@@ -1,28 +1,28 @@
-package ebs
+package common
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/hashicorp/packer/builder/amazon/common"
+	"github.com/hashicorp/packer/helper/multistep"
 	"github.com/hashicorp/packer/packer"
-	"github.com/mitchellh/multistep"
 )
 
 // stepCleanupVolumes cleans up any orphaned volumes that were not designated to
 // remain after termination of the instance. These volumes are typically ones
 // that are marked as "delete on terminate:false" in the source_ami of a build.
-type stepCleanupVolumes struct {
-	BlockDevices common.BlockDevices
+type StepCleanupVolumes struct {
+	LaunchMappings BlockDevices
 }
 
-func (s *stepCleanupVolumes) Run(state multistep.StateBag) multistep.StepAction {
+func (s *StepCleanupVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	// stepCleanupVolumes is for Cleanup only
 	return multistep.ActionContinue
 }
 
-func (s *stepCleanupVolumes) Cleanup(state multistep.StateBag) {
+func (s *StepCleanupVolumes) Cleanup(state multistep.StateBag) {
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 	instanceRaw := state.Get("instance")
 	var instance *ec2.Instance
@@ -79,7 +79,7 @@ func (s *stepCleanupVolumes) Cleanup(state multistep.StateBag) {
 
 	// Filter out any devices created as part of the launch mappings, since
 	// we'll let amazon follow the `delete_on_termination` setting.
-	for _, b := range s.BlockDevices.LaunchMappings {
+	for _, b := range s.LaunchMappings {
 		for volKey, volName := range volList {
 			if volName == b.DeviceName {
 				delete(volList, volKey)
