@@ -1,10 +1,10 @@
 ---
 description: |
-    Packer is able to create Amazon AMIs. To achieve this, Packer comes with
-    multiple builders depending on the strategy you want to use to build the AMI.
+  Packer is able to create Amazon AMIs. To achieve this, Packer comes with
+  multiple builders depending on the strategy you want to use to build the AMI.
 layout: docs
-page_title: 'Amazon AMI - Builders'
-sidebar_current: 'docs-builders-amazon'
+page_title: Amazon AMI - Builders
+sidebar_current: docs-builders-amazon
 ---
 
 # Amazon AMI Builder
@@ -13,26 +13,26 @@ Packer is able to create Amazon AMIs. To achieve this, Packer comes with
 multiple builders depending on the strategy you want to use to build the AMI.
 Packer supports the following builders at the moment:
 
--   [amazon-ebs](/docs/builders/amazon-ebs.html) - Create EBS-backed AMIs by
-    launching a source AMI and re-packaging it into a new AMI after
-    provisioning. If in doubt, use this builder, which is the easiest to get
-    started with.
+- [amazon-ebs](/docs/builders/amazon-ebs.html) - Create EBS-backed AMIs by
+  launching a source AMI and re-packaging it into a new AMI after
+  provisioning. If in doubt, use this builder, which is the easiest to get
+  started with.
 
--   [amazon-instance](/docs/builders/amazon-instance.html) - Create
-    instance-store AMIs by launching and provisioning a source instance, then
-    rebundling it and uploading it to S3.
+- [amazon-instance](/docs/builders/amazon-instance.html) - Create
+  instance-store AMIs by launching and provisioning a source instance, then
+  rebundling it and uploading it to S3.
 
--   [amazon-chroot](/docs/builders/amazon-chroot.html) - Create EBS-backed AMIs
-    from an existing EC2 instance by mounting the root device and using a
-    [Chroot](https://en.wikipedia.org/wiki/Chroot) environment to provision
-    that device. This is an **advanced builder and should not be used by
-    newcomers**. However, it is also the fastest way to build an EBS-backed AMI
-    since no new EC2 instance needs to be launched.
+- [amazon-chroot](/docs/builders/amazon-chroot.html) - Create EBS-backed AMIs
+  from an existing EC2 instance by mounting the root device and using a
+  [Chroot](https://en.wikipedia.org/wiki/Chroot) environment to provision
+  that device. This is an **advanced builder and should not be used by
+  newcomers**. However, it is also the fastest way to build an EBS-backed AMI
+  since no new EC2 instance needs to be launched.
 
--   [amazon-ebssurrogate](/docs/builders/amazon-ebssurrogate.html) - Create EBS
-    -backed AMIs from scratch. Works similarly to the `chroot` builder but does
-    not require running in AWS. This is an **advanced builder and should not be
-    used by newcomers**.
+- [amazon-ebssurrogate](/docs/builders/amazon-ebssurrogate.html) - Create EBS
+  -backed AMIs from scratch. Works similarly to the `chroot` builder but does
+  not require running in AWS. This is an **advanced builder and should not be
+  used by newcomers**.
 
 -&gt; **Don't know which builder to use?** If in doubt, use the [amazon-ebs
 builder](/docs/builders/amazon-ebs.html). It is much easier to use and Amazon
@@ -43,9 +43,9 @@ generally recommends EBS-backed images nowadays.
 Packer is able to create Amazon EBS Volumes which are preinitialized with a
 filesystem and data.
 
--   [amazon-ebsvolume](/docs/builders/amazon-ebsvolume.html) - Create EBS
-    volumes by launching a source AMI with block devices mapped. Provision the
-    instance, then destroy it, retaining the EBS volumes.
+- [amazon-ebsvolume](/docs/builders/amazon-ebsvolume.html) - Create EBS
+  volumes by launching a source AMI with block devices mapped. Provision the
+  instance, then destroy it, retaining the EBS volumes.
 
 <span id="specifying-amazon-credentials"></span>
 
@@ -55,10 +55,10 @@ The AWS provider offers a flexible means of providing credentials for
 authentication. The following methods are supported, in this order, and
 explained below:
 
--   Static credentials
--   Environment variables
--   Shared credentials file
--   EC2 Role
+- Static credentials
+- Environment variables
+- Shared credentials file
+- EC2 Role
 
 ### Static Credentials
 
@@ -67,10 +67,10 @@ These look like:
 
 ```json
 {
-    "access_key": "AKIAIOSFODNN7EXAMPLE",
-    "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-    "region": "us-east-1",
-    "type": "amazon-ebs"
+  "access_key": "AKIAIOSFODNN7EXAMPLE",
+  "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "region": "us-east-1",
+  "type": "amazon-ebs"
 }
 ```
 
@@ -93,7 +93,7 @@ Usage:
 ### Shared Credentials file
 
 You can use an AWS credentials file to specify your credentials. The default
-location is $HOME/.aws/credentials on Linux and OS X, or
+location is \$HOME/.aws/credentials on Linux and OS X, or
 "%USERPROFILE%.aws\\credentials" for Windows users. If we fail to detect
 credentials inline, or in the environment, Packer will check this location. You
 can optionally specify a different location in the configuration by setting the
@@ -110,9 +110,9 @@ configuration option, or setting the `AWS_PROFILE` environment variable:
 
 ```json
 {
-    "profile": "customprofile",
-    "region": "us-east-1",
-    "type": "amazon-ebs"
+  "profile": "customprofile",
+  "region": "us-east-1",
+  "type": "amazon-ebs"
 }
 ```
 
@@ -131,9 +131,10 @@ for Packer to work:
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
+  "Statement": [
+    {
       "Effect": "Allow",
-      "Action" : [
+      "Action": [
         "ec2:AttachVolume",
         "ec2:AuthorizeSecurityGroupIngress",
         "ec2:CopyImage",
@@ -168,8 +169,9 @@ for Packer to work:
         "ec2:StopInstances",
         "ec2:TerminateInstances"
       ],
-      "Resource" : "*"
-  }]
+      "Resource": "*"
+    }
+  ]
 }
 ```
 
@@ -200,15 +202,10 @@ work, but specifics will depend on your use-case.
 
 ```json
 {
-    "Sid": "PackerIAMPassRole",
-    "Effect": "Allow",
-    "Action": [
-        "iam:PassRole",
-        "iam:GetInstanceProfile"
-    ],
-    "Resource": [
-        "*"
-    ]
+  "Sid": "PackerIAMPassRole",
+  "Effect": "Allow",
+  "Action": ["iam:PassRole", "iam:GetInstanceProfile"],
+  "Resource": ["*"]
 }
 ```
 
@@ -217,22 +214,22 @@ IAM policies.
 
 ```json
 {
-    "Sid": "PackerIAMCreateRole",
-    "Effect": "Allow",
-    "Action": [
-        "iam:PassRole",
-        "iam:CreateInstanceProfile",
-        "iam:DeleteInstanceProfile",
-        "iam:GetRole",
-        "iam:GetInstanceProfile",
-        "iam:DeleteRolePolicy",
-        "iam:RemoveRoleFromInstanceProfile",
-        "iam:CreateRole",
-        "iam:DeleteRole",
-        "iam:PutRolePolicy",
-        "iam:AddRoleToInstanceProfile"
-    ],
-    "Resource": "*"
+  "Sid": "PackerIAMCreateRole",
+  "Effect": "Allow",
+  "Action": [
+    "iam:PassRole",
+    "iam:CreateInstanceProfile",
+    "iam:DeleteInstanceProfile",
+    "iam:GetRole",
+    "iam:GetInstanceProfile",
+    "iam:DeleteRolePolicy",
+    "iam:RemoveRoleFromInstanceProfile",
+    "iam:CreateRole",
+    "iam:DeleteRole",
+    "iam:PutRolePolicy",
+    "iam:AddRoleToInstanceProfile"
+  ],
+  "Resource": "*"
 }
 ```
 
@@ -241,13 +238,10 @@ following policies at a minimum:
 
 ```json
 {
-    "Sid": "Allow use of the key",
-    "Effect": "Allow",
-    "Action": [
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*"
-    ],
-    "Resource": "*"
+  "Sid": "Allow use of the key",
+  "Effect": "Allow",
+  "Action": ["kms:ReEncrypt*", "kms:GenerateDataKey*"],
+  "Resource": "*"
 }
 ```
 
@@ -255,10 +249,8 @@ If you are using a key provided by a different account than the one you are
 using to run the Packer build, your key will also need
 
 ```json
-        "kms:CreateGrant",
-        "kms:DescribeKey"
+("kms:CreateGrant", "kms:DescribeKey")
 ```
-
 
 ### Checking that system time is current
 
@@ -275,38 +267,37 @@ Linux/OS X, you can run the `date` command to get the current time. If you're
 on Linux, you can try setting the time with ntp by running `sudo ntpd -q`.
 
 ### ResourceNotReady Error
-This error generally appears as either `ResourceNotReady: exceeded wait
-attempts` or `ResourceNotReady: failed waiting for successful resource state`.
+
+This error generally appears as either `ResourceNotReady: exceeded wait attempts` or `ResourceNotReady: failed waiting for successful resource state`.
 
 This opaque error gets returned from AWS's API for a number of reasons,
 generally during image copy/encryption. Possible reasons for the error include:
 
-- You aren't waiting long enough. This is where you'll see the `exceeded wait
-  attempts` variety of this error message:
+- You aren't waiting long enough. This is where you'll see the `exceeded wait attempts` variety of this error message:
   We use the AWS SDK's built-in waiters to wait for longer-running tasks to
-    complete. These waiters have default delays between queries and maximum
-    number of queries that don't always work for our users.
+  complete. These waiters have default delays between queries and maximum
+  number of queries that don't always work for our users.
 
-    If you find that you are being rate-limited or have exceeded your max wait
-    attempts, you can override the defaults by setting the following packer
-    environment variables (note that these will apply to all AWS tasks that we
-    have to wait for):
+  If you find that you are being rate-limited or have exceeded your max wait
+  attempts, you can override the defaults by setting the following packer
+  environment variables (note that these will apply to all AWS tasks that we
+  have to wait for):
 
-    - `AWS_MAX_ATTEMPTS` - This is how many times to re-send a status update
+  - `AWS_MAX_ATTEMPTS` - This is how many times to re-send a status update
     request. Excepting tasks that we know can take an extremely long time, this
     defaults to 40 tries.
 
-    - `AWS_POLL_DELAY_SECONDS` - How many seconds to wait in between status update
+  - `AWS_POLL_DELAY_SECONDS` - How many seconds to wait in between status update
     requests. Generally defaults to 2 or 5 seconds, depending on the task.
 
 - You are using short-lived credentials that expired during the build. If this
-    is the problem, you may also see `RequestExpired: Request has expired.`
-    errors displayed in the Packer output:
+  is the problem, you may also see `RequestExpired: Request has expired.`
+  errors displayed in the Packer output:
 
-    - If you are using STS credentials, make sure that they expire only after the
+  - If you are using STS credentials, make sure that they expire only after the
     build has completed
 
-    - If you are chaining roles, make sure your build doesn't last more than an
+  - If you are chaining roles, make sure your build doesn't last more than an
     hour, since when you chain roles the maximum length of time your credentials
     will last is an hour:
     https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html
@@ -314,7 +305,7 @@ generally during image copy/encryption. Possible reasons for the error include:
 - Something is wrong with your KMS key. This is where you'll see the
   `ResourceNotReady: failed waiting for successful resource state` variety of
   this error message. Issues we've seen include:
-    - Your KMS key is invalid, possibly because of a typo
-    - Your KMS key is valid but does not have the necessary permissions (see
-      above for the necessary key permissions)
-    - Your KMS key is valid, but not in the region you've told us to use it in.
+  - Your KMS key is invalid, possibly because of a typo
+  - Your KMS key is valid but does not have the necessary permissions (see
+    above for the necessary key permissions)
+  - Your KMS key is valid, but not in the region you've told us to use it in.

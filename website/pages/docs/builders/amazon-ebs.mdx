@@ -1,12 +1,12 @@
 ---
 description: |
-    The amazon-ebs Packer builder is able to create Amazon AMIs backed by EBS
-    volumes for use in EC2. For more information on the difference between
-    EBS-backed instances and instance-store backed instances, see the storage for
-    the root device section in the EC2 documentation.
+  The amazon-ebs Packer builder is able to create Amazon AMIs backed by EBS
+  volumes for use in EC2. For more information on the difference between
+  EBS-backed instances and instance-store backed instances, see the storage for
+  the root device section in the EC2 documentation.
 layout: docs
-page_title: 'Amazon EBS - Builders'
-sidebar_current: 'docs-builders-amazon-ebsbacked'
+page_title: Amazon EBS - Builders
+sidebar_current: docs-builders-amazon-ebsbacked
 ---
 
 # AMI Builder (EBS backed)
@@ -26,7 +26,7 @@ keypairs, security group rules, etc. that provide it temporary access to the
 instance while the image is being created. This simplifies configuration quite
 a bit.
 
-The builder does *not* manage AMIs. Once it creates an AMI and stores it in
+The builder does _not_ manage AMIs. Once it creates an AMI and stores it in
 your account, it is up to you to use, delete, etc. the AMI.
 
 -&gt; **Note:** Temporary resources are, by default, all created with the
@@ -47,38 +47,37 @@ necessary for this build to succeed and can be found further down the page.
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/ebs/Config-not-required" %>
-
+@include 'partials/builder/amazon/ebs/Config-not-required.mdx'
 
 ### AMI Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AMIConfig-required" %>
+@include 'partials/builder/amazon/common/AMIConfig-required.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/AMIConfig-not-required" %>
+
+@include 'partials/builder/amazon/common/AMIConfig-not-required.mdx'
 
 ### Access Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-not-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-not-required.mdx'
 
 ### Run Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/RunConfig-required" %>
+@include 'partials/builder/amazon/common/RunConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/RunConfig-not-required" %>
-
+@include 'partials/builder/amazon/common/RunConfig-not-required.mdx'
 
 ### Block Devices Configuration
 
@@ -86,18 +85,18 @@ Block devices can be nested in the
 [ami_block_device_mappings](#ami_block_device_mappings) or the
 [launch_block_device_mappings](#launch_block_device_mappings) array.
 
-<%= partial "partials/builder/amazon/common/BlockDevice" %>
-
+@include 'partials/builder/amazon/common/BlockDevice.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/BlockDevice-not-required" %>
+
+@include 'partials/builder/amazon/common/BlockDevice-not-required.mdx'
 
 ### Communicator Configuration
 
 #### Optional:
 
-<%= partial "partials/helper/communicator/Config-not-required" %>
-<%= partial "partials/helper/communicator/SSH-not-required" %>
+@include 'partials/helper/communicator/Config-not-required.mdx'
+@include 'partials/helper/communicator/SSH-not-required.mdx'
 
 ## Basic Example
 
@@ -187,25 +186,25 @@ configuration of `launch_block_device_mappings` will expand the root volume
 In configuration directives marked as a template engine above, the following
 variables are available:
 
--   `BuildRegion` - The region (for example `eu-central-1`) where Packer is
-    building the AMI.
--   `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
-    the AMI.
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
--   `SourceAMIOwner` - The source AMI owner ID.
--   `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
--   `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
+- `BuildRegion` - The region (for example `eu-central-1`) where Packer is
+  building the AMI.
+- `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
+  the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
+- `SourceAMIOwner` - The source AMI owner ID.
+- `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
+- `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
 
 ## Build function template engine variables
 
 For the build function of [template engine](/docs/templates/engine.html), the following
 variables are available:
 
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
 
 ## Tag Example
 
@@ -342,14 +341,12 @@ be easily added to the provisioner section.
 
 ```json
 {
-    "type": "powershell",
-    "inline": [
-      "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
-      "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
-    ]
-
+  "type": "powershell",
+  "inline": [
+    "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+    "C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+  ]
 }
 ```
 
-<%= partial "partials/builders/aws-ssh-differentiation-table" %>
-
+@include 'partials/builders/aws-ssh-differentiation-table.mdx'

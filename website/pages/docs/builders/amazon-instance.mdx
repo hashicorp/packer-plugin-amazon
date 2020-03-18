@@ -1,12 +1,16 @@
 ---
-description: |
-    The amazon-instance Packer builder is able to create Amazon AMIs backed by
-    instance storage as the root device. For more information on the difference
-    between instance storage and EBS-backed instances, see the storage for the root
-    device section in the EC2 documentation.
+description: >
+  The amazon-instance Packer builder is able to create Amazon AMIs backed by
+
+  instance storage as the root device. For more information on the difference
+
+  between instance storage and EBS-backed instances, see the storage for the
+  root
+
+  device section in the EC2 documentation.
 layout: docs
-page_title: 'Amazon instance-store - Builders'
-sidebar_current: 'docs-builders-amazon-instance'
+page_title: Amazon instance-store - Builders
+sidebar_current: docs-builders-amazon-instance
 ---
 
 # AMI Builder (instance-store)
@@ -26,7 +30,7 @@ AWS account. This builder will create temporary key pairs, security group
 rules, etc. that provide it temporary access to the instance while the image is
 being created. This simplifies configuration quite a bit.
 
-This builder does *not* manage AMIs. Once it creates an AMI and stores it in
+This builder does _not_ manage AMIs. Once it creates an AMI and stores it in
 your account, it is up to you to use, delete, etc. the AMI.
 
 -&gt; **Note:** Temporary resources are, by default, all created with the
@@ -55,42 +59,41 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Required:
 
-<%= partial "partials/builder/amazon/instance/Config-required" %>
+@include 'partials/builder/amazon/instance/Config-required.mdx'
 
 ### Optional:
 
-<%= partial "partials/builder/amazon/instance/Config-not-required" %>
-
+@include 'partials/builder/amazon/instance/Config-not-required.mdx'
 
 ### AMI Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AMIConfig-required" %>
+@include 'partials/builder/amazon/common/AMIConfig-required.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/AMIConfig-not-required" %>
+
+@include 'partials/builder/amazon/common/AMIConfig-not-required.mdx'
 
 ### Access Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-not-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-not-required.mdx'
 
 ### Run Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/RunConfig-required" %>
+@include 'partials/builder/amazon/common/RunConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/RunConfig-not-required" %>
-
+@include 'partials/builder/amazon/common/RunConfig-not-required.mdx'
 
 ### Block Devices Configuration
 
@@ -98,18 +101,18 @@ Block devices can be nested in the
 [ami_block_device_mappings](#ami_block_device_mappings) or the
 [launch_block_device_mappings](#launch_block_device_mappings) array.
 
-<%= partial "partials/builder/amazon/common/BlockDevice" %>
-
+@include 'partials/builder/amazon/common/BlockDevice.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/BlockDevice-not-required" %>
+
+@include 'partials/builder/amazon/common/BlockDevice-not-required.mdx'
 
 ### Communicator Configuration
 
 #### Optional:
 
-<%= partial "partials/helper/communicator/Config-not-required" %>
-<%= partial "partials/helper/communicator/SSH-not-required" %>
+@include 'partials/helper/communicator/Config-not-required.mdx'
+@include 'partials/helper/communicator/SSH-not-required.mdx'
 
 ## Basic Example
 
@@ -151,25 +154,25 @@ You can use this information to access the instance as it is running.
 In configuration directives marked as a template engine above, the following
 variables are available:
 
--   `BuildRegion` - The region (for example `eu-central-1`) where Packer is
-    building the AMI.
--   `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
-    the AMI.
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
--   `SourceAMIOwner` - The source AMI owner ID.
--   `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
--   `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
+- `BuildRegion` - The region (for example `eu-central-1`) where Packer is
+  building the AMI.
+- `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
+  the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
+- `SourceAMIOwner` - The source AMI owner ID.
+- `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
+- `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
 
 ## Build function template engine variables
 
 For the build function of [template engine](/docs/templates/engine.html), the following
 variables are available:
 
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
 
 ## Custom Bundle Commands
 
@@ -195,7 +198,7 @@ multiple lines for convenience of reading. The bundle volume command is
 responsible for executing `ec2-bundle-vol` in order to store and image of the
 root filesystem to use to create the AMI.
 
-``` text
+```text
 sudo -i -n ec2-bundle-vol \
   -k {{.KeyPath}}  \
   -u {{.AccountId}} \
@@ -223,7 +226,7 @@ across multiple lines for convenience of reading. Access key and secret key are
 omitted if using instance profile. The bundle upload command is responsible for
 taking the bundled volume and uploading it to S3.
 
-``` text
+```text
 sudo -i -n ec2-upload-bundle \
   -b {{.BucketName}} \
   -m {{.ManifestPath}} \
@@ -248,24 +251,23 @@ this:
 
 ```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:PutObject",
-                "s3:GetObject",
-                "s3:ListBucket",
-                "s3:GetBucketLocation",
-                "s3:PutObjectAcl"
-            ],
-            "Resource": "*"
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:GetBucketLocation",
+        "s3:PutObjectAcl"
+      ],
+      "Resource": "*"
+    }
+  ]
 }
 ```
 
 You may wish to constrain the resource to a specific bucket.
 
-
-<%= partial "partials/builders/aws-ssh-differentiation-table" %>
+@include 'partials/builders/aws-ssh-differentiation-table.mdx'

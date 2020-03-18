@@ -1,10 +1,10 @@
 ---
 description: |
-    The amazon-ebsvolume Packer builder is like the EBS builder, but is
-    intended to create EBS volumes rather than a machine image.
+  The amazon-ebsvolume Packer builder is like the EBS builder, but is
+  intended to create EBS volumes rather than a machine image.
 layout: docs
-page_title: 'Amazon EBS Volume - Builders'
-sidebar_current: 'docs-builders-amazon-ebsvolume'
+page_title: Amazon EBS Volume - Builders
+sidebar_current: docs-builders-amazon-ebsvolume
 ---
 
 # EBS Volume Builder
@@ -24,7 +24,7 @@ This is all done in your own AWS account. The builder will create temporary key
 pairs, security group rules, etc. that provide it temporary access to the
 instance while the image is being created.
 
-The builder does *not* manage EBS Volumes. Once it creates volumes and stores
+The builder does _not_ manage EBS Volumes. Once it creates volumes and stores
 it in your account, it is up to you to use, delete, etc. the volumes.
 
 -&gt; **Note:** Temporary resources are, by default, all created with the
@@ -45,102 +45,102 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Optional:
 
-<%= partial "partials/builder/amazon/ebsvolume/Config-not-required" %>
+@include 'partials/builder/amazon/ebsvolume/Config-not-required.mdx'
 
 ### Access Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-not-required" %>
+@include 'partials/builder/amazon/common/AccessConfig-not-required.mdx'
 
 ### AMI Configuration
 
 #### Optional:
 
--   `snapshot_groups` (array of strings) - A list of groups that have access to
-    create volumes from the snapshot(s). By default no groups have permission
-    to create volumes from the snapshot(s). `all` will make the snapshot
-    publicly accessible.
+- `snapshot_groups` (array of strings) - A list of groups that have access to
+  create volumes from the snapshot(s). By default no groups have permission
+  to create volumes from the snapshot(s). `all` will make the snapshot
+  publicly accessible.
 
--   `snapshot_users` (array of strings) - A list of account IDs that have
-    access to create volumes from the snapshot(s). By default no additional
-    users other than the user creating the AMI has permissions to create
-    volumes from the backing snapshot(s).
+- `snapshot_users` (array of strings) - A list of account IDs that have
+  access to create volumes from the snapshot(s). By default no additional
+  users other than the user creating the AMI has permissions to create
+  volumes from the backing snapshot(s).
 
 ### Block Devices Configuration
 
 Block devices can be nested in the
 [ebs_volumes](#ebs_volumes) array.
 
-<%= partial "partials/builder/amazon/common/BlockDevice" %>
-
+@include 'partials/builder/amazon/common/BlockDevice.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/BlockDevice-not-required" %>
-<%= partial "partials/builder/amazon/ebsvolume/BlockDevice-not-required" %>
+
+@include 'partials/builder/amazon/common/BlockDevice-not-required.mdx'
+@include 'partials/builder/amazon/ebsvolume/BlockDevice-not-required.mdx'
 
 ### Run Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/RunConfig-required" %>
+@include 'partials/builder/amazon/common/RunConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/RunConfig-not-required" %>
+@include 'partials/builder/amazon/common/RunConfig-not-required.mdx'
 
 ### Communicator Configuration
 
 #### Optional:
 
-<%= partial "partials/helper/communicator/Config-not-required" %>
-<%= partial "partials/helper/communicator/SSH-not-required" %>
+@include 'partials/helper/communicator/Config-not-required.mdx'
+@include 'partials/helper/communicator/SSH-not-required.mdx'
 
 ## Basic Example
 
 ```json
 {
-  "type" : "amazon-ebsvolume",
-  "secret_key" : "YOUR SECRET KEY HERE",
-  "access_key" : "YOUR KEY HERE",
-  "region" : "us-east-1",
-  "ssh_username" : "ubuntu",
-  "instance_type" : "t2.medium",
-  "source_ami" : "ami-40d28157",
-  "ebs_volumes" : [
+  "type": "amazon-ebsvolume",
+  "secret_key": "YOUR SECRET KEY HERE",
+  "access_key": "YOUR KEY HERE",
+  "region": "us-east-1",
+  "ssh_username": "ubuntu",
+  "instance_type": "t2.medium",
+  "source_ami": "ami-40d28157",
+  "ebs_volumes": [
     {
-      "volume_type" : "gp2",
-      "device_name" : "/dev/xvdf",
-      "delete_on_termination" : false,
-      "tags" : {
-        "zpool" : "data",
-        "Name" : "Data1"
+      "volume_type": "gp2",
+      "device_name": "/dev/xvdf",
+      "delete_on_termination": false,
+      "tags": {
+        "zpool": "data",
+        "Name": "Data1"
       },
-      "volume_size" : 10
+      "volume_size": 10
     },
     {
-      "volume_type" : "gp2",
-      "device_name" : "/dev/xvdg",
-      "tags" : {
-        "zpool" : "data",
-        "Name" : "Data2"
+      "volume_type": "gp2",
+      "device_name": "/dev/xvdg",
+      "tags": {
+        "zpool": "data",
+        "Name": "Data2"
       },
-      "delete_on_termination" : false,
-      "volume_size" : 10
+      "delete_on_termination": false,
+      "volume_size": 10
     },
     {
-      "volume_size" : 10,
-      "tags" : {
-        "Name" : "Data3",
-        "zpool" : "data"
+      "volume_size": 10,
+      "tags": {
+        "Name": "Data3",
+        "zpool": "data"
       },
-      "delete_on_termination" : false,
-      "device_name" : "/dev/xvdh",
-      "volume_type" : "gp2"
+      "delete_on_termination": false,
+      "device_name": "/dev/xvdh",
+      "volume_type": "gp2"
     }
   ]
 }
@@ -168,16 +168,16 @@ You can use this information to access the instance as it is running.
 In configuration directives marked as a template engine above, the following
 variables are available:
 
--   `BuildRegion` - The region (for example `eu-central-1`) where Packer is
-    building the AMI.
--   `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
-    the AMI.
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
--   `SourceAMIOwner` - The source AMI owner ID.
--   `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
--   `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
+- `BuildRegion` - The region (for example `eu-central-1`) where Packer is
+  building the AMI.
+- `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
+  the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
+- `SourceAMIOwner` - The source AMI owner ID.
+- `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
+- `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
 
 -&gt; **Note:** Packer uses pre-built AMIs as the source for building images.
 These source AMIs may include volumes that are not flagged to be destroyed on
@@ -190,9 +190,8 @@ marked for deletion on termination will remain in your account.
 For the build function of [template engine](/docs/templates/engine.html), the following
 variables are available:
 
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
 
-
-<%= partial "partials/builders/aws-ssh-differentiation-table" %>
+@include 'partials/builders/aws-ssh-differentiation-table.mdx'
