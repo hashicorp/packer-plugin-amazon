@@ -1,10 +1,12 @@
 ---
-description: |
-    The amazon-ebssurrogate Packer builder is like the chroot builder, but does not
-    require running inside an EC2 instance.
+description: >
+  The amazon-ebssurrogate Packer builder is like the chroot builder, but does
+  not
+
+  require running inside an EC2 instance.
 layout: docs
-page_title: 'Amazon EBS Surrogate - Builders'
-sidebar_current: 'docs-builders-amazon-ebssurrogate'
+page_title: Amazon EBS Surrogate - Builders
+sidebar_title: EBS Surrogate
 ---
 
 # EBS Surrogate Builder
@@ -37,97 +39,95 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Required:
 
-<%= partial "partials/builder/amazon/ebssurrogate/Config-required" %>
+@include 'builder/amazon/ebssurrogate/Config-required.mdx'
 
 ### Optional:
 
-<%= partial "partials/builder/amazon/ebssurrogate/Config-not-required" %>
-
+@include 'builder/amazon/ebssurrogate/Config-not-required.mdx'
 
 ### AMI Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AMIConfig-required" %>
+@include 'builder/amazon/common/AMIConfig-required.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/AMIConfig-not-required" %>
+
+@include 'builder/amazon/common/AMIConfig-not-required.mdx'
 
 ### Access Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-required" %>
+@include 'builder/amazon/common/AccessConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/AccessConfig-not-required" %>
+@include 'builder/amazon/common/AccessConfig-not-required.mdx'
 
 ### Run Configuration
 
 #### Required:
 
-<%= partial "partials/builder/amazon/common/RunConfig-required" %>
+@include 'builder/amazon/common/RunConfig-required.mdx'
 
 #### Optional:
 
-<%= partial "partials/builder/amazon/common/RunConfig-not-required" %>
-
+@include 'builder/amazon/common/RunConfig-not-required.mdx'
 
 ### Block Devices Configuration
 
 Block devices can be nested in the
 [ami_block_device_mappings](#ami_block_device_mappings) array.
 
-
-<%= partial "partials/builder/amazon/common/BlockDevice" %>
+@include 'builder/amazon/common/BlockDevice.mdx'
 
 #### Optional only for [launch_block_device_mappings](#launch_block_device_mappings)
 
-<%= partial "partials/builder/amazon/ebssurrogate/BlockDevice-not-required" %>
+@include 'builder/amazon/ebssurrogate/BlockDevice-not-required.mdx'
 
 #### Optional:
-<%= partial "partials/builder/amazon/common/BlockDevice-not-required" %>
 
-
+@include 'builder/amazon/common/BlockDevice-not-required.mdx'
 
 ### Communicator Configuration
 
 #### Optional:
 
-<%= partial "partials/helper/communicator/Config-not-required" %>
-<%= partial "partials/helper/communicator/SSH-not-required" %>
+@include 'helper/communicator/Config-not-required.mdx'
+
+@include 'helper/communicator/SSH-not-required.mdx'
 
 ## Basic Example
 
 ```json
 {
-   "type" : "amazon-ebssurrogate",
-   "secret_key" : "YOUR SECRET KEY HERE",
-   "access_key" : "YOUR KEY HERE",
-   "region" : "us-east-1",
-   "ssh_username" : "ubuntu",
-   "instance_type" : "t2.medium",
-   "source_ami" : "ami-40d28157",
-   "launch_block_device_mappings" : [
-     {
-       "volume_type" : "gp2",
-       "device_name" : "/dev/xvdf",
-       "delete_on_termination" : false,
-       "volume_size" : 10
-     }
-   ],
-   "ami_root_device": {
-     "source_device_name": "/dev/xvdf",
-     "device_name": "/dev/xvda",
-     "delete_on_termination": true,
-     "volume_size": 16,
-     "volume_type": "gp2"
-   }
+  "type": "amazon-ebssurrogate",
+  "secret_key": "YOUR SECRET KEY HERE",
+  "access_key": "YOUR KEY HERE",
+  "region": "us-east-1",
+  "ssh_username": "ubuntu",
+  "instance_type": "t2.medium",
+  "source_ami": "ami-40d28157",
+  "launch_block_device_mappings": [
+    {
+      "volume_type": "gp2",
+      "device_name": "/dev/xvdf",
+      "delete_on_termination": false,
+      "volume_size": 10
+    }
+  ],
+  "ami_root_device": {
+    "source_device_name": "/dev/xvdf",
+    "device_name": "/dev/xvda",
+    "delete_on_termination": true,
+    "volume_size": 16,
+    "volume_type": "gp2"
+  }
 }
 ```
 
--&gt; **Note:** Packer can also read the access key and secret access key from
+-> **Note:** Packer can also read the access key and secret access key from
 environmental variables. See the configuration reference in the section above
 for more information on what environmental variables Packer will look for.
 
@@ -149,31 +149,30 @@ You can use this information to access the instance as it is running.
 In configuration directives marked as a template engine above, the following
 variables are available:
 
--   `BuildRegion` - The region (for example `eu-central-1`) where Packer is
-    building the AMI.
--   `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
-    the AMI.
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
--   `SourceAMIOwner` - The source AMI owner ID.
--   `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
--   `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
+- `BuildRegion` - The region (for example `eu-central-1`) where Packer is
+  building the AMI.
+- `SourceAMI` - The source AMI ID (for example `ami-a2412fcd`) used to build
+  the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
+- `SourceAMIOwner` - The source AMI owner ID.
+- `SourceAMIOwnerName` - The source AMI owner alias/name (for example `amazon`).
+- `SourceAMITags` - The source AMI Tags, as a `map[string]string` object.
 
 ## Build function template engine variables
 
-For the build function of [template engine](/docs/templates/engine.html), the following
+For the build function of [template engine](/docs/templates/engine), the following
 variables are available:
 
--   `SourceAMIName` - The source AMI Name (for example
-    `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
-    build the AMI.
+- `SourceAMIName` - The source AMI Name (for example
+  `ubuntu/images/ebs-ssd/ubuntu-xenial-16.04-amd64-server-20180306`) used to
+  build the AMI.
 
--&gt; **Note:** Packer uses pre-built AMIs as the source for building images.
+-> **Note:** Packer uses pre-built AMIs as the source for building images.
 These source AMIs may include volumes that are not flagged to be destroyed on
 termination of the instance building the new image. In addition to those
 volumes created by this builder, any volumes in the source AMI which are not
 marked for deletion on termination will remain in your account.
 
-
-<%= partial "partials/builders/aws-ssh-differentiation-table" %>
+@include 'builders/aws-ssh-differentiation-table.mdx'
