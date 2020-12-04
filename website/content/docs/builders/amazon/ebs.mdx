@@ -226,7 +226,7 @@ configuration of `launch_block_device_mappings` will expand the root volume
 ```json
 {
   "builders": [
-      {
+    {
       "type": "amazon-ebs",
       "region": "us-east-1",
       "source_ami": "ami-fce3c696",
@@ -593,7 +593,6 @@ build {
 </Tab>
 </Tabs>
 
-
 ## Windows 2016 Sysprep Commands - For Amazon Windows AMIs Only
 
 For Amazon Windows 2016 AMIs it is necessary to run Sysprep commands which can
@@ -626,6 +625,5 @@ provisioner "powershell" {
 
 </Tab>
 </Tabs>
-
 
 @include 'builders/aws-ssh-differentiation-table.mdx'
