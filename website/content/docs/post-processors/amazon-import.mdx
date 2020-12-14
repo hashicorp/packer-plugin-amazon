@@ -2,7 +2,6 @@
 description: |
   The Packer Amazon Import post-processor takes an OVA artifact from various
   builders and imports it to an AMI available to Amazon Web Services EC2.
-layout: docs
 page_title: Amazon Import - Post-Processors
 sidebar_title: Amazon Import
 ---
@@ -216,14 +215,14 @@ You'll need at least the following permissions in the policy for your IAM user
 in order to successfully upload an image via the amazon-import post-processor.
 
 ```json
-        "ec2:CancelImportTask",
-        "ec2:CopyImage",
-        "ec2:CreateTags",
-        "ec2:DescribeImages",
-        "ec2:DescribeImportImageTasks",
-        "ec2:ImportImage",
-        "ec2:ModifyImageAttribute",
-        "ec2:DeregisterImage"
+("ec2:CancelImportTask",
+"ec2:CopyImage",
+"ec2:CreateTags",
+"ec2:DescribeImages",
+"ec2:DescribeImportImageTasks",
+"ec2:ImportImage",
+"ec2:ModifyImageAttribute",
+"ec2:DeregisterImage")
 ```
 
 ## Troubleshooting Timeouts

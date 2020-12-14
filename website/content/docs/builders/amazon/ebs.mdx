@@ -4,7 +4,6 @@ description: |
   volumes for use in EC2. For more information on the difference between
   EBS-backed instances and instance-store backed instances, see the storage for
   the root device section in the EC2 documentation.
-layout: docs
 page_title: Amazon EBS - Builders
 sidebar_title: EBS
 ---
@@ -226,7 +225,7 @@ configuration of `launch_block_device_mappings` will expand the root volume
 ```json
 {
   "builders": [
-      {
+    {
       "type": "amazon-ebs",
       "region": "us-east-1",
       "source_ami": "ami-fce3c696",
@@ -593,7 +592,6 @@ build {
 </Tab>
 </Tabs>
 
-
 ## Windows 2016 Sysprep Commands - For Amazon Windows AMIs Only
 
 For Amazon Windows 2016 AMIs it is necessary to run Sysprep commands which can
@@ -626,6 +624,5 @@ provisioner "powershell" {
 
 </Tab>
 </Tabs>
-
 
 @include 'builders/aws-ssh-differentiation-table.mdx'
