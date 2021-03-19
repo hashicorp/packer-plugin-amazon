@@ -10,11 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/hashicorp/hcl/v2/hcldec"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
-	"github.com/hashicorp/packer/builder/amazon/common/awserrors"
 	"github.com/zclconf/go-cty/cty"
 )
 

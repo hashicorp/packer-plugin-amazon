@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 )
 
 type AWSHelper struct {

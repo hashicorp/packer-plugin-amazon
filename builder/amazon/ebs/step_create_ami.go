@@ -8,12 +8,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
-	"github.com/hashicorp/packer/builder/amazon/common/awserrors"
 )
 
 type stepCreateAMI struct {

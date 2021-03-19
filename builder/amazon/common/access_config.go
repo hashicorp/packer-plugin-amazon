@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	awsbase "github.com/hashicorp/aws-sdk-go-base"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/packer/builder/amazon/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/common/awserrors"
 	vaultapi "github.com/hashicorp/vault/api"
 )
 

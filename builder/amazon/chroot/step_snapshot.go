@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
 )
 
 // StepSnapshot creates a snapshot of the created volume.

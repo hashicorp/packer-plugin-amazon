@@ -4,9 +4,9 @@ package ebsvolume
 
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
 )
 
 type BlockDevice struct {

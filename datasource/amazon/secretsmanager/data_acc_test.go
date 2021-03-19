@@ -12,10 +12,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
-	"github.com/hashicorp/packer/builder/amazon/common/awserrors"
 )
 
 func TestAmazonSecretsManager(t *testing.T) {

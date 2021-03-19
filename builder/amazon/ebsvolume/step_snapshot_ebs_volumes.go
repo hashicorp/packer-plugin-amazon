@@ -7,10 +7,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
 )
 
 type stepSnapshotEBSVolumes struct {

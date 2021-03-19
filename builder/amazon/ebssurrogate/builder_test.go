@@ -3,7 +3,7 @@ package ebssurrogate
 import (
 	"testing"
 
-	"github.com/hashicorp/packer/builder/amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )

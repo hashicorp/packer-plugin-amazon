@@ -3,7 +3,7 @@ package ami
 import (
 	"testing"
 
-	awscommon "github.com/hashicorp/packer/builder/amazon/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 )
 
 func TestDatasourceConfigure_FilterBlank(t *testing.T) {

@@ -3,8 +3,8 @@ package chroot
 import (
 	"testing"
 
+	amazon "github.com/hashicorp/packer-plugin-amazon/builder/amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
-	amazon "github.com/hashicorp/packer/builder/amazon/common"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"

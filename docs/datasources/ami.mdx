@@ -34,8 +34,30 @@ This selects the most recent Ubuntu 16.04 HVM EBS AMI from Canonical. Note that 
 
 ## Configuration Reference
 
-@include 'builder/amazon/common/AmiFilterOptions-not-required.mdx'
+- `filters` (map[string]string) - Filters used to select an AMI. Any filter described in the docs for
+[DescribeImages](http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html)
+is valid.
+
+- `owners` ([]string) - Filters the images by their owner. You
+may specify one or more AWS account IDs, "self" (which will use the
+account whose credentials you are using to run Packer), or an AWS owner
+alias: for example, `amazon`, `aws-marketplace`, or `microsoft`. This
+option is required for security reasons.
+
+- `most_recent` (bool) - Selects the newest created image when true.
+This is most useful for selecting a daily distro build.
 
 ## Output Data
 
-@include 'datasource/amazon/ami/DatasourceOutput.mdx'
+- `id` (string) - The ID of the AMI.
+
+- `name` (string) - The name of the AMI.
+
+- `creation_date` (string) - The date of creation of the AMI.
+
+- `owner` (string) - The AWS account ID of the owner.
+
+- `owner_name` (string) - The owner alias.
+
+- `tags` (map[string]string) - The key/value combination of the tags assigned to the AMI.
+
