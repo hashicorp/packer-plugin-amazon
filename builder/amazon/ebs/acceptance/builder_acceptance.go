@@ -9,8 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	amazonebsbuilder "github.com/hashicorp/packer/builder/amazon/ebs"
-
+	amazonebsbuilder "github.com/hashicorp/packer-plugin-amazon/builder/amazon/ebs"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 

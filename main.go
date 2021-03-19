@@ -4,6 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/chroot"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/ebs"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/ebssurrogate"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/ebsvolume"
+	"github.com/hashicorp/packer-plugin-amazon/builder/amazon/instance"
+	"github.com/hashicorp/packer-plugin-amazon/datasource/amazon/ami"
+	"github.com/hashicorp/packer-plugin-amazon/datasource/amazon/secretsmanager"
+	amazonimport "github.com/hashicorp/packer-plugin-amazon/post-processor/import"
 	"github.com/hashicorp/packer-plugin-sdk/plugin"
 	"github.com/hashicorp/packer-plugin-sdk/version"
 )
@@ -24,7 +32,14 @@ var (
 
 func main() {
 	pps := plugin.NewSet()
-	// todo add components
+	pps.RegisterBuilder("chroot", new(chroot.Builder))
+	pps.RegisterBuilder("ebs", new(ebs.Builder))
+	pps.RegisterBuilder("ebssurrogate", new(ebssurrogate.Builder))
+	pps.RegisterBuilder("ebsvolume", new(ebsvolume.Builder))
+	pps.RegisterBuilder("instance", new(instance.Builder))
+	pps.RegisterDatasource("ami", new(ami.Datasource))
+	pps.RegisterDatasource("secretsmanager", new(secretsmanager.Datasource))
+	pps.RegisterPostProcessor("import", new(amazonimport.PostProcessor))
 	pps.SetVersion(PluginVersion)
 	err := pps.Run()
 	if err != nil {

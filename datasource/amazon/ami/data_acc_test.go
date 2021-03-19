@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"testing"
 
+	amazonacc "github.com/hashicorp/packer-plugin-amazon/builder/amazon/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
-	amazonacc "github.com/hashicorp/packer/builder/amazon/ebs/acceptance"
 )
 
 func TestAmazonAmi(t *testing.T) {
