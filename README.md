@@ -1,7 +1,7 @@
 # Packer Plugin Amazon
 The `amazon` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
 to create custom [Amazon AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html).
-For the full list of available features for this plugin see [docs](docs)
+For the full list of available features for this plugin see [docs](docs).
 
 ## Installation
 
