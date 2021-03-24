@@ -1,3 +1,12 @@
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 0.0.1"
+      source = "github.com/hashicorp/amazon"
+    }
+  }
+}
+
 data "amazon-ami" "ubuntu-xenial-1604-amd64" {
   filters = {
     name                = "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*"
