@@ -1,7 +1,6 @@
 # Packer Plugin Amazon
-The `amazon` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
-to create custom [Amazon AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html).
-For the full list of available features for this plugin see [docs](docs).
+The `Amazon` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
+to create custom images. For the full list of available features for this plugin see [docs](docs).
 
 ## Installation
 
@@ -11,7 +10,7 @@ For the full list of available features for this plugin see [docs](docs).
 
 Starting from version 1.7, Packer supports a new `packer init` command allowing
 automatic installation of Packer plugins. Read the
-[Packer documentation](https://www.packer.io/docs/commands/init) for more information
+[Packer documentation](https://www.packer.io/docs/commands/init) for more information.
 
 
 #### Manual installation
