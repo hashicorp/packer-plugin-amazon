@@ -2,6 +2,7 @@ package secretsmanager
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,7 +19,10 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
-func TestAmazonSecretsManager(t *testing.T) {
+//go:embed test-fixtures/template.pkr.hcl
+var testDatasourceBasic string
+
+func TestAccAmazonSecretsManager(t *testing.T) {
 	secret := &AmazonSecret{
 		Name:        "packer_datasource_secretsmanager_test_secret",
 		Key:         "packer_test_key",
@@ -26,7 +30,7 @@ func TestAmazonSecretsManager(t *testing.T) {
 		Description: "this is a secret used in a packer acc test",
 	}
 
-	testCase := &acctest.DatasourceTestCase{
+	testCase := &acctest.PluginTestCase{
 		Name: "amazon_secretsmanager_datasource_basic_test",
 		Setup: func() error {
 			return secret.Create()
@@ -35,7 +39,6 @@ func TestAmazonSecretsManager(t *testing.T) {
 			return secret.Delete()
 		},
 		Template: testDatasourceBasic,
-		Type:     "amazon-secrestmanager",
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
 				if buildCommand.ProcessState.ExitCode() != 0 {
@@ -75,41 +78,8 @@ func TestAmazonSecretsManager(t *testing.T) {
 			return nil
 		},
 	}
-	acctest.TestDatasource(t, testCase)
+	acctest.TestPlugin(t, testCase)
 }
-
-const testDatasourceBasic = `
-data "amazon-secretsmanager" "test" {
-  name = "packer_datasource_secretsmanager_test_secret"
-  key  = "packer_test_key"
-}
-
-locals {
-  value         = data.amazon-secretsmanager.test.value
-  secret_string = data.amazon-secretsmanager.test.secret_string
-  version_id    = data.amazon-secretsmanager.test.version_id
-  secret_value  = jsondecode(data.amazon-secretsmanager.test.secret_string)["packer_test_key"]
-}
-
-source "null" "basic-example" {
-  communicator = "none"
-}
-
-build {
-  sources = [
-    "source.null.basic-example"
-  ]
-
-  provisioner "shell-local" {
-    inline = [
-      "echo secret value: ${local.value}",
-      "echo secret secret_string: ${local.secret_string}",
-      "echo secret version_id: ${local.version_id}",
- 	  "echo secret value: ${local.secret_value}"
-    ]
-  }
-}
-`
 
 type AmazonSecret struct {
 	Name        string

@@ -1,4 +1,4 @@
-package amazon_acc
+package ebs
 
 import (
 	"fmt"
@@ -8,12 +8,12 @@ import (
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 )
 
-type AWSHelper struct {
-	Region  string
-	AMIName string
+type AMIHelper struct {
+	Region string
+	Name   string
 }
 
-func (a *AWSHelper) CleanUpAmi() error {
+func (a *AMIHelper) CleanUpAmi() error {
 	accessConfig := &awscommon.AccessConfig{}
 	session, err := accessConfig.Session()
 	if err != nil {
@@ -28,10 +28,10 @@ func (a *AWSHelper) CleanUpAmi() error {
 		Owners: aws.StringSlice([]string{"self"}),
 		Filters: []*ec2.Filter{{
 			Name:   aws.String("name"),
-			Values: aws.StringSlice([]string{a.AMIName}),
+			Values: aws.StringSlice([]string{a.Name}),
 		}}})
 	if err != nil {
-		return fmt.Errorf("AWSAMICleanUp: Unable to find Image %s: %s", a.AMIName, err.Error())
+		return fmt.Errorf("AWSAMICleanUp: Unable to find Image %s: %s", a.Name, err.Error())
 	}
 
 	if resp != nil && len(resp.Images) > 0 {
@@ -43,4 +43,27 @@ func (a *AWSHelper) CleanUpAmi() error {
 		}
 	}
 	return nil
+}
+
+func (a *AMIHelper) GetAmi() ([]*ec2.Image, error) {
+	accessConfig := &awscommon.AccessConfig{}
+	session, err := accessConfig.Session()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create aws session %s", err.Error())
+	}
+
+	regionconn := ec2.New(session.Copy(&aws.Config{
+		Region: aws.String(a.Region),
+	}))
+
+	resp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{
+		Owners: aws.StringSlice([]string{"self"}),
+		Filters: []*ec2.Filter{{
+			Name:   aws.String("name"),
+			Values: aws.StringSlice([]string{a.Name}),
+		}}})
+	if err != nil {
+		return nil, fmt.Errorf("Unable to find Image %s: %s", a.Name, err.Error())
+	}
+	return resp.Images, nil
 }

@@ -44,9 +44,9 @@ func (s *AmazonEBSAccTest) GetConfigs() (map[string]string, error) {
 }
 
 func (s *AmazonEBSAccTest) CleanUp() error {
-	helper := AWSHelper{
-		Region:  "us-east-1",
-		AMIName: "packer-acc-test",
+	helper := amazonebsbuilder.AMIHelper{
+		Region: "us-east-1",
+		Name:   "packer-acc-test",
 	}
 	return helper.CleanUpAmi()
 }
