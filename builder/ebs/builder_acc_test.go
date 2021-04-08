@@ -91,7 +91,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 	return nil
 }
 
-func TestBuilderAcc_forceDeregister(t *testing.T) {
+func TestAccBuilderAcc_forceDeregister(t *testing.T) {
 	amiName := "dereg"
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_deregister_part1_test",
@@ -133,7 +133,7 @@ func TestBuilderAcc_forceDeregister(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func TestBuilderAcc_forceDeleteSnapshot(t *testing.T) {
+func TestAccBuilderAcc_forceDeleteSnapshot(t *testing.T) {
 	amiName := "packer-test-dereg"
 
 	testCase := &acctest.PluginTestCase{
@@ -206,7 +206,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 	return nil
 }
 
-func TestBuilderAcc_amiSharing(t *testing.T) {
+func TestAccBuilderAcc_amiSharing(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-sharing-acc-test",
@@ -283,7 +283,7 @@ func checkAMISharing(ami AMIHelper, count int, uid, group string) error {
 	return nil
 }
 
-func TestBuilderAcc_encryptedBoot(t *testing.T) {
+func TestAccBuilderAcc_encryptedBoot(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-enc-acc-test",
@@ -338,7 +338,7 @@ func checkBootEncrypted(ami AMIHelper) error {
 	return nil
 }
 
-func TestBuilderAcc_SessionManagerInterface(t *testing.T) {
+func TestAccBuilderAcc_SessionManagerInterface(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_sessionmanager_interface_test",
 		Template: testBuilderAccSessionManagerInterface,
