@@ -38,6 +38,22 @@ The Amazon plugin supports the following builders at the moment:
 builder](/docs/builders/amazon/ebs). It is much easier to use and Amazon
 generally recommends EBS-backed images nowadays.
 
+## How to use this plugin
+
+From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
+Then, run [`packer init`](/docs/commands/init).
+
+```hcl
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 0.0.1"
+      source = "github.com/hashicorp/amazon"
+    }
+  }
+}
+```
+
 # Amazon EBS Volume Builder
 
 The Amazon Plugin is able to create Amazon EBS Volumes which are preinitialized with a

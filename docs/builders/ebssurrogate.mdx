@@ -25,6 +25,22 @@ This is all done in your own AWS account. This builder will create temporary
 key pairs, security group rules, etc., that provide it temporary access to the
 instance while the image is being created.
 
+### How to use this plugin
+
+From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
+Then, run [`packer init`](/docs/commands/init).
+
+```hcl
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 0.0.1"
+      source = "github.com/hashicorp/amazon"
+    }
+  }
+}
+```
+
 ## Configuration Reference
 
 There are many configuration options available for the builder. In addition to

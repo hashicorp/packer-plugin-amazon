@@ -53,6 +53,22 @@ expensive because the EC2 instance must be kept running persistently in order
 to build AMIs, whereas the other AMI builders start instances on-demand to
 build AMIs as needed.
 
+### How to use this plugin
+
+From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
+Then, run [`packer init`](/docs/commands/init).
+
+```hcl
+packer {
+  required_plugins {
+    amazon = {
+      version = ">= 0.0.1"
+      source = "github.com/hashicorp/amazon"
+    }
+  }
+}
+```
+
 ## Chroot Specific Configuration Reference
 
 There are many configuration options available for the builder. In addition to
