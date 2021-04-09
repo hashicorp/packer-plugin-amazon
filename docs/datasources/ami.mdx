@@ -81,8 +81,7 @@ This is most useful for selecting a daily distro build.
 
 The authentication for Amazon Data Sources uses the same configuration options as [Amazon Builders](/docs/builders/amazon). To learn more about all of the available authentication options please see [Amazon Builders authentication](/docs/builders/amazon#authentication).
 
--> **Note:** A data source will start and execute in your own authentication session. The authentication in the data source
-doesn't relate with the authentication on Amazon Builders.
+-> **Note:** The authentication session started by a data source is separate from any authentication sessions started by an Amazon builder. Users are encouraged to use `variables` for defining and sharing configuration values between datasources and builders. 
 
 Basic example of an Amazon data source authentication using `assume_role`:
 
