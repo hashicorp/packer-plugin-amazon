@@ -12,7 +12,7 @@ sidebar_title: Amazon AMI
 Type: `amazon-ami`
 
 The Amazon AMI data source will filter and fetch an Amazon AMI, and output all the AMI information that will
-be then available to use in the [Amazon builders](/docs/builders/amazon/instance.mdx).
+be then available to use in the [Amazon builders](/docs/builders/amazon).
 
 -> **Note:** Data sources is a feature exclusively available to HCL2 templates.
 
@@ -61,3 +61,23 @@ This is most useful for selecting a daily distro build.
 
 - `tags` (map[string]string) - The key/value combination of the tags assigned to the AMI.
 
+## Authentication
+
+The authentication for Amazon Data Sources uses the same configuration options as [Amazon Builders](/docs/builders/amazon). To learn more about all of the available authentication options please see [Amazon Builders authentication](/docs/builders/amazon#authentication).
+
+-> **Note:** The authentication session started by a data source is separate from any authentication sessions started by an Amazon builder. Users are encouraged to use `variables` for defining and sharing configuration values between datasources and builders. 
+
+Basic example of an Amazon data source authentication using `assume_role`:
+
+```hcl
+data "amazon-secretsmanager" "basic-example" {
+  name = "packer_test_secret"
+  key  = "packer_test_key"
+
+  assume_role {
+      role_arn     = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
+      session_name = "SESSION_NAME"
+      external_id  = "EXTERNAL_ID"
+  }
+}
+```
