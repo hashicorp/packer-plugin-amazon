@@ -32,22 +32,6 @@ data "amazon-ami" "basic-example" {
 This selects the most recent Ubuntu 16.04 HVM EBS AMI from Canonical. Note that the data source will fail unless
 *exactly* one AMI is returned. In the above example, `most_recent` will cause this to succeed by selecting the newest image.
 
-### How to use this plugin
-
-From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
-Then, run [`packer init`](/docs/commands/init).
-
-```hcl
-packer {
-  required_plugins {
-    amazon = {
-      version = ">= 0.0.1"
-      source = "github.com/hashicorp/amazon"
-    }
-  }
-}
-```
-
 ## Configuration Reference
 
 - `filters` (map[string]string) - Filters used to select an AMI. Any filter described in the docs for

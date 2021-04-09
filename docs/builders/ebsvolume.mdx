@@ -31,22 +31,6 @@ it in your account, it is up to you to use, delete, etc. the volumes.
 prefix `packer`. This can be useful if you want to restrict the security groups
 and key pairs Packer is able to operate on.
 
-### How to use this plugin
-
-From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
-Then, run [`packer init`](/docs/commands/init).
-
-```hcl
-packer {
-  required_plugins {
-    amazon = {
-      version = ">= 0.0.1"
-      source = "github.com/hashicorp/amazon"
-    }
-  }
-}
-```
-
 ## Configuration Reference
 
 There are many configuration options available for the builder. In addition to
