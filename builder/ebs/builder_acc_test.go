@@ -180,8 +180,11 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 		Name:     "amazon-ebs_force_delete_snapshot_part2_test",
 		Template: buildForceDeleteSnapshotConfig("true", amiName),
 		Teardown: func() error {
-			// skip
-			return nil
+			ami := amazon_acc.AMIHelper{
+				Region: "us-east-1",
+				Name:   amiName,
+			}
+			return ami.CleanUpAmi()
 		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
