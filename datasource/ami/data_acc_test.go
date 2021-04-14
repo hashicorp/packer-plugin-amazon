@@ -13,7 +13,7 @@ import (
 //go:embed test-fixtures/template.pkr.hcl
 var testDatasourceBasic string
 
-func TestAccAmazonAmi(t *testing.T) {
+func TestAccDatasource_AmazonAmi(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name: "amazon_ami_datasource_basic_test",
 		Teardown: func() error {
