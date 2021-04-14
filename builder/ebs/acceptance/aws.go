@@ -1,4 +1,4 @@
-package ebs
+package amazon_acc
 
 import (
 	"fmt"

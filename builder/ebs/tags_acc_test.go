@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
@@ -26,7 +27,7 @@ type TFConfig struct {
 }
 
 func TestAccBuilder_EbsTagsBasic(t *testing.T) {
-	ami := AMIHelper{
+	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-tags-acc-testing",
 	}
@@ -48,7 +49,7 @@ func TestAccBuilder_EbsTagsBasic(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func checkTags(ami AMIHelper) error {
+func checkTags(ami amazon_acc.AMIHelper) error {
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)

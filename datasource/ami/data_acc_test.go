@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/hashicorp/packer-plugin-amazon/builder/ebs"
+	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
@@ -17,7 +17,7 @@ func TestAccDatasource_AmazonAmi(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name: "amazon_ami_datasource_basic_test",
 		Teardown: func() error {
-			helper := ebs.AMIHelper{
+			helper := amazon_acc.AMIHelper{
 				Region: "us-west-2",
 				Name:   "packer-amazon-ami-test",
 			}

@@ -2,6 +2,7 @@
 Deregister the test image with
 aws ec2 deregister-image --image-id $(aws ec2 describe-images --output text --filters "Name=name,Values=packer-test-packer-test-dereg" --query 'Images[*].{ID:ImageId}')
 */
+//nolint:unparam
 package ebs
 
 import (
@@ -13,11 +14,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
 func TestAccBuilder_EbsBasic(t *testing.T) {
-	ami := AMIHelper{
+	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-plugin-amazon-ebs-basic-acc-test",
 	}
@@ -45,12 +47,12 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 		Name:     "amazon-ebs_region_copy_test",
 		Template: testBuilderAccRegionCopy,
 		Teardown: func() error {
-			ami := AMIHelper{
+			ami := amazon_acc.AMIHelper{
 				Region: "us-east-1",
 				Name:   amiName,
 			}
 			ami.CleanUpAmi()
-			ami = AMIHelper{
+			ami = amazon_acc.AMIHelper{
 				Region: "us-west-2",
 				Name:   amiName,
 			}
@@ -74,7 +76,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 
 	for _, r := range regions {
 		regionSet[r] = struct{}{}
-		ami := AMIHelper{
+		ami := amazon_acc.AMIHelper{
 			Region: r,
 			Name:   amiName,
 		}
@@ -115,7 +117,7 @@ func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 		Name:     "amazon-ebs_force_deregister_part2_test",
 		Template: buildForceDeregisterConfig("true", amiName),
 		Teardown: func() error {
-			ami := AMIHelper{
+			ami := amazon_acc.AMIHelper{
 				Region: "us-east-1",
 				Name:   amiName,
 			}
@@ -207,7 +209,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 }
 
 func TestAccBuilder_EbsAmiSharing(t *testing.T) {
-	ami := AMIHelper{
+	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-sharing-acc-test",
 	}
@@ -236,7 +238,7 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func checkAMISharing(ami AMIHelper, count int, uid, group string) error {
+func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) error {
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
@@ -284,7 +286,7 @@ func checkAMISharing(ami AMIHelper, count int, uid, group string) error {
 }
 
 func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
-	ami := AMIHelper{
+	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-enc-acc-test",
 	}
@@ -307,7 +309,7 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func checkBootEncrypted(ami AMIHelper) error {
+func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
@@ -343,7 +345,7 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 		Name:     "amazon-ebs_sessionmanager_interface_test",
 		Template: testBuilderAccSessionManagerInterface,
 		Teardown: func() error {
-			helper := AMIHelper{
+			helper := amazon_acc.AMIHelper{
 				Region: "us-east-1",
 				Name:   "packer-ssm-acc-test",
 			}
