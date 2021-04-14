@@ -25,7 +25,7 @@ type TFConfig struct {
 	Builders []TFBuilder `json:"builders"`
 }
 
-func TestAccBuilderTagsAcc_basic(t *testing.T) {
+func TestAccBuilder_EbsTagsBasic(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-tags-acc-testing",

@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
-func TestAccBuilderAcc_basic(t *testing.T) {
+func TestAccBuilder_EbsBasic(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-plugin-amazon-ebs-basic-acc-test",
@@ -39,7 +39,7 @@ func TestAccBuilderAcc_basic(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func TestAccBuilderAcc_regionCopy(t *testing.T) {
+func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 	amiName := "packer-test-builder-region-copy-acc-test"
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_region_copy_test",
@@ -91,7 +91,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 	return nil
 }
 
-func TestAccBuilderAcc_forceDeregister(t *testing.T) {
+func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 	amiName := "dereg"
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_deregister_part1_test",
@@ -133,7 +133,7 @@ func TestAccBuilderAcc_forceDeregister(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func TestAccBuilderAcc_forceDeleteSnapshot(t *testing.T) {
+func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 	amiName := "packer-test-dereg"
 
 	testCase := &acctest.PluginTestCase{
@@ -206,7 +206,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 	return nil
 }
 
-func TestAccBuilderAcc_amiSharing(t *testing.T) {
+func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-sharing-acc-test",
@@ -283,7 +283,7 @@ func checkAMISharing(ami AMIHelper, count int, uid, group string) error {
 	return nil
 }
 
-func TestAccBuilderAcc_encryptedBoot(t *testing.T) {
+func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	ami := AMIHelper{
 		Region: "us-east-1",
 		Name:   "packer-enc-acc-test",
@@ -338,7 +338,7 @@ func checkBootEncrypted(ami AMIHelper) error {
 	return nil
 }
 
-func TestAccBuilderAcc_SessionManagerInterface(t *testing.T) {
+func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_sessionmanager_interface_test",
 		Template: testBuilderAccSessionManagerInterface,
