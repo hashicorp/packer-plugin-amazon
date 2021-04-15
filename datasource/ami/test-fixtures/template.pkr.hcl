@@ -13,7 +13,7 @@ source "amazon-ebs" "basic-example" {
   region        = "us-west-2"
   source_ami    = data.amazon-ami.test.id
   instance_type = "t2.micro"
-  ami_name      = "packer-amazon-ami-test"
+  ami_name      = "%s"
   communicator  = "ssh"
   ssh_username  = "ubuntu"
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
@@ -29,11 +30,11 @@ type TFConfig struct {
 func TestAccBuilder_EbsTagsBasic(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "packer-tags-acc-testing",
+		Name:   fmt.Sprintf("packer-tags-acc-testing %d", time.Now().Unix()),
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_tags_test",
-		Template: testBuilderTagsAccBasic,
+		Template: fmt.Sprintf(testBuilderTagsAccBasic, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -127,7 +128,7 @@ const testBuilderTagsAccBasic = `
       "source_ami": "ami-9eaa1cf6",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
-      "ami_name": "packer-tags-acc-testing",
+      "ami_name": "%s",
       "tags": {
         "OS_Version": "Ubuntu",
         "Release": "Latest",

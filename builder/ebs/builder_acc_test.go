@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -21,11 +22,11 @@ import (
 func TestAccBuilder_EbsBasic(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "packer-plugin-amazon-ebs-basic-acc-test",
+		Name:   fmt.Sprintf("packer-plugin-amazon-ebs-basic-acc-test %d", time.Now().Unix()),
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_basic_test",
-		Template: testBuilderAccBasic,
+		Template: fmt.Sprintf(testBuilderAccBasic, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -42,10 +43,10 @@ func TestAccBuilder_EbsBasic(t *testing.T) {
 }
 
 func TestAccBuilder_EbsRegionCopy(t *testing.T) {
-	amiName := "packer-test-builder-region-copy-acc-test"
+	amiName := fmt.Sprintf("packer-test-builder-region-copy-acc-test-%d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_region_copy_test",
-		Template: testBuilderAccRegionCopy,
+		Template: fmt.Sprintf(testBuilderAccRegionCopy, amiName),
 		Teardown: func() error {
 			ami := amazon_acc.AMIHelper{
 				Region: "us-east-1",
@@ -94,7 +95,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 }
 
 func TestAccBuilder_EbsForceDeregister(t *testing.T) {
-	amiName := "dereg"
+	amiName := fmt.Sprintf("dereg %d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_deregister_part1_test",
 		Template: buildForceDeregisterConfig("false", amiName),
@@ -136,7 +137,7 @@ func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 }
 
 func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
-	amiName := "packer-test-dereg"
+	amiName := fmt.Sprintf("packer-test-dereg %d", time.Now().Unix())
 
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_delete_snapshot_part1_test",
@@ -214,7 +215,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "packer-sharing-acc-test",
+		Name:   fmt.Sprintf("packer-sharing-acc-test %d", time.Now().Unix()),
 	}
 
 	testCase := &acctest.PluginTestCase{
@@ -225,7 +226,7 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 			}
 			return nil
 		},
-		Template: buildSharingConfig(os.Getenv("TESTACC_AWS_ACCOUNT_ID")),
+		Template: buildSharingConfig(os.Getenv("TESTACC_AWS_ACCOUNT_ID"), ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -291,12 +292,12 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "packer-enc-acc-test",
+		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
 	}
 
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_encrypted_boot_test",
-		Template: testBuilderAccEncrypted,
+		Template: fmt.Sprintf(testBuilderAccEncrypted, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -344,15 +345,15 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 }
 
 func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ssm-acc-test %d", time.Now().Unix()),
+	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_sessionmanager_interface_test",
-		Template: testBuilderAccSessionManagerInterface,
+		Template: fmt.Sprintf(testBuilderAccSessionManagerInterface, ami.Name),
 		Teardown: func() error {
-			helper := amazon_acc.AMIHelper{
-				Region: "us-east-1",
-				Name:   "packer-ssm-acc-test",
-			}
-			return helper.CleanUpAmi()
+			return ami.CleanUpAmi()
 		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState != nil {
@@ -384,7 +385,7 @@ const testBuilderAccBasic = `
 		"instance_type": "m3.medium",
 		"source_ami": "ami-76b2a71e",
 		"ssh_username": "ubuntu",
-		"ami_name": "packer-plugin-amazon-ebs-basic-acc-test"
+		"ami_name": "%s"
 	}]
 }
 `
@@ -397,7 +398,7 @@ const testBuilderAccRegionCopy = `
 		"instance_type": "m3.medium",
 		"source_ami": "ami-76b2a71e",
 		"ssh_username": "ubuntu",
-		"ami_name": "packer-test-builder-region-copy-acc-test",
+		"ami_name": "%s",
 		"ami_regions": ["us-east-1", "us-west-2"]
 	}]
 }
@@ -440,7 +441,7 @@ const testBuilderAccSharing = `
 		"instance_type": "m3.medium",
 		"source_ami": "ami-76b2a71e",
 		"ssh_username": "ubuntu",
-		"ami_name": "packer-sharing-acc-test",
+		"ami_name": "%s",
 		"ami_users":["%s"],
 		"ami_groups":["all"]
 	}]
@@ -455,7 +456,7 @@ const testBuilderAccEncrypted = `
 		"instance_type": "m3.medium",
 		"source_ami":"ami-c15bebaa",
 		"ssh_username": "ubuntu",
-		"ami_name": "packer-enc-acc-test",
+		"ami_name": "%s",
 		"encrypt_boot": true
 	}]
 }
@@ -481,7 +482,7 @@ const testBuilderAccSessionManagerInterface = `
 		"ssh_username": "ubuntu",
 		"ssh_interface": "session_manager",
 		"iam_instance_profile": "SSMInstanceProfile",
-		"ami_name": "packer-ssm-acc-test"
+		"ami_name": "%s"
 	}]
 }
 `
@@ -494,6 +495,6 @@ func buildForceDeleteSnapshotConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeleteSnapshot, val, val, name)
 }
 
-func buildSharingConfig(val string) string {
-	return fmt.Sprintf(testBuilderAccSharing, val)
+func buildSharingConfig(val, name string) string {
+	return fmt.Sprintf(testBuilderAccSharing, val, name)
 }
