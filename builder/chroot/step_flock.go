@@ -56,7 +56,7 @@ func (s *StepFlock) Run(ctx context.Context, state multistep.StateBag) multistep
 }
 
 func (s *StepFlock) Cleanup(state multistep.StateBag) {
-	s.CleanupFunc(state)
+	_ = s.CleanupFunc(state)
 }
 
 func (s *StepFlock) CleanupFunc(state multistep.StateBag) error {

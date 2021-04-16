@@ -165,7 +165,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 
 	if s.createdPolicyName != "" {
 		ui.Say("Removing policy from temporary role...")
-		iamsvc.DeleteRolePolicy(&iam.DeleteRolePolicyInput{
+		_, _ = iamsvc.DeleteRolePolicy(&iam.DeleteRolePolicyInput{
 			PolicyName: aws.String(s.createdPolicyName),
 			RoleName:   aws.String(s.createdRoleName),
 		})

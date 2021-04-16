@@ -26,7 +26,7 @@ func TestCopyFile(t *testing.T) {
 	if _, err = first.WriteString(payload); err != nil {
 		t.Fatalf("Couldn't write payload to first file.")
 	}
-	first.Sync()
+	_ = first.Sync()
 
 	cmd := common.ShellCommand(fmt.Sprintf("cp %s %s", first.Name(), newName))
 	if err := cmd.Run(); err != nil {

@@ -52,12 +52,12 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 				Region: "us-east-1",
 				Name:   amiName,
 			}
-			ami.CleanUpAmi()
+			_ = ami.CleanUpAmi()
 			ami = amazon_acc.AMIHelper{
 				Region: "us-west-2",
 				Name:   amiName,
 			}
-			ami.CleanUpAmi()
+			_ = ami.CleanUpAmi()
 			return nil
 		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
@@ -165,7 +165,7 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 			Values: []*string{aws.String(amiName)},
 		},
 	}}
-	ec2conn.WaitUntilImageExists(describeInput)
+	_ = ec2conn.WaitUntilImageExists(describeInput)
 	imageResp, _ := ec2conn.DescribeImages(describeInput)
 	image := imageResp.Images[0]
 

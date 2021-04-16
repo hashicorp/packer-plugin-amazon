@@ -57,7 +57,7 @@ func checkTags(ami amazon_acc.AMIHelper) error {
 	}
 
 	config := TFConfig{}
-	json.Unmarshal([]byte(testBuilderTagsAccBasic), &config)
+	_ = json.Unmarshal([]byte(testBuilderTagsAccBasic), &config)
 	tags := config.Builders[0].Tags
 	snapshotTags := config.Builders[0].SnapshotTags
 

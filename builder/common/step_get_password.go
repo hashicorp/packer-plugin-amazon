@@ -135,7 +135,7 @@ func (s *StepGetPassword) waitForPassword(ctx context.Context, state multistep.S
 
 		if resp.PasswordData != nil && *resp.PasswordData != "" {
 			decryptedPassword, err := decryptPasswordDataWithPrivateKey(
-				*resp.PasswordData, []byte(privateKey))
+				*resp.PasswordData, privateKey)
 			if err != nil {
 				err := fmt.Errorf("Error decrypting auto-generated instance password: %s", err)
 				return "", err
