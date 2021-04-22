@@ -1,4 +1,4 @@
-# This is an example goreleaser.yaml file with some sane defaults.
+# This is an example goreleaser.yaml file with some defaults.
 # Make sure to check the documentation at http://goreleaser.com
 env:
   - CGO_ENABLED=0
@@ -6,10 +6,10 @@ before:
   hooks:
     # We strongly recommend running tests to catch any regression before release.
     # Even though, this an optional step.
-    - make test
+    - go test ./...
     # As part of the release doc files are included as a separate deliverable for
     # consumption by Packer.io. To include a separate docs.zip uncomment the following command.
-    - /bin/sh -c "[ -d docs ] && zip -r docs.zip docs/"
+    - make ci-release-docs
 builds:
   # A separated build to run the packer-plugins-check only once for a linux_amd64 binary
   -
