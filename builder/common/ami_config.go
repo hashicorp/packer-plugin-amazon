@@ -90,7 +90,7 @@ type AMIConfig struct {
 	//
 	// Please note that if you are using an account with the global "Always
 	// encrypt new EBS volumes" option set to `true`, Packer will be unable to
-	// override this setting, and the final image will be encryoted whether
+	// override this setting, and the final image will be encrypted whether
 	// you set this value or not.
 	AMIEncryptBootVolume config.Trilean `mapstructure:"encrypt_boot" required:"false"`
 	// ID, alias or ARN of the KMS key to use for AMI encryption. This
