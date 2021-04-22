@@ -9,7 +9,7 @@ description: >
 
   in the EC2 documentation.
 page_title: Amazon chroot - Builders
-sidebar_title: chroot
+nav_title: chroot
 ---
 
 # AMI Builder (chroot)
@@ -64,166 +64,11 @@ necessary for this build to succeed and can be found further down the page.
 
 #### Required:
 
-- `source_ami` (string) - The source AMI whose root volume will be copied and provisioned on the
-currently running instance. This must be an EBS-backed AMI with a root
-volume snapshot that you have access to. Note: this is not used when
-from_scratch is set to true.
+@include 'builder/chroot/Config-required.mdx'
 
 #### Optional:
 
-- `ami_block_device_mappings` (awscommon.BlockDevices) - Add one or more [block device
-mappings](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html)
-to the AMI. If this field is populated, and you are building from an
-existing source image, the block device mappings in the source image
-will be overwritten. This means you must have a block device mapping
-entry for your root volume, `root_volume_size` and `root_device_name`.
-See the [BlockDevices](#block-devices-configuration) documentation for
-fields.
-
-- `chroot_mounts` ([][]string) - This is a list of devices to mount into the chroot environment. This
-configuration parameter requires some additional documentation which is
-in the Chroot Mounts section. Please read that section for more
-information on how to use this.
-
-- `command_wrapper` (string) - How to run shell commands. This defaults to `{{.Command}}`. This may be
-useful to set if you want to set environmental variables or perhaps run
-it with sudo or so on. This is a configuration template where the
-.Command variable is replaced with the command to be run. Defaults to
-`{{.Command}}`.
-
-- `copy_files` ([]string) - Paths to files on the running EC2 instance that will be copied into the
-chroot environment prior to provisioning. Defaults to /etc/resolv.conf
-so that DNS lookups work. Pass an empty list to skip copying
-/etc/resolv.conf. You may need to do this if you're building an image
-that uses systemd.
-
-- `device_path` (string) - The path to the device where the root volume of the source AMI will be
-attached. This defaults to "" (empty string), which forces Packer to
-find an open device automatically.
-
-- `nvme_device_path` (string) - When we call the mount command (by default mount -o device dir), the
-string provided in nvme_mount_path will replace device in that command.
-When this option is not set, device in that command will be something
-like /dev/sdf1, mirroring the attached device name. This assumption
-works for most instances but will fail with c5 and m5 instances. In
-order to use the chroot builder with c5 and m5 instances, you must
-manually set nvme_device_path and device_path.
-
-- `from_scratch` (bool) - Build a new volume instead of starting from an existing AMI root volume
-snapshot. Default false. If true, source_ami/source_ami_filter are no
-longer used and the following options become required:
-ami_virtualization_type, pre_mount_commands and root_volume_size.
-
-- `mount_options` ([]string) - Options to supply the mount command when mounting devices. Each option
-will be prefixed with -o and supplied to the mount command ran by
-Packer. Because this command is ran in a shell, user discretion is
-advised. See this manual page for the mount command for valid file
-system specific options.
-
-- `mount_partition` (string) - The partition number containing the / partition. By default this is the
-first partition of the volume, (for example, xvda1) but you can
-designate the entire block device by setting "mount_partition": "0" in
-your config, which will mount xvda instead.
-
-- `mount_path` (string) - The path where the volume will be mounted. This is where the chroot
-environment will be. This defaults to
-`/mnt/packer-amazon-chroot-volumes/{{.Device}}`. This is a configuration
-template where the .Device variable is replaced with the name of the
-device where the volume is attached.
-
-- `post_mount_commands` ([]string) - As pre_mount_commands, but the commands are executed after mounting the
-root device and before the extra mount and copy steps. The device and
-mount path are provided by `{{.Device}}` and `{{.MountPath}}`.
-
-- `pre_mount_commands` ([]string) - A series of commands to execute after attaching the root volume and
-before mounting the chroot. This is not required unless using
-from_scratch. If so, this should include any partitioning and filesystem
-creation commands. The path to the device is provided by `{{.Device}}`.
-
-- `root_device_name` (string) - The root device name. For example, xvda.
-
-- `root_volume_size` (int64) - The size of the root volume in GB for the chroot environment and the
-resulting AMI. Default size is the snapshot size of the source_ami
-unless from_scratch is true, in which case this field must be defined.
-
-- `root_volume_type` (string) - The type of EBS volume for the chroot environment and resulting AMI. The
-default value is the type of the source_ami, unless from_scratch is
-true, in which case the default value is gp2. You can only specify io1
-if building based on top of a source_ami which is also io1.
-
-- `source_ami_filter` (awscommon.AmiFilterOptions) - Filters used to populate the source_ami field. Example:
-
-```json
-{
-	 "source_ami_filter": {
-	 "filters": {
-	  "virtualization-type": "hvm",
-	  "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
-	  "root-device-type": "ebs"
-	},
-	"owners": ["099720109477"],
-	"most_recent": true
-	 }
-}
-  ```
-
-This selects the most recent Ubuntu 16.04 HVM EBS AMI from Canonical. NOTE:
-This will fail unless *exactly* one AMI is returned. In the above example,
-`most_recent` will cause this to succeed by selecting the newest image.
-
--   `filters` (map of strings) - filters used to select a `source_ami`.
-NOTE: This will fail unless *exactly* one AMI is returned. Any filter
-described in the docs for
-[DescribeImages](http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html)
-is valid.
-
--   `owners` (array of strings) - Filters the images by their owner. You
-may specify one or more AWS account IDs, "self" (which will use the
-account whose credentials you are using to run Packer), or an AWS owner
-alias: for example, "amazon", "aws-marketplace", or "microsoft". This
-option is required for security reasons.
-
--   `most_recent` (boolean) - Selects the newest created image when true.
-This is most useful for selecting a daily distro build.
-
-You may set this in place of `source_ami` or in conjunction with it. If you
-set this in conjunction with `source_ami`, the `source_ami` will be added
-to the filter. The provided `source_ami` must meet all of the filtering
-criteria provided in `source_ami_filter`; this pins the AMI returned by the
-filter, but will cause Packer to fail if the `source_ami` does not exist.
-
-- `root_volume_tags` (map[string]string) - Key/value pair tags to apply to the volumes that are *launched*. This is
-a [template engine](/docs/templates/legacy_json_templates/engine), see [Build template
-data](#build-template-data) for more information.
-
-- `root_volume_tag` ([]{key string, value string}) - Same as [`root_volume_tags`](#root_volume_tags) but defined as a
-singular block containing a `key` and a `value` field. In HCL2 mode the
-[`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
-will allow you to create those programatically.
-
-- `root_volume_encrypt_boot` (boolean) - Whether or not to encrypt the volumes that are *launched*. By default, Packer will keep
-the encryption setting to what it was in the source image when set to `false`. Setting true will
-always result in an encrypted one.
-
-- `root_volume_kms_key_id` (string) - ID, alias or ARN of the KMS key to use for *launched* volumes encryption.
-
-Set this value if you select `root_volume_encrypt_boot`, but don't want to use the
-region's default KMS key.
-
-If you have a custom kms key you'd like to apply to the launch volume,
-and are only building in one region, it is more efficient to set this
-and `root_volume_encrypt_boot` to `true` and not use `encrypt_boot` and `kms_key_id`. This saves
-potentially many minutes at the end of the build by preventing Packer
-from having to copy and re-encrypt the image at the end of the build.
-
-For valid formats see *KmsKeyId* in the [AWS API docs -
-CopyImage](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html).
-This field is validated by Packer, when using an alias, you will have to
-prefix `kms_key_id` with `alias/`.
-
-- `ami_architecture` (string) - what architecture to use when registering the final AMI; valid options
-are "x86_64" or "arm64". Defaults to "x86_64".
-
+@include 'builder/chroot/Config-not-required.mdx'
 
 ## General Common Configuration Reference
 
@@ -234,433 +79,46 @@ builders.
 
 #### Required:
 
-- `ami_name` (string) - The name of the resulting AMI that will appear when managing AMIs in the
-AWS console or via APIs. This must be unique. To help make this unique,
-use a function like timestamp (see [template
-engine](/docs/templates/legacy_json_templates/engine) for more info).
+@include 'builder/common/AMIConfig-required.mdx'
 
 #### Optional:
 
-- `ami_description` (string) - The description to set for the resulting
-AMI(s). By default this description is empty.  This is a
-[template engine](/docs/templates/legacy_json_templates/engine), see [Build template
-data](#build-template-data) for more information.
+@include 'builder/common/AMIConfig-not-required.mdx'
 
-- `ami_virtualization_type` (string) - The type of virtualization for the AMI
-you are building. This option is required to register HVM images. Can be
-paravirtual (default) or hvm.
-
-- `ami_users` ([]string) - A list of account IDs that have access to
-launch the resulting AMI(s). By default no additional users other than the
-user creating the AMI has permissions to launch it.
-
-- `ami_groups` ([]string) - A list of groups that have access to
-launch the resulting AMI(s). By default no groups have permission to launch
-the AMI. all will make the AMI publicly accessible.
-
-- `ami_product_codes` ([]string) - A list of product codes to
-associate with the AMI. By default no product codes are associated with the
-AMI.
-
-- `ami_regions` ([]string) - A list of regions to copy the AMI to.
-Tags and attributes are copied along with the AMI. AMI copying takes time
-depending on the size of the AMI, but will generally take many minutes.
-
-- `skip_region_validation` (bool) - Set to true if you want to skip
-validation of the ami_regions configuration option. Default false.
-
-- `tags` (map[string]string) - Key/value pair tags applied to the AMI. This is a [template
-engine](/docs/templates/legacy_json_templates/engine), see [Build template
-data](#build-template-data) for more information.
-
-- `tag` ([]{key string, value string}) - Same as [`tags`](#tags) but defined as a singular repeatable block
-containing a `key` and a `value` field. In HCL2 mode the
-[`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
-will allow you to create those programatically.
-
-- `ena_support` (boolean) - Enable enhanced networking (ENA but not SriovNetSupport) on
-HVM-compatible AMIs. If set, add `ec2:ModifyInstanceAttribute` to your
-AWS IAM policy.
-
-Note: you must make sure enhanced networking is enabled on your
-instance. See [Amazon's documentation on enabling enhanced
-networking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html#enabling_enhanced_networking).
-
-- `sriov_support` (bool) - Enable enhanced networking (SriovNetSupport but not ENA) on
-HVM-compatible AMIs. If true, add `ec2:ModifyInstanceAttribute` to your
-AWS IAM policy. Note: you must make sure enhanced networking is enabled
-on your instance. See [Amazon's documentation on enabling enhanced
-networking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html#enabling_enhanced_networking).
-Default `false`.
-
-- `force_deregister` (bool) - Force Packer to first deregister an existing
-AMI if one with the same name already exists. Default false.
-
-- `force_delete_snapshot` (bool) - Force Packer to delete snapshots
-associated with AMIs, which have been deregistered by force_deregister.
-Default false.
-
-- `encrypt_boot` (boolean) - Whether or not to encrypt the resulting AMI when
-copying a provisioned instance to an AMI. By default, Packer will keep
-the encryption setting to what it was in the source image. Setting false
-will result in an unencrypted image, and true will result in an encrypted
-one.
-
-If you have used the `launch_block_device_mappings` to set an encryption
-key and that key is the same as the one you want the image encrypted with
-at the end, then you don't need to set this field; leaving it empty will
-prevent an unnecessary extra copy step and save you some time.
-
-Please note that if you are using an account with the global "Always
-encrypt new EBS volumes" option set to `true`, Packer will be unable to
-override this setting, and the final image will be encryoted whether
-you set this value or not.
-
-- `kms_key_id` (string) - ID, alias or ARN of the KMS key to use for AMI encryption. This
-only applies to the main `region` -- any regions the AMI gets copied to
-copied will be encrypted by the default EBS KMS key for that region,
-unless you set region-specific keys in AMIRegionKMSKeyIDs.
-
-Set this value if you select `encrypt_boot`, but don't want to use the
-region's default KMS key.
-
-If you have a custom kms key you'd like to apply to the launch volume,
-and are only building in one region, it is more efficient to leave this
-and `encrypt_boot` empty and to instead set the key id in the
-launch_block_device_mappings (you can find an example below). This saves
-potentially many minutes at the end of the build by preventing Packer
-from having to copy and re-encrypt the image at the end of the build.
-
-For valid formats see *KmsKeyId* in the [AWS API docs -
-CopyImage](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html).
-This field is validated by Packer, when using an alias, you will have to
-prefix `kms_key_id` with `alias/`.
-
-- `region_kms_key_ids` (map[string]string) - regions to copy the ami to, along with the custom kms key id (alias or
-arn) to use for encryption for that region. Keys must match the regions
-provided in `ami_regions`. If you just want to encrypt using a default
-ID, you can stick with `kms_key_id` and `ami_regions`. If you want a
-region to be encrypted with that region's default key ID, you can use an
-empty string `""` instead of a key id in this map. (e.g. `"us-east-1":
-""`) However, you cannot use default key IDs if you are using this in
-conjunction with `snapshot_users` -- in that situation you must use
-custom keys. For valid formats see *KmsKeyId* in the [AWS API docs -
-CopyImage](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html).
-
-This option supercedes the `kms_key_id` option -- if you set both, and
-they are different, Packer will respect the value in
-`region_kms_key_ids` for your build region and silently disregard the
-value provided in `kms_key_id`.
-
-- `skip_save_build_region` (bool) - If true, Packer will not check whether an AMI with the `ami_name` exists
-in the region it is building in. It will use an intermediary AMI name,
-which it will not convert to an AMI in the build region. It will copy
-the intermediary AMI into any regions provided in `ami_regions`, then
-delete the intermediary AMI. Default `false`.
-
-- `snapshot_tags` (map[string]string) - Key/value pair tags to apply to snapshot. They will override AMI tags if
-already applied to snapshot. This is a [template
-engine](/docs/templates/legacy_json_templates/engine), see [Build template
-data](#build-template-data) for more information.
-
-- `snapshot_tag` ([]{key string, value string}) - Same as [`snapshot_tags`](#snapshot_tags) but defined as a singular
-repeatable block containing a `key` and a `value` field. In HCL2 mode the
-[`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
-will allow you to create those programatically.
-
-- `snapshot_users` ([]string) - A list of account IDs that have
-access to create volumes from the snapshot(s). By default no additional
-users other than the user creating the AMI has permissions to create
-volumes from the backing snapshot(s).
-
-- `snapshot_groups` ([]string) - A list of groups that have access to
-create volumes from the snapshot(s). By default no groups have permission
-to create volumes from the snapshot(s). all will make the snapshot
-publicly accessible.
+@include 'builder/common/SnapshotConfig-not-required.mdx'
 
 ### Block Devices Configuration
 
 Block devices can be nested in the
 [ami_block_device_mappings](#ami_block_device_mappings) array.
 
-These will be attached when launching your instance. Your
-options here may vary depending on the type of VM you use.
-
-Example use case:
-
-The following mapping will tell Packer to encrypt the root volume of the
-build instance at launch using a specific non-default kms key:
-
-HCL2 example:
-
-```hcl
-launch_block_device_mappings {
-    device_name = "/dev/sda1"
-    encrypted = true
-    kms_key_id = "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
-}
-```
-
-JSON example:
-```json
-"launch_block_device_mappings": [
-  {
-     "device_name": "/dev/sda1",
-     "encrypted": true,
-     "kms_key_id": "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
-  }
-]
-```
-
-Please note that the kms_key_id option in this example exists for
-launch_block_device_mappings but not ami_block_device_mappings.
-
-Documentation for Block Devices Mappings can be found here:
-https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html
-
+@include 'builder/common/BlockDevice.mdx'
 
 #### Optional:
 
-- `delete_on_termination` (bool) - Indicates whether the EBS volume is deleted on instance termination.
-Default false. NOTE: If this value is not explicitly set to true and
-volumes are not cleaned up by an alternative method, additional volumes
-will accumulate after every build.
-
-- `device_name` (string) - The device name exposed to the instance (for example, /dev/sdh or xvdh).
-Required for every device in the block device mapping.
-
-- `encrypted` (boolean) - Indicates whether or not to encrypt the volume. By default, Packer will
-keep the encryption setting to what it was in the source image. Setting
-false will result in an unencrypted device, and true will result in an
-encrypted one.
-
-- `iops` (\*int64) - The number of I/O operations per second (IOPS) that the volume supports.
-See the documentation on
-[IOPs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
-for more information
-
-- `no_device` (bool) - Suppresses the specified device included in the block device mapping of
-the AMI.
-
-- `snapshot_id` (string) - The ID of the snapshot.
-
-- `throughput` (\*int64) - The throughput for gp3 volumes, only valid for gp3 types
-See the documentation on
-[Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
-for more information
-
-- `virtual_name` (string) - The virtual device name. See the documentation on Block Device Mapping
-for more information.
-
-- `volume_type` (string) - The volume type. gp2 & gp3 for General Purpose (SSD) volumes, io1 & io2
-for Provisioned IOPS (SSD) volumes, st1 for Throughput Optimized HDD,
-sc1 for Cold HDD, and standard for Magnetic volumes.
-
-- `volume_size` (int64) - The size of the volume, in GiB. Required if not specifying a
-snapshot_id.
-
-- `kms_key_id` (string) - ID, alias or ARN of the KMS key to use for boot volume encryption.
-This option exists for launch_block_device_mappings but not
-ami_block_device_mappings. The kms key id defined here only applies to
-the original build region; if the AMI gets copied to other regions, the
-volume in those regions will be encrypted by the default EBS KMS key.
-For valid formats see KmsKeyId in the [AWS API docs -
-CopyImage](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html)
-This field is validated by Packer. When using an alias, you will have to
-prefix kms_key_id with alias/.
-
+@include 'builder/common/BlockDevice-not-required.mdx'
 
 ### Access Config Configuration
 
 #### Required:
 
-- `access_key` (string) - The access key used to communicate with AWS. [Learn how  to set this]
-(/docs/builders/amazon#specifying-amazon-credentials). On EBS, this
-is not required if you are using `use_vault_aws_engine` for
-authentication instead.
-
-- `region` (string) - The name of the region, such as `us-east-1`, in which
-to launch the EC2 instance to create the AMI.
-When chroot building, this value is guessed from environment.
-
-- `secret_key` (string) - The secret key used to communicate with AWS. [Learn how to set
-this](/docs/builders/amazon#specifying-amazon-credentials). This is not required
-if you are using `use_vault_aws_engine` for authentication instead.
+@include 'builder/common/AccessConfig-required.mdx'
 
 #### Optional:
 
-- `assume_role` (AssumeRoleConfig) - If provided with a role ARN, Packer will attempt to assume this role
-using the supplied credentials. See
-[AssumeRoleConfig](#assume-role-configuration) below for more
-details on all of the options available, and for a usage example.
-
-- `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
-provider whose API is compatible with aws EC2. Specify another endpoint
-like this https://ec2.custom.endpoint.com.
-
-- `shared_credentials_file` (string) - Path to a credentials file to load credentials from
-
-- `decode_authorization_messages` (bool) - Enable automatic decoding of any encoded authorization (error) messages
-using the `sts:DecodeAuthorizationMessage` API. Note: requires that the
-effective user/role have permissions to `sts:DecodeAuthorizationMessage`
-on resource `*`. Default `false`.
-
-- `insecure_skip_tls_verify` (bool) - This allows skipping TLS
-verification of the AWS EC2 endpoint. The default is false.
-
-- `max_retries` (int) - This is the maximum number of times an API call is retried, in the case
-where requests are being throttled or experiencing transient failures.
-The delay between the subsequent API calls increases exponentially.
-
-- `mfa_code` (string) - The MFA
-[TOTP](https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm)
-code. This should probably be a user variable since it changes all the
-time.
-
-- `profile` (string) - The profile to use in the shared credentials file for
-AWS. See Amazon's documentation on [specifying
-profiles](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-profiles)
-for more details.
-
-- `skip_metadata_api_check` (bool) - Skip Metadata Api Check
-
-- `skip_credential_validation` (bool) - Set to true if you want to skip validating AWS credentials before runtime.
-
-- `token` (string) - The access token to use. This is different from the
-access key and secret key. If you're not sure what this is, then you
-probably don't need it. This will also be read from the AWS_SESSION_TOKEN
-environmental variable.
-
-- `vault_aws_engine` (VaultAWSEngineOptions) - Get credentials from HashiCorp Vault's aws secrets engine. You must
-already have created a role to use. For more information about
-generating credentials via the Vault engine, see the [Vault
-docs.](https://www.vaultproject.io/api/secret/aws#generate-credentials)
-If you set this flag, you must also set the below options:
--   `name` (string) - Required. Specifies the name of the role to generate
-credentials against. This is part of the request URL.
--   `engine_name` (string) - The name of the aws secrets engine. In the
-Vault docs, this is normally referred to as "aws", and Packer will
-default to "aws" if `engine_name` is not set.
--   `role_arn` (string)- The ARN of the role to assume if credential\_type
-on the Vault role is assumed\_role. Must match one of the allowed role
-ARNs in the Vault role. Optional if the Vault role only allows a single
-AWS role ARN; required otherwise.
--   `ttl` (string) - Specifies the TTL for the use of the STS token. This
-is specified as a string with a duration suffix. Valid only when
-credential\_type is assumed\_role or federation\_token. When not
-specified, the default\_sts\_ttl set for the role will be used. If that
-is also not set, then the default value of 3600s will be used. AWS
-places limits on the maximum TTL allowed. See the AWS documentation on
-the DurationSeconds parameter for AssumeRole (for assumed\_role
-credential types) and GetFederationToken (for federation\_token
-credential types) for more details.
-
-HCL2 example:
-
-```hcl
-vault_aws_engine {
-    name = "myrole"
-    role_arn = "myarn"
-    ttl = "3600s"
-}
-  ```
-
-JSON example:
-
-```json
-{
-    "vault_aws_engine": {
-        "name": "myrole",
-        "role_arn": "myarn",
-        "ttl": "3600s"
-    }
-}
-  ```
-
-- `aws_polling` (\*AWSPollingConfig) - [Polling configuration](#polling-configuration) for the AWS waiter. Configures the waiter that checks
-resource state.
+@include 'builder/common/AccessConfig-not-required.mdx'
 
 ### Assume Role Configuration
 
-AssumeRoleConfig lets users set configuration options for assuming a special
-role when executing Packer.
+@include 'builder/common/AssumeRoleConfig.mdx'
 
-Usage example:
-
-HCL config example:
-
-```HCL
-source "amazon-ebs" "example" {
-	assume_role {
-		role_arn     = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
-		session_name = "SESSION_NAME"
-		external_id  = "EXTERNAL_ID"
-	}
-}
-```
-
-JSON config example:
-
-```json
-"builders": [{
-	"type": "amazon-ebs",
-	"assume_role": {
-		"role_arn"    :  "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME",
-		"session_name":  "SESSION_NAME",
-		"external_id" :  "EXTERNAL_ID"
-	}
-}]
-```
-
-- `role_arn` (string) - Amazon Resource Name (ARN) of the IAM Role to assume.
-
-- `duration_seconds` (int) - Number of seconds to restrict the assume role session duration.
-
-- `external_id` (string) - The external ID to use when assuming the role. If omitted, no external
-  ID is passed to the AssumeRole call.
-
-- `policy` (string) - IAM Policy JSON describing further restricting permissions for the IAM
-  Role being assumed.
-
-- `policy_arns` ([]string) - Set of Amazon Resource Names (ARNs) of IAM Policies describing further
-  restricting permissions for the IAM Role being
-
-- `session_name` (string) - Session name to use when assuming the role.
-
-- `tags` (map[string]string) - Map of assume role session tags.
-
-- `transitive_tag_keys` ([]string) - Set of assume role session tag keys to pass to any subsequent sessions.
+@include 'builder/common/AssumeRoleConfig-not-required.mdx'
 
 ### Polling Configuration
 
-Polling configuration for the AWS waiter. Configures the waiter for resources creation or actions like attaching
-volumes or importing image.
+@include 'builder/common/AWSPollingConfig.mdx'
 
-HCL2 example:
-```hcl
-aws_polling {
-	 delay_seconds = 30
-	 max_attempts = 50
-}
-```
-
-JSON example:
-```json
-"aws_polling" : {
-	 "delay_seconds": 30,
-	 "max_attempts": 50
-}
-```
-
-- `max_attempts` (int) - Specifies the maximum number of attempts the waiter will check for resource state.
-  This value can also be set via the AWS_MAX_ATTEMPTS.
-  If both option and environment variable are set, the max_attempts will be considered over the AWS_MAX_ATTEMPTS.
-  If none is set, defaults to AWS waiter default which is 40 max_attempts.
-
-- `delay_seconds` (int) - Specifies the delay in seconds between attempts to check the resource state.
-  This value can also be set via the AWS_POLL_DELAY_SECONDS.
-  If both option and environment variable are set, the delay_seconds will be considered over the AWS_POLL_DELAY_SECONDS.
-  If none is set, defaults to AWS waiter default which is 15 seconds.
+@include 'builder/common/AWSPollingConfig-not-required.mdx'
 
 ## Basic Example
 
