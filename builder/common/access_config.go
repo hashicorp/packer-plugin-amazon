@@ -95,10 +95,9 @@ func (v *VaultAWSEngineOptions) Empty() bool {
 
 // AccessConfig is for common configuration related to AWS access
 type AccessConfig struct {
-	// The access key used to communicate with AWS. [Learn how  to set this]
-	// (/docs/builders/amazon#specifying-amazon-credentials). On EBS, this
-	// is not required if you are using `use_vault_aws_engine` for
-	// authentication instead.
+	// The access key used to communicate with AWS. [Learn how  to set this](/docs/builders/amazon#specifying-amazon-credentials).
+	// On EBS, this is not required if you are using `use_vault_aws_engine`
+	// for authentication instead.
 	AccessKey string `mapstructure:"access_key" required:"true"`
 	// If provided with a role ARN, Packer will attempt to assume this role
 	// using the supplied credentials. See
