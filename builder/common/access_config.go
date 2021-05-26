@@ -12,12 +12,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsCredentials "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	awsbase "github.com/hashicorp/aws-sdk-go-base"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
 	vaultapi "github.com/hashicorp/vault/api"
 )
 
@@ -279,6 +281,21 @@ func (c *AccessConfig) Session() (*session.Session, error) {
 
 	if c.DecodeAuthZMessages {
 		DecodeAuthZMessages(c.session)
+	}
+
+	// Append additional User-Agent products to the AWS SDK Go client.
+	// At the moment, there is no mechanism to obtain the Packer version from
+	// within a plugin, therefore we can only advertise the plugin version. Once
+	// there is a mechanism to obtain the Packer version from within a plugin,
+	// we can add that into this list.
+	userAgentProducts := []*awsbase.UserAgentProduct{
+		{Name: "APN", Version: "1.0"},
+		{Name: "HashiCorp", Version: "1.0"},
+		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Extra: []string{"+https://www.packer.io/docs/builders/amazon"}},
+	}
+	for i := len(userAgentProducts) - 1; i >= 0; i-- {
+		product := userAgentProducts[i]
+		c.session.Handlers.Build.PushFront(request.MakeAddToUserAgentHandler(product.Name, product.Version, product.Extra...))
 	}
 
 	return c.session, nil
