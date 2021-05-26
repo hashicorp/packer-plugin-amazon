@@ -1,3 +1,6 @@
+- `fleet_tags` (object of key/value strings) - Requires `spot_price` to be
+  set. This tells Packer to apply tags to the fleet that is issued.
+
 - `spot_instance_types` (array of strings) - a list of acceptable instance
   types to run your build on. We will request a spot instance using the max
   price of `spot_price` and the allocation strategy of "lowest price".

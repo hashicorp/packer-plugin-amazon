@@ -100,6 +100,8 @@ type FlatConfig struct {
 	EbsOptimized                              *bool                                  `mapstructure:"ebs_optimized" required:"false" cty:"ebs_optimized" hcl:"ebs_optimized"`
 	EnableT2Unlimited                         *bool                                  `mapstructure:"enable_t2_unlimited" required:"false" cty:"enable_t2_unlimited" hcl:"enable_t2_unlimited"`
 	IamInstanceProfile                        *string                                `mapstructure:"iam_instance_profile" required:"false" cty:"iam_instance_profile" hcl:"iam_instance_profile"`
+	FleetTags                                 map[string]string                      `mapstructure:"fleet_tags" required:"false" cty:"fleet_tags" hcl:"fleet_tags"`
+	FleetTag                                  []config.FlatKeyValue                  `mapstructure:"fleet_tag" required:"false" cty:"fleet_tag" hcl:"fleet_tag"`
 	SkipProfileValidation                     *bool                                  `mapstructure:"skip_profile_validation" required:"false" cty:"skip_profile_validation" hcl:"skip_profile_validation"`
 	TemporaryIamInstanceProfilePolicyDocument *common.FlatPolicyDocument             `mapstructure:"temporary_iam_instance_profile_policy_document" required:"false" cty:"temporary_iam_instance_profile_policy_document" hcl:"temporary_iam_instance_profile_policy_document"`
 	InstanceInitiatedShutdownBehavior         *string                                `mapstructure:"shutdown_behavior" required:"false" cty:"shutdown_behavior" hcl:"shutdown_behavior"`
@@ -228,6 +230,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ebs_optimized":                 &hcldec.AttrSpec{Name: "ebs_optimized", Type: cty.Bool, Required: false},
 		"enable_t2_unlimited":           &hcldec.AttrSpec{Name: "enable_t2_unlimited", Type: cty.Bool, Required: false},
 		"iam_instance_profile":          &hcldec.AttrSpec{Name: "iam_instance_profile", Type: cty.String, Required: false},
+		"fleet_tags":                    &hcldec.AttrSpec{Name: "fleet_tags", Type: cty.Map(cty.String), Required: false},
+		"fleet_tag":                     &hcldec.BlockListSpec{TypeName: "fleet_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"skip_profile_validation":       &hcldec.AttrSpec{Name: "skip_profile_validation", Type: cty.Bool, Required: false},
 		"temporary_iam_instance_profile_policy_document": &hcldec.BlockSpec{TypeName: "temporary_iam_instance_profile_policy_document", Nested: hcldec.ObjectSpec((*common.FlatPolicyDocument)(nil).HCL2Spec())},
 		"shutdown_behavior":                     &hcldec.AttrSpec{Name: "shutdown_behavior", Type: cty.String, Required: false},

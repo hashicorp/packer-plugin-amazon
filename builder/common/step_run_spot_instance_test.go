@@ -43,6 +43,7 @@ func getBasicStep() *StepRunSpotInstance {
 		},
 		EbsOptimized:                      false,
 		ExpectedRootDevice:                "ebs",
+		FleetTags:                         nil,
 		InstanceInitiatedShutdownBehavior: "stop",
 		InstanceType:                      "t2.micro",
 		Region:                            "us-east-1",
@@ -255,6 +256,9 @@ func TestRun(t *testing.T) {
 	stepRunSpotInstance.SpotTags = map[string]string{
 		"spot-tag": "spot-tag-value",
 	}
+	stepRunSpotInstance.FleetTags = map[string]string{
+		"fleet-tag": "fleet-tag-value",
+	}
 	stepRunSpotInstance.VolumeTags = map[string]string{
 		"volume-tag": "volume-tag-value",
 	}
@@ -304,6 +308,11 @@ func TestRun(t *testing.T) {
 	}
 	if *ec2Mock.CreateFleetParams[0].LaunchTemplateConfigs[0].LaunchTemplateSpecification.LaunchTemplateName != *launchTemplateName {
 		t.Fatalf("launchTemplateName should match in createLaunchTemplate and createFleet requests")
+	}
+	
+	fleetNameTag := ec2Mock.CreateFleetParams[0].TagSpecifications[0].Tags[0]
+	if *fleetNameTag.Key != "fleet-tag" || *fleetNameTag.Value != "fleet-tag-value" {
+		t.Fatalf("expected fleet-tag: fleet-tag-value")
 	}
 
 	if len(ec2Mock.DescribeInstancesParams) != 1 {
