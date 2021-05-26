@@ -285,7 +285,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	var warns []string
 
 	errs = packersdk.MultiErrorAppend(errs, b.config.RootVolumeTag.CopyOn(&b.config.RootVolumeTags)...)
-	errs = packersdk.MultiErrorAppend(errs, b.config.AccessConfig.Prepare()...)
+	errs = packersdk.MultiErrorAppend(errs, b.config.AccessConfig.Prepare(&b.config.PackerConfig)...)
 	errs = packersdk.MultiErrorAppend(errs,
 		b.config.AMIConfig.Prepare(&b.config.AccessConfig, &b.config.ctx)...)
 

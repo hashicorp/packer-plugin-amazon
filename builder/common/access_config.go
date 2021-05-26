@@ -20,6 +20,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
+	"github.com/hashicorp/packer-plugin-sdk/common"
 	vaultapi "github.com/hashicorp/vault/api"
 )
 
@@ -202,6 +203,10 @@ type AccessConfig struct {
 	PollingConfig *AWSPollingConfig `mapstructure:"aws_polling" required:"false"`
 
 	getEC2Connection func() ec2iface.EC2API
+
+	// packerConfig is set by Prepare() containing information about Packer,
+	// including the CorePackerVersionString
+	packerConfig *common.PackerConfig
 }
 
 // Config returns a valid aws.Config object for access to AWS services, or
@@ -284,13 +289,10 @@ func (c *AccessConfig) Session() (*session.Session, error) {
 	}
 
 	// Append additional User-Agent products to the AWS SDK Go client.
-	// At the moment, there is no mechanism to obtain the Packer version from
-	// within a plugin, therefore we can only advertise the plugin version. Once
-	// there is a mechanism to obtain the Packer version from within a plugin,
-	// we can add that into this list.
 	userAgentProducts := []*awsbase.UserAgentProduct{
 		{Name: "APN", Version: "1.0"},
 		{Name: "HashiCorp", Version: "1.0"},
+		{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Extra: []string{"+https://www.packer.io"}},
 		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Extra: []string{"+https://www.packer.io/docs/builders/amazon"}},
 	}
 	for i := len(userAgentProducts) - 1; i >= 0; i-- {
@@ -385,7 +387,7 @@ func (c *AccessConfig) GetCredsFromVault() error {
 	return nil
 }
 
-func (c *AccessConfig) Prepare() []error {
+func (c *AccessConfig) Prepare(packerConfig *common.PackerConfig) []error {
 	var errs []error
 
 	if c.SkipMetadataApiCheck {
@@ -422,6 +424,13 @@ func (c *AccessConfig) Prepare() []error {
 	// Aws sdk defaults this to 3, which regularly gets tripped by users.
 	if c.MaxRetries == 0 {
 		c.MaxRetries = 10
+	}
+
+	c.packerConfig = packerConfig
+	if c.packerConfig == nil {
+		c.packerConfig = &common.PackerConfig{
+			PackerCoreVersion: "unknown",
+		}
 	}
 
 	return errs

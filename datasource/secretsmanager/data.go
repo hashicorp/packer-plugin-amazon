@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hcldec"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -23,6 +24,7 @@ type Datasource struct {
 }
 
 type Config struct {
+	common.PackerConfig `mapstructure:",squash"`
 	// Specifies the secret containing the version that you want to retrieve.
 	// You can specify either the Amazon Resource Name (ARN) or the friendly name of the secret.
 	Name string `mapstructure:"name" required:"true"`
@@ -49,7 +51,7 @@ func (d *Datasource) Configure(raws ...interface{}) error {
 	}
 
 	var errs *packersdk.MultiError
-	errs = packersdk.MultiErrorAppend(errs, d.config.AccessConfig.Prepare()...)
+	errs = packersdk.MultiErrorAppend(errs, d.config.AccessConfig.Prepare(&d.config.PackerConfig)...)
 
 	if d.config.Name == "" {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("a 'name' must be provided"))

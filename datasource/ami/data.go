@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -20,6 +21,7 @@ type Datasource struct {
 }
 
 type Config struct {
+	common.PackerConfig        `mapstructure:",squash"`
 	awscommon.AccessConfig     `mapstructure:",squash"`
 	awscommon.AmiFilterOptions `mapstructure:",squash"`
 }
@@ -35,7 +37,7 @@ func (d *Datasource) Configure(raws ...interface{}) error {
 	}
 
 	var errs *packersdk.MultiError
-	errs = packersdk.MultiErrorAppend(errs, d.config.AccessConfig.Prepare()...)
+	errs = packersdk.MultiErrorAppend(errs, d.config.AccessConfig.Prepare(&d.config.PackerConfig)...)
 
 	if d.config.Empty() {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("The `filters` must be specified"))
