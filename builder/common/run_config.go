@@ -129,6 +129,13 @@ type RunConfig struct {
 	// profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html)
 	// to launch the EC2 instance with.
 	IamInstanceProfile string `mapstructure:"iam_instance_profile" required:"false"`
+	// Key/value pair tags to apply tags to the fleet that is issued.
+	FleetTags map[string]string `mapstructure:"fleet_tags" required:"false"`
+	// Same as [`fleet_tags`](#fleet_tags) but defined as a singular repeatable block
+	// containing a `key` and a `value` field. In HCL2 mode the
+	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// will allow you to create those programatically.
+	FleetTag config.KeyValues `mapstructure:"fleet_tag" required:"false"`
 	// Whether or not to check if the IAM instance profile exists. Defaults to false
 	SkipProfileValidation bool `mapstructure:"skip_profile_validation" required:"false"`
 	// Temporary IAM instance profile policy document
@@ -549,6 +556,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	// Copy singular tag maps
 	errs = append(errs, c.RunTag.CopyOn(&c.RunTags)...)
 	errs = append(errs, c.SpotTag.CopyOn(&c.SpotTags)...)
+	errs = append(errs, c.FleetTag.CopyOn(&c.FleetTags)...)
 
 	for _, preparer := range []interface{ Prepare() []error }{
 		&c.SecurityGroupFilter,
@@ -605,6 +613,13 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	if c.InstanceType != "" && len(c.SpotInstanceTypes) > 0 {
 		errs = append(errs, fmt.Errorf("either instance_type or "+
 			"spot_instance_types must be specified, not both"))
+	}
+
+	if c.FleetTags != nil {
+		if c.SpotPrice == "" || c.SpotPrice == "0" {
+			errs = append(errs, fmt.Errorf(
+				"fleet_tags should not be set when not requesting a spot instance"))
+		}
 	}
 
 	if c.BlockDurationMinutes%60 != 0 {

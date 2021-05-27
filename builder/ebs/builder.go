@@ -94,6 +94,8 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		InterpolateFilter: &interpolate.RenderFilter{
 			Exclude: []string{
 				"ami_description",
+				"fleet_tags",
+				"fleet_tag",
 				"run_tags",
 				"run_tag",
 				"run_volume_tags",
@@ -187,6 +189,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Debug:                             b.config.PackerDebug,
 			EbsOptimized:                      b.config.EbsOptimized,
 			ExpectedRootDevice:                "ebs",
+			FleetTags:                         b.config.FleetTags,
 			HttpEndpoint:                      b.config.Metadata.HttpEndpoint,
 			HttpTokens:                        b.config.Metadata.HttpTokens,
 			HttpPutResponseHopLimit:           b.config.Metadata.HttpPutResponseHopLimit,

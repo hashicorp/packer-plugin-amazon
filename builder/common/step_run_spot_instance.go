@@ -34,6 +34,7 @@ type StepRunSpotInstance struct {
 	Comm                              *communicator.Config
 	EbsOptimized                      bool
 	ExpectedRootDevice                string
+	FleetTags                         map[string]string
 	HttpEndpoint                      string
 	HttpTokens                        string
 	HttpPutResponseHopLimit           int64
@@ -262,6 +263,14 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		return multistep.ActionHalt
 	}
 
+	fleetTags, err := TagMap(s.FleetTags).EC2Tags(s.Ctx, s.Region, state)
+	if err != nil {
+		err := fmt.Errorf("Error generating fleet tags: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+
 	// Create a launch template for the instance
 	ui.Message("Loading User Data File...")
 
@@ -348,6 +357,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		TargetCapacitySpecification: &ec2.TargetCapacitySpecificationRequest{
 			TotalTargetCapacity:       aws.Int64(1),
 			DefaultTargetCapacityType: aws.String("spot"),
+		},
+		TagSpecifications: []*ec2.TagSpecification{
+			{
+				ResourceType: aws.String("fleet"),
+				Tags:         fleetTags,
+			},
 		},
 		Type: aws.String("instant"),
 	}
