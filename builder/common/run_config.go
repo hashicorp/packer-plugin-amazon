@@ -614,7 +614,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, fmt.Errorf("either instance_type or "+
 			"spot_instance_types must be specified, not both"))
 	}
-	
+
 	if c.FleetTags != nil {
 		if c.SpotPrice == "" || c.SpotPrice == "0" {
 			errs = append(errs, fmt.Errorf(

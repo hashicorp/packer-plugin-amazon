@@ -262,7 +262,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
-	
+
 	fleetTags, err := TagMap(s.FleetTags).EC2Tags(s.Ctx, s.Region, state)
 	if err != nil {
 		err := fmt.Errorf("Error generating fleet tags: %s", err)
@@ -342,7 +342,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		}
 		overrides = append(overrides, &override)
 	}
-	
+
 	createFleetInput := &ec2.CreateFleetInput{
 		LaunchTemplateConfigs: []*ec2.FleetLaunchTemplateConfigRequest{
 			{
