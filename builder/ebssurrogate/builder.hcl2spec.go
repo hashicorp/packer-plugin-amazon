@@ -88,12 +88,12 @@ type FlatConfig struct {
 	EbsOptimized                              *bool                                  `mapstructure:"ebs_optimized" required:"false" cty:"ebs_optimized" hcl:"ebs_optimized"`
 	EnableT2Unlimited                         *bool                                  `mapstructure:"enable_t2_unlimited" required:"false" cty:"enable_t2_unlimited" hcl:"enable_t2_unlimited"`
 	IamInstanceProfile                        *string                                `mapstructure:"iam_instance_profile" required:"false" cty:"iam_instance_profile" hcl:"iam_instance_profile"`
+	FleetTags                                 map[string]string                      `mapstructure:"fleet_tags" required:"false" cty:"fleet_tags" hcl:"fleet_tags"`
+	FleetTag                                  []config.FlatKeyValue                  `mapstructure:"fleet_tag" required:"false" cty:"fleet_tag" hcl:"fleet_tag"`
 	SkipProfileValidation                     *bool                                  `mapstructure:"skip_profile_validation" required:"false" cty:"skip_profile_validation" hcl:"skip_profile_validation"`
 	TemporaryIamInstanceProfilePolicyDocument *common.FlatPolicyDocument             `mapstructure:"temporary_iam_instance_profile_policy_document" required:"false" cty:"temporary_iam_instance_profile_policy_document" hcl:"temporary_iam_instance_profile_policy_document"`
 	InstanceInitiatedShutdownBehavior         *string                                `mapstructure:"shutdown_behavior" required:"false" cty:"shutdown_behavior" hcl:"shutdown_behavior"`
 	InstanceType                              *string                                `mapstructure:"instance_type" required:"true" cty:"instance_type" hcl:"instance_type"`
-	FleetTags                                 map[string]string                      `mapstructure:"fleet_tags" required:"false" cty:"fleet_tags" hcl:"fleet_tags"`
-	FleetTag                                  []config.FlatKeyValue                  `mapstructure:"fleet_tag" required:"false" cty:"fleet_tag" hcl:"fleet_tag"`
 	SecurityGroupFilter                       *common.FlatSecurityGroupFilterOptions `mapstructure:"security_group_filter" required:"false" cty:"security_group_filter" hcl:"security_group_filter"`
 	RunTags                                   map[string]string                      `mapstructure:"run_tags" required:"false" cty:"run_tags" hcl:"run_tags"`
 	RunTag                                    []config.FlatKeyValue                  `mapstructure:"run_tag" required:"false" cty:"run_tag" hcl:"run_tag"`
