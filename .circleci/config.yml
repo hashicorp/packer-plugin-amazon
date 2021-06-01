@@ -61,7 +61,7 @@ jobs:
     working_directory: /go/src/github.com/hashicorp/packer-plugin-amazon
     steps:
       - checkout
-      - run: TESTARGS="-coverprofile=coverage.txt  -covermode=atomic" make ci
+      - run: go test -count 1 ./... -coverprofile=coverage.txt -covermode=atomic -timeout=3m
   test-darwin:
     executor: darwin
     working_directory: ~/go/github.com/hashicorp/packer-plugin-amazon
@@ -82,19 +82,37 @@ jobs:
       - checkout
       - run: git fetch --all
       - run:
-          command: make ci-lint
+          command: |
+            echo "==> Updating linter dependencies..."
+            curl -sSfL -q https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.8
+            echo "==> Running linter on newly added Go source files..."
+            GO111MODULE=on golangci-lint run --new-from-rev=$(shell git merge-base origin/main HEAD) ./...
           no_output_timeout: 30m
   check-fmt:
     executor: golang
     steps:
       - checkout
-      - run: make fmt-check
+      - run: |
+          go fmt ./...
+          echo "==> Checking that code complies with go fmt requirements..."
+          git diff --exit-code; if [ $$? -eq 1 ]; then \
+          echo "Found files that are not fmt'ed."; \
+          echo "You can use the command: \`go fmt ./...\` to reformat code."; \
+          exit 1; \
+          fi
   check-generate:
     executor: golang
     working_directory: /go/src/github.com/hashicorp/packer-plugin-amazon
     steps:
       - checkout
-      - run: make generate-check
+      - run: |
+          go generate ./...
+          @echo "==> Checking that auto-generated code is not changed..."
+          @git diff --exit-code; if [ $$? -eq 1 ]; then \
+              echo "Found diffs in go generated code."; \
+              echo "You can use the command: \`go generate ./...\` to reformat code."; \
+              exit 1; \
+          fi
 
 workflows:
   version: 2
