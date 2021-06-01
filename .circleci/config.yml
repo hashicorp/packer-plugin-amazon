@@ -58,7 +58,6 @@ commands:
 jobs:
   test-linux:
     executor: golang
-    resource_class: large
     working_directory: /go/src/github.com/hashicorp/packer-plugin-amazon
     steps:
       - checkout
@@ -79,7 +78,6 @@ jobs:
           GOVERSION: "1.16"
   check-lint:
     executor: golang
-    resource_class: xlarge
     steps:
       - checkout
       - run: git fetch --all
