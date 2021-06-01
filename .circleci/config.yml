@@ -107,12 +107,62 @@ jobs:
       - checkout
       - run: |
           make generate
-          @echo "==> Checking that auto-generated code is not changed..."
-          @git diff --exit-code; if [ $$? -eq 1 ]; then \
+          echo "==> Checking that auto-generated code is not changed..."
+          git diff --exit-code; if [ $$? -eq 1 ]; then \
               echo "Found diffs in go generated code."; \
               echo "You can use the command: \`make generate\` to reformat code."; \
               exit 1; \
           fi
+  build_linux:
+    executor: golang
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: linux
+  build_windows:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: windows
+  build_darwin:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: darwin
+  build_darwin_arm64:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: darwin
+          GOARCH: arm64
+  build_freebsd:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: freebsd
+  build_solaris:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: solaris
+  build_openbsd:
+    executor: golang
+    working_directory: /go/src/github.com/hashicorp/packer
+    steps:
+      - build-and-persist-packer-binary:
+          GOOS: openbsd
+  store_artifacts:
+    executor: golang
+    steps:
+      - attach_workspace:
+          at: .
+      - store_artifacts:
+          path: ./pkg/
+          destination: /
 
 workflows:
   version: 2
@@ -126,3 +176,21 @@ workflows:
       - check-lint
       - check-fmt
       - check-generate
+  build_packer_binaries:
+    jobs:
+      - build_linux
+      - build_darwin
+      - build_darwin_arm64
+      - build_windows
+      - build_freebsd
+      - build_openbsd
+      - build_solaris
+      - store_artifacts:
+          requires:
+            - build_linux
+            - build_darwin
+            - build_darwin_arm64
+            - build_windows
+            - build_freebsd
+            - build_openbsd
+            - build_solaris
