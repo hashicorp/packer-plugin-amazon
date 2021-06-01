@@ -1,6 +1,5 @@
 package version
 
-// TODO: remove this comment
 var (
 	// Version is the main version number that is being run at the moment.
 	Version = "0.0.2"
