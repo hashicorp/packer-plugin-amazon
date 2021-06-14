@@ -296,7 +296,7 @@ func (c *AccessConfig) Session() (*session.Session, error) {
 	}
 
 	if c.packerConfig != nil {
-		// In acceptance tests, this is new when authenticating for cleaning up created resources.
+		// In acceptance tests, this is nil when authenticating for cleaning up created resources.
 		userAgentProducts = append(userAgentProducts, &awsbase.UserAgentProduct{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Extra: []string{"+https://www.packer.io"}})
 	}
 
