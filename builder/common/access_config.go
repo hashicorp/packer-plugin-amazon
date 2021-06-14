@@ -292,9 +292,14 @@ func (c *AccessConfig) Session() (*session.Session, error) {
 	userAgentProducts := []*awsbase.UserAgentProduct{
 		{Name: "APN", Version: "1.0"},
 		{Name: "HashiCorp", Version: "1.0"},
-		{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Extra: []string{"+https://www.packer.io"}},
 		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Extra: []string{"+https://www.packer.io/docs/builders/amazon"}},
 	}
+
+	if c.packerConfig != nil {
+		// In acceptance tests, this is new when authenticating for cleaning up created resources.
+		userAgentProducts = append(userAgentProducts, &awsbase.UserAgentProduct{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Extra: []string{"+https://www.packer.io"}})
+	}
+
 	for i := len(userAgentProducts) - 1; i >= 0; i-- {
 		product := userAgentProducts[i]
 		c.session.Handlers.Build.PushFront(request.MakeAddToUserAgentHandler(product.Name, product.Version, product.Extra...))
