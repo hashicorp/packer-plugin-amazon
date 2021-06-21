@@ -262,6 +262,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
 			Comm:         &b.config.RunConfig.Comm,
+			IsRestricted: b.config.IsChinaCloud(),
+			Tags:         b.config.RunTags,
 			DebugKeyPath: fmt.Sprintf("ec2_%s.pem", b.config.PackerBuildName),
 		},
 		&awscommon.StepSecurityGroup{

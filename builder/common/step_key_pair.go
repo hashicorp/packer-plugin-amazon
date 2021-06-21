@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
@@ -18,6 +19,9 @@ type StepKeyPair struct {
 	Debug        bool
 	Comm         *communicator.Config
 	DebugKeyPath string
+	IsRestricted bool
+	Ctx          interpolate.Context
+	Tags         map[string]string
 
 	doCleanup bool
 }
@@ -58,13 +62,28 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	var keyResp *ec2.CreateKeyPairOutput
 
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
+	keypair := &ec2.CreateKeyPairInput{
+		KeyName: &s.Comm.SSHTemporaryKeyPairName,
+	}
+
+	if ! s.IsRestricted {
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		if err != nil {
+			err := fmt.Errorf("Error tagging key pair: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		keypair.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeKeyPair)
+	}
+
 	err := retry.Config{
 		Tries:      11,
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
 		var err error
-		keyResp, err = ec2conn.CreateKeyPair(&ec2.CreateKeyPairInput{
-			KeyName: &s.Comm.SSHTemporaryKeyPairName})
+		keyResp, err = ec2conn.CreateKeyPair(keypair)
 		return err
 	})
 
