@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
 
@@ -22,6 +23,9 @@ type StepSecurityGroup struct {
 	SecurityGroupIds       []string
 	TemporarySGSourceCidrs []string
 	SkipSSHRuleCreation    bool
+	Ctx                    interpolate.Context
+	IsRestricted           bool
+	Tags                   map[string]string
 
 	createdGroupId string
 }
@@ -83,6 +87,18 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	group := &ec2.CreateSecurityGroupInput{
 		GroupName:   &groupName,
 		Description: aws.String("Temporary group for Packer"),
+	}
+
+	if ! s.IsRestricted {
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		if err != nil {
+			err := fmt.Errorf("Error tagging security group: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		group.TagSpecifications = ec2Tags.TagSpeficitions(ec2.ResourceTypeSecurityGroup)
 	}
 
 	group.VpcId = &vpcId

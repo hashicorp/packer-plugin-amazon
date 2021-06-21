@@ -272,6 +272,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			CommConfig:             &b.config.RunConfig.Comm,
 			TemporarySGSourceCidrs: b.config.TemporarySGSourceCidrs,
 			SkipSSHRuleCreation:    b.config.SSMAgentEnabled(),
+			IsRestricted:           b.config.IsChinaCloud(),
+			Tags:                   b.config.RunTags,
 		},
 		&awscommon.StepIamInstanceProfile{
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
