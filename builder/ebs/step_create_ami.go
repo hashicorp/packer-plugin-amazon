@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
@@ -21,6 +22,9 @@ type stepCreateAMI struct {
 	image              *ec2.Image
 	AMISkipCreateImage bool
 	AMISkipBuildRegion bool
+	IsRestricted       bool
+	Ctx                interpolate.Context
+	Tags               map[string]string
 }
 
 func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -58,14 +62,25 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		BlockDeviceMappings: config.AMIMappings.BuildEC2BlockDeviceMappings(),
 	}
 
+	if ! s.IsRestricted {
+		ec2Tags, err := awscommon.TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		if err != nil {
+			err := fmt.Errorf("Error tagging AMI: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		createOpts.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeImage, ec2.ResourceTypeSnapshot)
+	}
+
 	var createResp *ec2.CreateImageOutput
-	var err error
 
 	// Create a timeout for the CreateImage call.
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*15)
 	defer cancel()
 
-	err = retry.Config{
+	err := retry.Config{
 		Tries: 0,
 		ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidParameterValue", "Instance is not in state") {
@@ -75,6 +90,7 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(timeoutCtx, func(ctx context.Context) error {
+		var err error
 		createResp, err = ec2conn.CreateImage(createOpts)
 		return err
 	})

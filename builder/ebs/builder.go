@@ -338,6 +338,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 			PollingConfig:      b.config.PollingConfig,
+			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
+			Tags:               b.config.RunTags,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
