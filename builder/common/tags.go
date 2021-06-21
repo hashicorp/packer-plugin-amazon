@@ -42,3 +42,17 @@ func (t TagMap) EC2Tags(ictx interpolate.Context, region string, state multistep
 	}
 	return ec2Tags, nil
 }
+
+func (t EC2Tags) TagSpecifications(resourceType ...string) []*ec2.TagSpecification {
+	var tagSpecs []*ec2.TagSpecification
+	if len(t) > 0 {
+		for _, resource := range resourceType {
+			runTags := &ec2.TagSpecification{
+				ResourceType: aws.String(resource),
+				Tags:         t,
+			}
+			tagSpecs = append(tagSpecs, runTags)
+		}
+	}
+	return tagSpecs
+}
