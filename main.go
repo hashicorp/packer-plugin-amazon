@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/builder/ebsvolume"
 	"github.com/hashicorp/packer-plugin-amazon/builder/instance"
 	"github.com/hashicorp/packer-plugin-amazon/datasource/ami"
+	"github.com/hashicorp/packer-plugin-amazon/datasource/parameterstore"
 	"github.com/hashicorp/packer-plugin-amazon/datasource/secretsmanager"
 	amazonimport "github.com/hashicorp/packer-plugin-amazon/post-processor/import"
 	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
@@ -32,6 +33,7 @@ func main() {
 	pps.RegisterBuilder("instance", new(instance.Builder))
 	pps.RegisterDatasource("ami", new(ami.Datasource))
 	pps.RegisterDatasource("secretsmanager", new(secretsmanager.Datasource))
+	pps.RegisterDatasource("parameterstore", new(parameterstore.Datasource))
 	pps.RegisterPostProcessor("import", new(amazonimport.PostProcessor))
 	pps.SetVersion(PluginVersion)
 	err := pps.Run()

@@ -26,6 +26,7 @@ multiple builders, data sources, and a post-processor to build the AMI depending
 - [amazon-ami](/docs/datasources/ami.mdx) - Filter and fetch an Amazon AMI to output all the AMI information.
 - [amazon-secretsmanager](/docs/datasources/secretsmanager.mdx) - Retrieve information
   about a Secrets Manager secret version, including its secret value.
+- [amazon-parameterstore](/docs/datasources/parameterstore.mdx) - Retrieve information about a parameter in SSM.
 
 ### Post-Processors
 - [amazon-import](/docs/post-processors/import.mdx) -  The Amazon Import post-processor takes an OVA artifact 
