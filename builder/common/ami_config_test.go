@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -241,4 +242,31 @@ func TestAMINameValidation(t *testing.T) {
 		t.Fatalf("expected `xyz-base-2017-04-05-1934` to pass validation.")
 	}
 
+}
+
+func TestAMIConfigPrepare_DeprecationTime(t *testing.T) {
+	c := testAMIConfig()
+	accessConf := FakeAccessConfig()
+
+	currentTime := time.Now().UTC()
+	testcases := []struct {
+		name            string
+		deprecationTime string
+		isErr           bool
+	}{
+		{"good", currentTime.Format(time.RFC3339), false},
+		{"not in format (YYYY-MM-DDTHH:MM:SSZ)", currentTime.Format(time.ANSIC), true},
+	}
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("%s_%s", tc.deprecationTime, tc.name), func(t *testing.T) {
+			c.DeprecationTime = tc.deprecationTime
+			err := c.Prepare(accessConf, nil)
+			if tc.isErr && err == nil {
+				t.Error("Expect error")
+			}
+			if !tc.isErr && err != nil {
+				t.Errorf("Expect no error. got %s", err)
+			}
+		})
+	}
 }

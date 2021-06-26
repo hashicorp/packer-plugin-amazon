@@ -3,9 +3,11 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -137,6 +139,10 @@ type AMIConfig struct {
 	AMISkipBuildRegion bool `mapstructure:"skip_save_build_region"`
 
 	SnapshotConfig `mapstructure:",squash"`
+	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
+	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
+	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
+	DeprecationTime string `mapstructure:"deprecate_at"`
 }
 
 func stringInSlice(s []string, searchstr string) bool {
@@ -233,6 +239,10 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 			"filter to automatically clean your ami name."))
 	}
 
+	if err := c.validateDeprecationTime(); err != nil {
+		errs = append(errs, err)
+	}
+
 	if len(errs) > 0 {
 		return errs
 	}
@@ -293,4 +303,15 @@ func ValidateKmsKey(kmsKey string) (valid bool) {
 		return true
 	}
 	return false
+}
+
+func (c *AMIConfig) validateDeprecationTime() error {
+	if c.DeprecationTime == "" {
+		return nil
+	}
+	_, err := time.Parse(time.RFC3339, c.DeprecationTime)
+	if err != nil {
+		return errors.New("deprecate_at is not a valid time. Expect time format: YYYY-MM-DDTHH:MM:SSZ")
+	}
+	return nil
 }
