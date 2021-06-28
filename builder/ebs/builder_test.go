@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"testing"
+	"time"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -125,6 +126,20 @@ func TestBuilderPrepare_InvalidShutdownBehavior(t *testing.T) {
 	}
 	if err == nil {
 		t.Fatal("should have error")
+	}
+}
+
+func TestBuilderPrepare_DeprecationTime(t *testing.T) {
+	var b Builder
+	config := testConfig()
+
+	config["deprecate_at"] = time.Now().UTC().AddDate(0, 0, 1).Format(time.RFC3339)
+	_, warnings, err := b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err != nil {
+		t.Fatalf("should not have error: %s", err)
 	}
 }
 

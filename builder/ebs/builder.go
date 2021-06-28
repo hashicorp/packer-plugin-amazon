@@ -363,6 +363,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			SnapshotTags:       b.config.SnapshotTags,
 			Ctx:                b.config.ctx,
 		},
+		&stepEnableDeprecation{
+			DeprecationTime: b.config.DeprecationTime,
+		},
 	}
 
 	// Run!

@@ -367,6 +367,61 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+func TestAccBuilder_EbsEnableDeprecation(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-deprecation-acc-test %d", time.Now().Unix()),
+	}
+	deprecationTime := time.Now().UTC().AddDate(0, 0, 1)
+	deprecationTimeStr := deprecationTime.Format(time.RFC3339)
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_enable_deprecation_test",
+		Template: buildEnableDeprecationConfig(deprecationTimeStr, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return checkDeprecationEnabled(ami, deprecationTime)
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) == 0 {
+		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	ec2conn, _ := testEC2Conn()
+	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: []*string{images[0].ImageId},
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error Describe Image for AMI (%s): %s", ami.Name, err)
+	}
+
+	expectTime := deprecationTime.Round(time.Minute)
+	expectTimeStr := expectTime.Format(time.RFC3339)
+
+	image := imageResp.Images[0]
+	if image.DeprecationTime == nil {
+		return fmt.Errorf("Failed to Enable Deprecation for AMI (%s), expected Deprecation Time (%s), got empty", ami.Name, expectTimeStr)
+	}
+
+	actualTimeStr := aws.StringValue(image.DeprecationTime)
+	actualTime, _ := time.Parse(time.RFC3339, actualTimeStr)
+	if !actualTime.Equal(expectTime) {
+		return fmt.Errorf("Wrong Deprecation Time, expected (%s), got (%s)", expectTimeStr, actualTimeStr)
+	}
+
+	return nil
+}
 func testEC2Conn() (*ec2.EC2, error) {
 	access := &common.AccessConfig{RawRegion: "us-east-1"}
 	session, err := access.Session()
@@ -487,6 +542,20 @@ const testBuilderAccSessionManagerInterface = `
 }
 `
 
+const testBuilderAccEnableDeprecation = `
+{
+	"builders": [{
+		"type": "amazon-ebs",
+		"region": "us-east-1",
+		"instance_type": "m3.medium",
+		"source_ami": "ami-76b2a71e",
+		"ssh_username": "ubuntu",
+		"deprecate_at" : "%s",
+		"ami_name": "%s"
+	}]
+}
+`
+
 func buildForceDeregisterConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeregister, val, name)
 }
@@ -497,4 +566,8 @@ func buildForceDeleteSnapshotConfig(val, name string) string {
 
 func buildSharingConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccSharing, val, name)
+}
+
+func buildEnableDeprecationConfig(val, name string) string {
+	return fmt.Sprintf(testBuilderAccEnableDeprecation, val, name)
 }
