@@ -58,7 +58,6 @@ type FlatConfig struct {
 	SnapshotTag                               []config.FlatKeyValue                  `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
 	SnapshotUsers                             []string                               `mapstructure:"snapshot_users" required:"false" cty:"snapshot_users" hcl:"snapshot_users"`
 	SnapshotGroups                            []string                               `mapstructure:"snapshot_groups" required:"false" cty:"snapshot_groups" hcl:"snapshot_groups"`
-	DeprecationTime                           *string                                `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	AssociatePublicIpAddress                  *bool                                  `mapstructure:"associate_public_ip_address" required:"false" cty:"associate_public_ip_address" hcl:"associate_public_ip_address"`
 	AvailabilityZone                          *string                                `mapstructure:"availability_zone" required:"false" cty:"availability_zone" hcl:"availability_zone"`
 	BlockDurationMinutes                      *int64                                 `mapstructure:"block_duration_minutes" required:"false" cty:"block_duration_minutes" hcl:"block_duration_minutes"`
@@ -152,6 +151,7 @@ type FlatConfig struct {
 	VolumeRunTags                             map[string]string                      `mapstructure:"run_volume_tags" cty:"run_volume_tags" hcl:"run_volume_tags"`
 	VolumeRunTag                              []config.FlatNameValue                 `mapstructure:"run_volume_tag" required:"false" cty:"run_volume_tag" hcl:"run_volume_tag"`
 	NoEphemeral                               *bool                                  `mapstructure:"no_ephemeral" required:"false" cty:"no_ephemeral" hcl:"no_ephemeral"`
+	DeprecationTime                           *string                                `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -212,7 +212,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"snapshot_tag":                  &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":                &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},
 		"snapshot_groups":               &hcldec.AttrSpec{Name: "snapshot_groups", Type: cty.List(cty.String), Required: false},
-		"deprecate_at":                  &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"associate_public_ip_address":   &hcldec.AttrSpec{Name: "associate_public_ip_address", Type: cty.Bool, Required: false},
 		"availability_zone":             &hcldec.AttrSpec{Name: "availability_zone", Type: cty.String, Required: false},
 		"block_duration_minutes":        &hcldec.AttrSpec{Name: "block_duration_minutes", Type: cty.Number, Required: false},
@@ -306,6 +305,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"run_volume_tags":                       &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},
 		"run_volume_tag":                        &hcldec.BlockListSpec{TypeName: "run_volume_tag", Nested: hcldec.ObjectSpec((*config.FlatNameValue)(nil).HCL2Spec())},
 		"no_ephemeral":                          &hcldec.AttrSpec{Name: "no_ephemeral", Type: cty.Bool, Required: false},
+		"deprecate_at":                          &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 	}
 	return s
 }

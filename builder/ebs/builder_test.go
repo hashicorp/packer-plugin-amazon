@@ -1,6 +1,7 @@
 package ebs
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -133,13 +134,30 @@ func TestBuilderPrepare_DeprecationTime(t *testing.T) {
 	var b Builder
 	config := testConfig()
 
-	config["deprecate_at"] = time.Now().UTC().AddDate(0, 0, 1).Format(time.RFC3339)
-	_, warnings, err := b.Prepare(config)
-	if len(warnings) > 0 {
-		t.Fatalf("bad: %#v", warnings)
+	currentTime := time.Now().UTC()
+	testcases := []struct {
+		name            string
+		deprecationTime string
+		isErr           bool
+	}{
+		{"good", currentTime.Format(time.RFC3339), false},
+		{"not in format (YYYY-MM-DDTHH:MM:SSZ)", currentTime.Format(time.ANSIC), true},
 	}
-	if err != nil {
-		t.Fatalf("should not have error: %s", err)
+
+	for _, tc := range testcases {
+		t.Run(fmt.Sprintf("%s_%s", tc.deprecationTime, tc.name), func(t *testing.T) {
+			config["deprecate_at"] = tc.deprecationTime
+			_, warnings, err := b.Prepare(config)
+			if len(warnings) > 0 {
+				t.Fatalf("bad: %#v", warnings)
+			}
+			if tc.isErr && err == nil {
+				t.Error("Expect error")
+			}
+			if !tc.isErr && err != nil {
+				t.Errorf("Expect no error. got %s", err)
+			}
+		})
 	}
 }
 
