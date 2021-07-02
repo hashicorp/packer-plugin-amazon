@@ -31,21 +31,23 @@ type Config struct {
 	awscommon.AccessConfig `mapstructure:",squash"`
 
 	// Variables specific to this post processor
-	S3Bucket        string            `mapstructure:"s3_bucket_name"`
-	S3Key           string            `mapstructure:"s3_key_name"`
-	S3Encryption    string            `mapstructure:"s3_encryption"`
-	S3EncryptionKey string            `mapstructure:"s3_encryption_key"`
-	SkipClean       bool              `mapstructure:"skip_clean"`
-	Tags            map[string]string `mapstructure:"tags"`
-	Name            string            `mapstructure:"ami_name"`
-	Description     string            `mapstructure:"ami_description"`
-	Users           []string          `mapstructure:"ami_users"`
-	Groups          []string          `mapstructure:"ami_groups"`
-	Encrypt         bool              `mapstructure:"ami_encrypt"`
-	KMSKey          string            `mapstructure:"ami_kms_key"`
-	LicenseType     string            `mapstructure:"license_type"`
-	RoleName        string            `mapstructure:"role_name"`
-	Format          string            `mapstructure:"format"`
+	S3Bucket               string            `mapstructure:"s3_bucket_name"`
+	S3Key                  string            `mapstructure:"s3_key_name"`
+	S3Encryption           string            `mapstructure:"s3_encryption"`
+	S3EncryptionKey        string            `mapstructure:"s3_encryption_key"`
+	SkipClean              bool              `mapstructure:"skip_clean"`
+	Tags                   map[string]string `mapstructure:"tags"`
+	Name                   string            `mapstructure:"ami_name"`
+	Description            string            `mapstructure:"ami_description"`
+	Users                  []string          `mapstructure:"ami_users"`
+	Groups                 []string          `mapstructure:"ami_groups"`
+	Encrypt                bool              `mapstructure:"ami_encrypt"`
+	KMSKey                 string            `mapstructure:"ami_kms_key"`
+	LicenseType            string            `mapstructure:"license_type"`
+	RoleName               string            `mapstructure:"role_name"`
+	Format                 string            `mapstructure:"format"`
+	FromSnapshot           bool              `mapstructure:"from_snapshot"`
+	FromSnapshotDeviceName string            `mapstructure:"from_snapshot_device_name"`
 
 	ctx interpolate.Context
 }
@@ -81,6 +83,10 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		p.config.S3Key = "packer-import-{{timestamp}}." + p.config.Format
 	}
 
+	if p.config.FromSnapshotDeviceName == "" {
+		p.config.FromSnapshotDeviceName = "/dev/sda"
+	}
+
 	errs := new(packersdk.MultiError)
 
 	// Check and render s3_key_name
@@ -109,6 +115,17 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	default:
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid format '%s'. Only 'ova', 'raw', 'vhd', 'vhdx', or 'vmdk' are allowed", p.config.Format))
+	}
+
+	// If importing to snapshot, only 3 formats are allowed
+	if p.config.FromSnapshot {
+		switch p.config.Format {
+		case "vhd", "vmdk", "raw":
+		default:
+			errs = packersdk.MultiErrorAppend(
+				errs, fmt.Errorf(
+					"invalid format '%s' for snapshot import. Only 'raw', 'vhd', or 'vmdk' are allowed", p.config.Format))
+		}
 	}
 
 	if p.config.S3Encryption != "" && p.config.S3Encryption != "AES256" && p.config.S3Encryption != "aws:kms" {
@@ -210,90 +227,22 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	// Call EC2 image import process
 	log.Printf("Calling EC2 to import from s3://%s/%s", p.config.S3Bucket, p.config.S3Key)
 
+	// Split into snapshot or image import
+	var createdami string
 	ec2conn := ec2.New(session)
-	params := &ec2.ImportImageInput{
-		Encrypted: &p.config.Encrypt,
-		DiskContainers: []*ec2.ImageDiskContainer{
-			{
-				Format: &p.config.Format,
-				UserBucket: &ec2.UserBucket{
-					S3Bucket: &p.config.S3Bucket,
-					S3Key:    &p.config.S3Key,
-				},
-			},
-		},
-	}
 
-	if p.config.Encrypt && p.config.KMSKey != "" {
-		params.KmsKeyId = &p.config.KMSKey
+	if p.config.FromSnapshot {
+		createdami, err = p.importSnapshot(ui, ctx, ec2conn)
+	} else {
+		createdami, err = p.importImage(ui, ctx, ec2conn)
 	}
-
-	if p.config.RoleName != "" {
-		params.SetRoleName(p.config.RoleName)
-	}
-
-	if p.config.LicenseType != "" {
-		ui.Message(fmt.Sprintf("Setting license type to '%s'", p.config.LicenseType))
-		params.LicenseType = &p.config.LicenseType
-	}
-
-	var import_start *ec2.ImportImageOutput
-	err = retry.Config{
-		Tries:      11,
-		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
-	}.Run(ctx, func(ctx context.Context) error {
-		import_start, err = ec2conn.ImportImage(params)
-		return err
-	})
 
 	if err != nil {
-		return nil, false, false, fmt.Errorf("Failed to start import from s3://%s/%s: %s", p.config.S3Bucket, p.config.S3Key, err)
+		return nil, false, false, err
 	}
 
-	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *import_start.ImportTaskId))
-
-	// Wait for import process to complete, this takes a while
-	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *import_start.ImportTaskId))
-	err = p.config.PollingConfig.WaitUntilImageImported(aws.BackgroundContext(), ec2conn, *import_start.ImportTaskId)
-	if err != nil {
-
-		// Retrieve the status message
-		import_result, err2 := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
-			ImportTaskIds: []*string{
-				import_start.ImportTaskId,
-			},
-		})
-
-		statusMessage := "Error retrieving status message"
-
-		if err2 == nil {
-			statusMessage = *import_result.ImportImageTasks[0].StatusMessage
-		}
-		return nil, false, false, fmt.Errorf("Import task %s failed with status message: %s, error: %s", *import_start.ImportTaskId, statusMessage, err)
-	}
-
-	// Retrieve what the outcome was for the import task
-	import_result, err := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
-		ImportTaskIds: []*string{
-			import_start.ImportTaskId,
-		},
-	})
-
-	if err != nil {
-		return nil, false, false, fmt.Errorf("Failed to find import task %s: %s", *import_start.ImportTaskId, err)
-	}
-	// Check it was actually completed
-	if *import_result.ImportImageTasks[0].Status != "completed" {
-		// The most useful error message is from the job itself
-		return nil, false, false, fmt.Errorf("Import task %s failed: %s", *import_start.ImportTaskId, *import_result.ImportImageTasks[0].StatusMessage)
-	}
-
-	ui.Message(fmt.Sprintf("Import task %s complete", *import_start.ImportTaskId))
-
-	// Pull AMI ID out of the completed job
-	createdami := *import_result.ImportImageTasks[0].ImageId
-
-	if p.config.Name != "" {
+	// Dont rename on snapshot as we set the name on creation
+	if p.config.Name != "" && !p.config.FromSnapshot {
 
 		ui.Message(fmt.Sprintf("Starting rename of AMI (%s)", createdami))
 
@@ -465,4 +414,210 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	return artifact, false, false, nil
+}
+
+func (p *PostProcessor) importSnapshot(ui packersdk.Ui, ctx context.Context, ec2conn *ec2.EC2) (string, error) {
+	var err error
+	var err2 error
+	var importResult *ec2.DescribeImportSnapshotTasksOutput
+
+	params := &ec2.ImportSnapshotInput{
+		Encrypted: &p.config.Encrypt,
+		DiskContainer: &ec2.SnapshotDiskContainer{
+			Format: &p.config.Format,
+			UserBucket: &ec2.UserBucket{
+				S3Bucket: &p.config.S3Bucket,
+				S3Key:    &p.config.S3Key,
+			},
+		},
+	}
+
+	if p.config.Encrypt && p.config.KMSKey != "" {
+		params.KmsKeyId = &p.config.KMSKey
+	}
+
+	if p.config.RoleName != "" {
+		params.SetRoleName(p.config.RoleName)
+	}
+
+	var importStart *ec2.ImportSnapshotOutput
+	err = retry.Config{
+		Tries:      11,
+		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+	}.Run(ctx, func(ctx context.Context) error {
+		importStart, err = ec2conn.ImportSnapshot(params)
+		return err
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Failed to start import from s3://%s/%s: %s", p.config.S3Bucket, p.config.S3Key, err)
+	}
+
+	importTaskId := importStart.ImportTaskId
+
+	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *importTaskId))
+
+	// Wait for import process to complete, this takes a while
+	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *importTaskId))
+
+	err = p.config.PollingConfig.WaitUntilSnapshotImported(aws.BackgroundContext(), ec2conn, *importTaskId)
+	if err != nil {
+		// Retrieve the status message
+		importResult, err2 = ec2conn.DescribeImportSnapshotTasks(&ec2.DescribeImportSnapshotTasksInput{
+			ImportTaskIds: []*string{
+				importTaskId,
+			},
+		})
+
+		statusMessage := "Error retrieving status message"
+
+		if err2 == nil {
+			statusMessage = *importResult.ImportSnapshotTasks[0].SnapshotTaskDetail.StatusMessage
+		}
+		return "", fmt.Errorf("Import task %s failed with status message: %s, error: %s", *importTaskId, statusMessage, err)
+	}
+
+	// Retrieve what the outcome was for the import task
+	importResult, err = ec2conn.DescribeImportSnapshotTasks(&ec2.DescribeImportSnapshotTasksInput{
+		ImportTaskIds: []*string{
+			importTaskId,
+		},
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Failed to find import task %s: %s", *importTaskId, err)
+	}
+
+	snapshotId := importResult.ImportSnapshotTasks[0].SnapshotTaskDetail.SnapshotId
+
+	// Check it was actually completed
+	if *importResult.ImportSnapshotTasks[0].SnapshotTaskDetail.Status != "completed" {
+		// The most useful error message is from the job itself
+		return "", fmt.Errorf("Import task %s failed: %s", *importTaskId, *importResult.ImportSnapshotTasks[0].SnapshotTaskDetail.StatusMessage)
+	}
+
+	ui.Message(fmt.Sprintf("Import task %s complete", *importTaskId))
+
+	ebsDevice := ec2.EbsBlockDevice{
+		SnapshotId: snapshotId,
+	}
+
+	blockDevice := ec2.BlockDeviceMapping{
+		DeviceName: &p.config.FromSnapshotDeviceName,
+		Ebs:        &ebsDevice,
+	}
+
+	var imageName string
+
+	// Unfortunately when importing from snapshot we need to give a name to the ami so either get the name
+	// from the config or set a name based on the source s3 object
+	if p.config.Name != "" {
+		imageName = p.config.Name
+	} else {
+		imageName = fmt.Sprintf("packer-import-from-%s", p.config.S3Key)
+	}
+
+	registerImageOutput, err := ec2conn.RegisterImage(&ec2.RegisterImageInput{
+		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+			&blockDevice,
+		},
+		RootDeviceName: &p.config.FromSnapshotDeviceName,
+		Name:           &imageName,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Failed to register snapshot %s as AMI: %s", snapshotId, err)
+	}
+
+	// Pull AMI ID out of the completed job
+	createdAmi := *registerImageOutput.ImageId
+	return createdAmi, err
+}
+
+func (p *PostProcessor) importImage(ui packersdk.Ui, ctx context.Context, ec2conn *ec2.EC2) (string, error) {
+	var err error
+	var value string
+	params := &ec2.ImportImageInput{
+		Encrypted: &p.config.Encrypt,
+		DiskContainers: []*ec2.ImageDiskContainer{
+			{
+				Format: &p.config.Format,
+				UserBucket: &ec2.UserBucket{
+					S3Bucket: &p.config.S3Bucket,
+					S3Key:    &p.config.S3Key,
+				},
+			},
+		},
+	}
+
+	if p.config.Encrypt && p.config.KMSKey != "" {
+		params.KmsKeyId = &p.config.KMSKey
+	}
+
+	if p.config.RoleName != "" {
+		params.SetRoleName(p.config.RoleName)
+	}
+
+	if p.config.LicenseType != "" {
+		ui.Message(fmt.Sprintf("Setting license type to '%s'", p.config.LicenseType))
+		params.LicenseType = &p.config.LicenseType
+	}
+
+	var importStart *ec2.ImportImageOutput
+	err = retry.Config{
+		Tries:      11,
+		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+	}.Run(ctx, func(ctx context.Context) error {
+		importStart, err = ec2conn.ImportImage(params)
+		return err
+	})
+
+	if err != nil {
+		return value, fmt.Errorf("Failed to start import from s3://%s/%s: %s", p.config.S3Bucket, p.config.S3Key, err)
+	}
+
+	importTaskId := importStart.ImportTaskId
+
+	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *importTaskId))
+
+	// Wait for import process to complete, this takes a while
+	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *importTaskId))
+	err = p.config.PollingConfig.WaitUntilImageImported(aws.BackgroundContext(), ec2conn, *importTaskId)
+	if err != nil {
+		// Retrieve the status message
+		importResult, err2 := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
+			ImportTaskIds: []*string{
+				importTaskId,
+			},
+		})
+
+		statusMessage := "Error retrieving status message"
+
+		if err2 == nil {
+			statusMessage = *importResult.ImportImageTasks[0].StatusMessage
+		}
+		return value, fmt.Errorf("Import task %s failed with status message: %s, error: %s", importTaskId, statusMessage, err)
+	}
+
+	// Retrieve what the outcome was for the import task
+	importResult, err := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
+		ImportTaskIds: []*string{
+			importTaskId,
+		},
+	})
+
+	if err != nil {
+		return value, fmt.Errorf("Failed to find import task %s: %s", *importTaskId, err)
+	}
+	// Check it was actually completed
+	if *importResult.ImportImageTasks[0].Status != "completed" {
+		// The most useful error message is from the job itself
+		return value, fmt.Errorf("Import task %s failed: %s", *importTaskId, *importResult.ImportImageTasks[0].StatusMessage)
+	}
+
+	ui.Message(fmt.Sprintf("Import task %s complete", *importTaskId))
+
+	// Pull AMI ID out of the completed job
+	createdAmi := *importResult.ImportImageTasks[0].ImageId
+	return createdAmi, err
 }
