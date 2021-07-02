@@ -104,18 +104,39 @@ Optional:
   must be set to  `uefi`.
 
 - `platform` (string) - The operating system of the virtual machine. One of:
-  `linux` or `windows`. If `boot_mode` is set to `uefi` then this value must be 
-  set to either `windows` or `linux` depending on the operating system of the 
-  virtual machine.
+  `linux` or `windows`. If `boot_mode` is set to `uefi` then this value must be
+  set to either `windows` or `linux` depending on the operating system of the
+  virtual machine. `windows` can only be used here when `import_type` is `image`.
 
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
   like this `https://ec2.custom.endpoint.com`.
 
+- `ena_support` (boolean) - Only applicable if `import_type` is set to
+  `snapshot`. This sets a flag on the AMI indicating that the image includes
+  support for the
+  [Elastic Network Adapter](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking-ena.html).
+  Defaults to `false`.
+
 - `format` (string) - One of: `ova`, `raw`, `vhd`, `vhdx`, or `vmdk`. This
   specifies the format of the source virtual machine image. The resulting
   artifact from the builder is assumed to have a file extension matching the
-  format. This defaults to `ova`.
+  format. This defaults to `ova` if `import_type` is `image`, and `raw` if
+  `import_type` is `snapshot`.
+
+- `import_type` (string) - The method to use to import the image.
+  One of: `image` or `snapshot`. If set to `image`, the
+  [ImportImage](https://docs.aws.amazon.com/vm-import/latest/userguide/vmimport-image-import.html)
+  API is used to perform the import, which only supports a limited number of
+  [operating systems](https://docs.aws.amazon.com/vm-import/latest/userguide/prerequisites.html#vmimport-operating-systems)
+  and performs
+  [programmatic modifications](https://docs.aws.amazon.com/vm-import/latest/userguide/import-modify-vm.html)
+  to the image during the import process. If set to `snapshot`, the
+  [ImportSnapshot](https://docs.aws.amazon.com/vm-import/latest/userguide/vmimport-import-snapshot.html)
+  API is used and then the resulting snapshot is registered as an AMI, which
+  does not perform any modifications to the image, supports a wider range of
+  Linux distributions, but does not support importing Windows images.
+  The default is `image`.
 
 - `insecure_skip_tls_verify` (boolean) - This allows skipping TLS
   verification of the AWS EC2 endpoint. The default is `false`.
@@ -127,7 +148,8 @@ Optional:
   Machine Image (AMI) after importing. Valid values: `AWS` or `BYOL`
   (default). For more details regarding licensing, see
   [Prerequisites](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/VMImportPrerequisites.html)
-  in the VM Import/Export User Guide.
+  in the VM Import/Export User Guide. If `import_type` is set to `snapshot`, this
+  is ignored.
 
 - `mfa_code` (string) - The MFA
   [TOTP](https://en.wikipedia.org/wiki/Time-based_One-time_Password_Algorithm)
@@ -169,6 +191,10 @@ Optional:
 - `skip_region_validation` (boolean) - Set to true if you want to skip
   validation of the region configuration option. Default `false`.
 
+- `snapshot_device_name` (string) - The root device name to use in the block
+  device mapping when registering a snapshot import as an AMI. Only applicable
+  if `import_type` is `snapshot`. Defaults to `/dev/sda`.
+
 - `tags` (object of key/value strings) - Tags applied to the created AMI and
   relevant snapshots.
 
@@ -176,6 +202,11 @@ Optional:
   access key and secret key. If you're not sure what this is, then you
   probably don't need it. This will also be read from the `AWS_SESSION_TOKEN`
   environmental variable.
+
+- `virtualization_type` (string) - The virtualization type to be used for
+  the imported AMI. One of: `hvm` or `paravirtual`. Defaults to `hvm`,
+  `paravirtual` is only supported on previous-generation EC2 instance types.
+  This option can only be set when `import_type` is set to `snapshot`.
 
 ## Basic Example
 
