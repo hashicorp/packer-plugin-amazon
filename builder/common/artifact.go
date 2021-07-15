@@ -28,6 +28,11 @@ type Artifact struct {
 	Session *session.Session
 }
 
+type registryImage struct {
+	ImageID                      string
+	ProviderName, ProviderRegion string
+}
+
 func (a *Artifact) BuilderId() string {
 	return a.BuilderIdValue
 }
@@ -66,6 +71,8 @@ func (a *Artifact) State(name string) interface{} {
 	switch name {
 	case "atlas.artifact.metadata":
 		return a.stateAtlasMetadata()
+	case "par.artifact.metadata":
+		return a.statePARMetadata()
 	default:
 		return nil
 	}
@@ -115,6 +122,21 @@ func (a *Artifact) stateAtlasMetadata() interface{} {
 	for region, imageId := range a.Amis {
 		k := fmt.Sprintf("region.%s", region)
 		metadata[k] = imageId
+	}
+
+	return metadata
+}
+
+func (a *Artifact) statePARMetadata() interface{} {
+	metadata := make([]registryImage, 0, len(a.Amis))
+
+	for region, imageId := range a.Amis {
+		metadata = append(metadata, registryImage{
+			ImageID:        imageId,
+			ProviderRegion: region,
+			ProviderName:   "aws",
+		})
+
 	}
 
 	return metadata
