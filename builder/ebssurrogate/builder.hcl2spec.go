@@ -108,6 +108,8 @@ type FlatConfig struct {
 	SpotTag                                   []config.FlatKeyValue                  `mapstructure:"spot_tag" required:"false" cty:"spot_tag" hcl:"spot_tag"`
 	SubnetFilter                              *common.FlatSubnetFilterOptions        `mapstructure:"subnet_filter" required:"false" cty:"subnet_filter" hcl:"subnet_filter"`
 	SubnetId                                  *string                                `mapstructure:"subnet_id" required:"false" cty:"subnet_id" hcl:"subnet_id"`
+	HostResourceGroupArn                      *string                                `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
+	LicenseConfigurationArn                   *string                                `mapstructure:"license_configuration_arn" required:"false" cty:"license_configuration_arn" hcl:"license_configuration_arn"`
 	Tenancy                                   *string                                `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 	TemporarySGSourceCidrs                    []string                               `mapstructure:"temporary_security_group_source_cidrs" required:"false" cty:"temporary_security_group_source_cidrs" hcl:"temporary_security_group_source_cidrs"`
 	UserData                                  *string                                `mapstructure:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
@@ -261,6 +263,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"spot_tag":                              &hcldec.BlockListSpec{TypeName: "spot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"subnet_filter":                         &hcldec.BlockSpec{TypeName: "subnet_filter", Nested: hcldec.ObjectSpec((*common.FlatSubnetFilterOptions)(nil).HCL2Spec())},
 		"subnet_id":                             &hcldec.AttrSpec{Name: "subnet_id", Type: cty.String, Required: false},
+		"host_resource_group_arn":               &hcldec.AttrSpec{Name: "host_resource_group_arn", Type: cty.String, Required: false},
+		"license_configuration_arn":             &hcldec.AttrSpec{Name: "license_configuration_arn", Type: cty.String, Required: false},
 		"tenancy":                               &hcldec.AttrSpec{Name: "tenancy", Type: cty.String, Required: false},
 		"temporary_security_group_source_cidrs": &hcldec.AttrSpec{Name: "temporary_security_group_source_cidrs", Type: cty.List(cty.String), Required: false},
 		"user_data":                             &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},

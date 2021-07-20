@@ -389,6 +389,10 @@ type RunConfig struct {
 	// subnet-12345def, where Packer will launch the EC2 instance. This field is
 	// required if you are using an non-default VPC.
 	SubnetId string `mapstructure:"subnet_id" required:"false"`
+	// The ARN of the host resource group in which to launch the instances.
+	HostResourceGroupArn string `mapstructure:"host_resource_group_arn" required:"false"`
+	// The Amazon Resource Name (ARN) of the license configuration.
+	LicenseConfigurationArn string `mapstructure:"license_configuration_arn" required:"false"`
 	// [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
 	// when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
 	//
