@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.10.1
 	github.com/hashicorp/packer-plugin-sdk v0.2.3
-	github.com/hashicorp/vault/api v1.1.0
+	github.com/hashicorp/vault/api v1.1.1
 	github.com/stretchr/testify v1.7.0
 	github.com/zclconf/go-cty v1.8.4
 	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d
