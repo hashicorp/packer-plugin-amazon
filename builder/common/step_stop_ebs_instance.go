@@ -50,7 +50,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 		},
 			RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-			ui.Message(fmt.Sprintf("Stopping instance"))
+			ui.Message("Stopping instance")
 
 			_, err = ec2conn.StopInstances(&ec2.StopInstancesInput{
 				InstanceIds: []*string{instance.InstanceId},

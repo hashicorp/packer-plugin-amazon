@@ -89,7 +89,7 @@ func TestArtifactState(t *testing.T) {
 	}
 }
 
-func TestArtifactState_parMetadata(t *testing.T) {
+func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 	a := &Artifact{
 		Amis: map[string]string{
 			"east": "foo", "west": "bar",
@@ -97,7 +97,7 @@ func TestArtifactState_parMetadata(t *testing.T) {
 	}
 
 	actual := a.State("par.artifact.metadata")
-	expected := []registryImage{
+	expected := []hcpPackerRegistryImage{
 		{
 			ImageID:        "foo",
 			ProviderName:   "aws",
