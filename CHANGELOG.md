@@ -1,3 +1,5 @@
+## 1.0.1 (Upcoming)
+
 ## 1.0.0 (June 14, 2021)
 
 * Bump github.com/hashicorp/packer-plugin-sdk from 0.1.0 to v0.2.3 [GH-89]
