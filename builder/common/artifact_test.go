@@ -88,3 +88,28 @@ func TestArtifactState(t *testing.T) {
 		t.Fatalf("Bad: State should be nil for nil StateData")
 	}
 }
+
+func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
+	a := &Artifact{
+		Amis: map[string]string{
+			"east": "foo", "west": "bar",
+		},
+	}
+
+	actual := a.State("par.artifact.metadata")
+	expected := []hcpPackerRegistryImage{
+		{
+			ImageID:        "foo",
+			ProviderName:   "aws",
+			ProviderRegion: "east",
+		},
+		{
+			ImageID:        "bar",
+			ProviderName:   "aws",
+			ProviderRegion: "west",
+		},
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+}

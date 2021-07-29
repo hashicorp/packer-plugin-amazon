@@ -28,6 +28,12 @@ type Artifact struct {
 	Session *session.Session
 }
 
+// hcpPackerRegistryImage provides the necessary metadata information that Packer will push to HCP Packer Registry
+type hcpPackerRegistryImage struct {
+	ImageID                      string
+	ProviderName, ProviderRegion string
+}
+
 func (a *Artifact) BuilderId() string {
 	return a.BuilderIdValue
 }
@@ -66,6 +72,10 @@ func (a *Artifact) State(name string) interface{} {
 	switch name {
 	case "atlas.artifact.metadata":
 		return a.stateAtlasMetadata()
+		// To be able to push metadata to HCP Packer Registry, Packer will read the 'par.artifact.metadata'
+		// state from artifacts to get a build's metadata.
+	case "par.artifact.metadata":
+		return a.stateHCPPackerRegistryMetadata()
 	default:
 		return nil
 	}
@@ -115,6 +125,23 @@ func (a *Artifact) stateAtlasMetadata() interface{} {
 	for region, imageId := range a.Amis {
 		k := fmt.Sprintf("region.%s", region)
 		metadata[k] = imageId
+	}
+
+	return metadata
+}
+
+// stateHCPPackerRegistryMetadata will write the metadata as an hcpRegistryImage for each of the AMIs
+// present in this artifact.
+func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
+	metadata := make([]hcpPackerRegistryImage, 0, len(a.Amis))
+
+	for region, imageId := range a.Amis {
+		metadata = append(metadata, hcpPackerRegistryImage{
+			ImageID:        imageId,
+			ProviderRegion: region,
+			ProviderName:   "aws",
+		})
+
 	}
 
 	return metadata

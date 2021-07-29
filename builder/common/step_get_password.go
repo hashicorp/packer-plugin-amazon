@@ -68,7 +68,7 @@ WaitLoop:
 				return multistep.ActionHalt
 			}
 
-			ui.Message(fmt.Sprintf(" \nPassword retrieved!"))
+			ui.Message(" \nPassword retrieved!")
 			s.Comm.WinRMPassword = password
 			break WaitLoop
 		case <-timeout:

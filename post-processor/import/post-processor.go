@@ -315,7 +315,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			return nil, false, false, fmt.Errorf("Error Copying AMI (%s): %s", createdami, err)
 		}
 
-		ui.Message(fmt.Sprintf("Waiting for AMI rename to complete (may take a while)"))
+		ui.Message("Waiting for AMI rename to complete (may take a while)")
 
 		if err := p.config.PollingConfig.WaitUntilAMIAvailable(aws.BackgroundContext(), ec2conn, *resp.ImageId); err != nil {
 			return nil, false, false, fmt.Errorf("Error waiting for AMI (%s): %s", *resp.ImageId, err)
@@ -328,7 +328,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			return nil, false, false, fmt.Errorf("Error deregistering existing AMI: %s", err)
 		}
 
-		ui.Message(fmt.Sprintf("AMI rename completed"))
+		ui.Message("AMI rename completed")
 
 		createdami = *resp.ImageId
 	}
