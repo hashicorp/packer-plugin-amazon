@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
 type StepKeyPair struct {

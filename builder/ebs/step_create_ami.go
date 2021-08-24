@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
 type stepCreateAMI struct {
@@ -62,7 +62,7 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		BlockDeviceMappings: config.AMIMappings.BuildEC2BlockDeviceMappings(),
 	}
 
-	if ! s.IsRestricted {
+	if !s.IsRestricted {
 		ec2Tags, err := awscommon.TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging AMI: %s", err)
