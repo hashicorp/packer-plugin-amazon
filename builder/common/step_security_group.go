@@ -89,7 +89,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		Description: aws.String("Temporary group for Packer"),
 	}
 
-	if ! s.IsRestricted {
+	if !s.IsRestricted {
 		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging security group: %s", err)
@@ -98,7 +98,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 			return multistep.ActionHalt
 		}
 
-		group.TagSpecifications = ec2Tags.TagSpeficitions(ec2.ResourceTypeSecurityGroup)
+		group.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeSecurityGroup)
 	}
 
 	group.VpcId = &vpcId
