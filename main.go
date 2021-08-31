@@ -13,15 +13,8 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/datasource/parameterstore"
 	"github.com/hashicorp/packer-plugin-amazon/datasource/secretsmanager"
 	amazonimport "github.com/hashicorp/packer-plugin-amazon/post-processor/import"
-	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
+	"github.com/hashicorp/packer-plugin-amazon/version"
 	"github.com/hashicorp/packer-plugin-sdk/plugin"
-	"github.com/hashicorp/packer-plugin-sdk/version"
-)
-
-var (
-	// PluginVersion is used by the plugin set to allow Packer to recognize
-	// what version this plugin is.
-	PluginVersion = version.InitializePluginVersion(pluginversion.Version, pluginversion.VersionPrerelease)
 )
 
 func main() {
@@ -35,7 +28,7 @@ func main() {
 	pps.RegisterDatasource("secretsmanager", new(secretsmanager.Datasource))
 	pps.RegisterDatasource("parameterstore", new(parameterstore.Datasource))
 	pps.RegisterPostProcessor("import", new(amazonimport.PostProcessor))
-	pps.SetVersion(PluginVersion)
+	pps.SetVersion(version.PluginVersion)
 	err := pps.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
