@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
 // Artifact is an artifact implementation that contains built AMIs.
@@ -26,12 +27,6 @@ type Artifact struct {
 
 	// EC2 connection for performing API stuff.
 	Session *session.Session
-}
-
-// hcpPackerRegistryImage provides the necessary metadata information that Packer will push to HCP Packer Registry
-type hcpPackerRegistryImage struct {
-	ImageID                      string
-	ProviderName, ProviderRegion string
 }
 
 func (a *Artifact) BuilderId() string {
@@ -74,7 +69,7 @@ func (a *Artifact) State(name string) interface{} {
 		return a.stateAtlasMetadata()
 		// To be able to push metadata to HCP Packer Registry, Packer will read the 'par.artifact.metadata'
 		// state from artifacts to get a build's metadata.
-	case "par.artifact.metadata":
+	case registryimage.ArtifactStateURI:
 		return a.stateHCPPackerRegistryMetadata()
 	default:
 		return nil
@@ -133,16 +128,32 @@ func (a *Artifact) stateAtlasMetadata() interface{} {
 // stateHCPPackerRegistryMetadata will write the metadata as an hcpRegistryImage for each of the AMIs
 // present in this artifact.
 func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
-	metadata := make([]hcpPackerRegistryImage, 0, len(a.Amis))
 
-	for region, imageId := range a.Amis {
-		metadata = append(metadata, hcpPackerRegistryImage{
+	f := func(k, v interface{}) (*registryimage.Image, error) {
+
+		region, ok := k.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value of key in Amis map")
+		}
+		imageId, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("unexpected value for %q in Amis map", region)
+		}
+		image := registryimage.Image{
 			ImageID:        imageId,
 			ProviderRegion: region,
 			ProviderName:   "aws",
-		})
+		}
+
+		return &image, nil
 
 	}
 
-	return metadata
+	images, err := registryimage.FromMappedData(a.Amis, f)
+	if err != nil {
+		log.Printf("[TRACE] error encountered when creating HCP Packer registry image for artifact.Amis: %s", err)
+		return nil
+	}
+
+	return images
 }

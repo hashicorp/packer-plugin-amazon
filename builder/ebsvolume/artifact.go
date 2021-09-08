@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
 
 // map of region to list of volume IDs
@@ -72,6 +73,12 @@ func (a *Artifact) String() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
+	// To be able to push metadata to HCP Packer Registry, Packer will read the 'par.artifact.metadata'
+	// state from artifacts to get a build's metadata.
+	if name == registryimage.ArtifactStateURI {
+		return a.stateHCPPackerRegistryMetadata()
+	}
+
 	if _, ok := a.StateData[name]; ok {
 		return a.StateData[name]
 	}
@@ -103,4 +110,36 @@ func (a *Artifact) Destroy() error {
 	}
 
 	return nil
+}
+
+// stateHCPPackerRegistryMetadata will write the metadata as an hcpRegistryImage for each of the AMIs
+// present in this artifact.
+func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
+
+	images := make([]*registryimage.Image, 0, len(a.Volumes)+len(a.Snapshots))
+	for region, volumeIDs := range a.Volumes {
+		for _, volumeID := range volumeIDs {
+			volumeID := volumeID
+			image := registryimage.Image{
+				ImageID:        volumeID,
+				ProviderRegion: region,
+				ProviderName:   "aws",
+			}
+			images = append(images, &image)
+		}
+	}
+
+	for region, snapshotIDs := range a.Snapshots {
+		for _, snapshotID := range snapshotIDs {
+			snapshotID := snapshotID
+			image := registryimage.Image{
+				ImageID:        snapshotID,
+				ProviderRegion: region,
+				ProviderName:   "aws",
+			}
+			images = append(images, &image)
+		}
+	}
+
+	return images
 }
