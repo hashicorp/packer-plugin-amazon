@@ -137,7 +137,7 @@ func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
 		}
 		imageId, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("unexpected type for %q in Amis map", region)
+			return nil, fmt.Errorf("unexpected type for value in Amis map")
 		}
 		image := registryimage.Image{
 			ImageID:        imageId,
