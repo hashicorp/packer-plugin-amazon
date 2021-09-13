@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestArtifact_Impl(t *testing.T) {
@@ -90,14 +92,28 @@ func TestArtifactState(t *testing.T) {
 }
 
 func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
-	a := &Artifact{
+	artifact := &Artifact{
 		Amis: map[string]string{
 			"east": "foo", "west": "bar",
 		},
 	}
 
-	actual := a.State("par.artifact.metadata")
-	expected := []hcpPackerRegistryImage{
+	result := artifact.State(registryimage.ArtifactStateURI)
+	if result == nil {
+		t.Fatalf("Bad: HCP Packer registry image data was nil")
+	}
+
+	var images []registryimage.Image
+	err := mapstructure.Decode(result, &images)
+	if err != nil {
+		t.Errorf("Bad: unexpected error when trying to decode state into registryimage.Image %v", err)
+	}
+
+	if len(images) != 2 {
+		t.Errorf("Bad: we should have two images for this test Artifact but we got %d", len(images))
+	}
+
+	expected := []registryimage.Image{
 		{
 			ImageID:        "foo",
 			ProviderName:   "aws",
@@ -109,7 +125,7 @@ func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 			ProviderRegion: "west",
 		},
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+	if !reflect.DeepEqual(images, expected) {
+		t.Fatalf("bad: %#v", images)
 	}
 }
