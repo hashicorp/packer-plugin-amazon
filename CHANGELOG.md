@@ -1,5 +1,7 @@
-## 1.0.1 (Upcoming)
+## 1.0.1 (September 13, 2021)
+
 * Add HCP Packer registry image metadata to builder artifacts. [GH-129]
+* Bump Packer plugin SDK to version v0.2.5 [GH-129]
 
 ## 1.0.0 (June 14, 2021)
 
