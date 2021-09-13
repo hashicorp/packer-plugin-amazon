@@ -1,4 +1,4 @@
-## 1.0.1 (September 13, 2021### 
+## 1.0.1 (September 13, 2021)
 ### NOTES:
 HCP Packer registry is currently in private beta.
 
