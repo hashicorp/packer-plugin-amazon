@@ -1,5 +1,8 @@
-## 1.0.1 (September 13, 2021)
+## 1.0.1 (September 13, 2021### 
+### NOTES:
+HCP Packer registry is currently in private beta.
 
+### FEATURES:
 * Add HCP Packer registry image metadata to builder artifacts. [GH-129]
 * Bump Packer plugin SDK to version v0.2.5 [GH-129]
 
