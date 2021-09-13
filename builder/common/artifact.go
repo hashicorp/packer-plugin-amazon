@@ -155,5 +155,19 @@ func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
 		return nil
 	}
 
+	if a.StateData == nil {
+		return images
+	}
+
+	data, ok := a.StateData["generated_data"].(map[string]interface{})
+	if !ok {
+		return images
+	}
+
+	for _, image := range images {
+		image.Labels = map[string]string{
+			"source_image": data["SourceAMIName"].(string),
+		}
+	}
 	return images
 }
