@@ -1,4 +1,5 @@
 ## 1.0.1 (Upcoming)
+* Add HCP Packer registry image metadata to builder artifacts. [GH-129]
 
 ## 1.0.0 (June 14, 2021)
 
