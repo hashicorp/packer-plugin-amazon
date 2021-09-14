@@ -314,6 +314,12 @@
   subnet-12345def, where Packer will launch the EC2 instance. This field is
   required if you are using an non-default VPC.
 
+- `host_resource_group_arn` (string) - [HostResourceGroupArn](https://docs.aws.amazon.com/license-manager/latest/userguide/host-resource-groups.html) used
+  when Packer launches the EC2 instance, allowing it to be launched on a collection of dedicated hardware.
+
+- `license_configuration_arn` (string) - [LicenseConfigurationArn](https://docs.aws.amazon.com/license-manager/latest/userguide/license-configurations.html) used
+  when Packer launches the EC2 instance, allowing it to be launched with a specific license specification.
+
 - `tenancy` (string) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
   when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
   
