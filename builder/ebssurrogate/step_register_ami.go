@@ -25,6 +25,7 @@ type StepRegisterAMI struct {
 	image                    *ec2.Image
 	LaunchOmitMap            map[string]bool
 	AMISkipBuildRegion       bool
+	BootMode                 string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -71,6 +72,9 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 		// Set EnaSupport to true
 		// As of February 2017, this applies to C5, I3, P2, R4, X1, and m4.16xlarge
 		registerOpts.EnaSupport = aws.Bool(true)
+	}
+	if s.BootMode != "" {
+		registerOpts.BootMode = aws.String(s.BootMode)
 	}
 	registerResp, err := ec2conn.RegisterImage(registerOpts)
 	if err != nil {

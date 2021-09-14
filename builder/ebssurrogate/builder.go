@@ -70,6 +70,11 @@ type Config struct {
 	// what architecture to use when registering the
 	// final AMI; valid options are "x86_64" or "arm64". Defaults to "x86_64".
 	Architecture string `mapstructure:"ami_architecture" required:"false"`
+	// The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
+	// [boot modes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-boot.html) for
+	// more information. Defaults to `legacy-bios` when `ami_architecture` is `x86_64` and
+	// `uefi` when `ami_architecture` is `arm64`.
+	BootMode string `mapstructure:"boot_mode" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -165,6 +170,20 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	if !valid {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "x86_64" and "arm64"`))
 	}
+
+	if b.config.BootMode != "" {
+		valid := false
+		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
+			if validBootMode == b.config.BootMode {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid boot_mode values are "legacy-bios" and "uefi"`))
+		}
+	}
+
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
 	}
@@ -369,6 +388,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LaunchOmitMap:            b.config.LaunchMappings.GetOmissions(),
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
+			BootMode:                 b.config.BootMode,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
