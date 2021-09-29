@@ -340,7 +340,7 @@ func (c *AccessConfig) GetCredentials(config *aws.Config) (*awsCredentials.Crede
 		AssumeRoleTags:              c.AssumeRole.AssumeRoleTags,
 		AssumeRoleTransitiveTagKeys: c.AssumeRole.AssumeRoleTransitiveTagKeys,
 		CredsFilename:               c.CredsFilename,
-		DebugLogging:                false,
+		DebugLogging:                c.packerConfig.PackerDebug,
 		// TODO: implement for Packer
 		// IamEndpoint:                 c.Endpoints["iam"],
 		Insecure:             c.InsecureSkipTLSVerify,
