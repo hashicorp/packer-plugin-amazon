@@ -273,6 +273,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
 			Comm:         &b.config.RunConfig.Comm,
+			IsRestricted: b.config.IsChinaCloud(),
+			Tags:         b.config.RunTags,
 			DebugKeyPath: fmt.Sprintf("ec2_%s.pem", b.config.PackerBuildName),
 		},
 		&awscommon.StepSecurityGroup{
@@ -281,6 +283,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			CommConfig:             &b.config.RunConfig.Comm,
 			TemporarySGSourceCidrs: b.config.TemporarySGSourceCidrs,
 			SkipSSHRuleCreation:    b.config.SSMAgentEnabled(),
+			IsRestricted:           b.config.IsChinaCloud(),
+			Tags:                   b.config.RunTags,
 		},
 		&awscommon.StepIamInstanceProfile{
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
@@ -345,6 +349,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 			PollingConfig:      b.config.PollingConfig,
+			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
+			Tags:               b.config.RunTags,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
