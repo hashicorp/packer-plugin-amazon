@@ -1,3 +1,8 @@
+## 1.2.0 (Upcoming)
+
+### IMPROVEMENTS
+* Add tag specification to supported resources to enable security tagging. [GH-96]
+
 ## 1.0.1 (September 13, 2021)
 ### NOTES:
 HCP Packer registry is currently in private beta.
