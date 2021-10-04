@@ -151,9 +151,7 @@ func (a *Artifact) stateHCPPackerRegistryMetadata() interface{} {
 	}
 
 	for _, image := range images {
-		image.Labels = map[string]string{
-			"source_image": data["SourceAMIName"].(string),
-		}
+		image.SourceImageID = data["SourceAMI"].(string)
 	}
 
 	return images

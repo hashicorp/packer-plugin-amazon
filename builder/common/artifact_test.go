@@ -96,6 +96,7 @@ func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 		Amis: map[string]string{
 			"east": "foo", "west": "bar",
 		},
+		StateData: map[string]interface{}{"generated_data": map[string]interface{}{"SourceAMI": "ami-12345"}},
 	}
 
 	result := artifact.State(registryimage.ArtifactStateURI)
@@ -118,11 +119,13 @@ func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 			ImageID:        "foo",
 			ProviderName:   "aws",
 			ProviderRegion: "east",
+			SourceImageID:  "ami-12345",
 		},
 		{
 			ImageID:        "bar",
 			ProviderName:   "aws",
 			ProviderRegion: "west",
+			SourceImageID:  "ami-12345",
 		},
 	}
 	if !reflect.DeepEqual(images, expected) {
