@@ -243,7 +243,7 @@ type RunConfig struct {
 	//   source_ami_filter {
 	//     filters = {
 	//        virtualization-type = "hvm"
-	//        name = "ubuntu/images/\*ubuntu-xenial-16.04-amd64-server-\*"
+	//        name = "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*"
 	//        root-device-type = "ebs"
 	//     }
 	//     owners = ["099720109477"]
@@ -260,7 +260,7 @@ type RunConfig struct {
 	//     "source_ami_filter": {
 	//        "filters": {
 	//        "virtualization-type": "hvm",
-	//        "name": "ubuntu/images/\*ubuntu-xenial-16.04-amd64-server-\*",
+	//        "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
 	//        "root-device-type": "ebs"
 	//        },
 	//        "owners": ["099720109477"],
