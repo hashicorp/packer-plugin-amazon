@@ -352,6 +352,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			Tags:               b.config.RunTags,
 		},
+		&stepEnableDeprecation{
+			DeprecationTime: b.config.DeprecationTime,
+		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,
@@ -379,9 +382,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:               b.config.AMITags,
 			SnapshotTags:       b.config.SnapshotTags,
 			Ctx:                b.config.ctx,
-		},
-		&stepEnableDeprecation{
-			DeprecationTime: b.config.DeprecationTime,
 		},
 	}
 
