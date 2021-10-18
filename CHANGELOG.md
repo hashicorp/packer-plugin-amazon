@@ -1,5 +1,4 @@
-## 1.2.0 (Upcoming)
-
+## 1.0.2 (October 18, 2021)
 
 ### IMPROVEMENTS
 * Add `SourceAMI` to HCP Packer registry image metadata. [GH-136]
