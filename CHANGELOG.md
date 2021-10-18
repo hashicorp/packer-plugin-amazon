@@ -1,11 +1,18 @@
 ## 1.2.0 (Upcoming)
 
+
 ### IMPROVEMENTS
-* Add tag specification to supported resources to enable security tagging. [GH-96]
+* Add `SourceAMI` to HCP Packer registry image metadata. [GH-136]
+* Add tag specification to supported resources to enable security tagging.
+    [GH-96]
+* Bump packer-plugin-sdk to v0.2.7 [GH-143]
+
+### BUG FIXES:
+* builder/ebs: Fix deprecate_at when copying to additional regions. [GH-138]
+* Fix `InvalidTagKey.Malformed` tag error for spot instance builds. [GH-92]
+
 
 ## 1.0.1 (September 13, 2021)
-### NOTES:
-HCP Packer registry is currently in private beta.
 
 ### FEATURES:
 * Add HCP Packer registry image metadata to builder artifacts. [GH-129]
