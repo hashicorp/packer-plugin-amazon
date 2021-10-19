@@ -1,3 +1,9 @@
+## 1.0.3 (October 18, 2021)
+
+### BUG FIXES:
+* Fix panic in GetCredentials helper [GH-145]
+
+
 ## 1.0.2 (October 18, 2021)
 
 ### IMPROVEMENTS
