@@ -328,6 +328,10 @@ func (c *AccessConfig) IsChinaCloud() bool {
 // endpoints. GetCredentials also validates the credentials and the ability to
 // assume a role or will return an error if unsuccessful.
 func (c *AccessConfig) GetCredentials(config *aws.Config) (*awsCredentials.Credentials, error) {
+	packerDebug := false
+	if c.packerConfig != nil && c.packerConfig.PackerDebug {
+		packerDebug = true
+	}
 	// Reload values into the config used by the Packer-Terraform shared SDK
 	awsbaseConfig := &awsbase.Config{
 		AccessKey:                   c.AccessKey,
@@ -340,7 +344,7 @@ func (c *AccessConfig) GetCredentials(config *aws.Config) (*awsCredentials.Crede
 		AssumeRoleTags:              c.AssumeRole.AssumeRoleTags,
 		AssumeRoleTransitiveTagKeys: c.AssumeRole.AssumeRoleTransitiveTagKeys,
 		CredsFilename:               c.CredsFilename,
-		DebugLogging:                c.packerConfig.PackerDebug,
+		DebugLogging:                packerDebug,
 		// TODO: implement for Packer
 		// IamEndpoint:                 c.Endpoints["iam"],
 		Insecure:             c.InsecureSkipTLSVerify,
