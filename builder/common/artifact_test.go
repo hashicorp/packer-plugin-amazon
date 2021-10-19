@@ -2,6 +2,7 @@ package common
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -94,9 +95,12 @@ func TestArtifactState(t *testing.T) {
 func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 	artifact := &Artifact{
 		Amis: map[string]string{
-			"east": "foo", "west": "bar",
+			"east": "foo",
+			"west": "bar",
 		},
-		StateData: map[string]interface{}{"generated_data": map[string]interface{}{"SourceAMI": "ami-12345"}},
+		StateData: map[string]interface{}{
+			"generated_data": map[string]interface{}{"SourceAMI": "ami-12345"},
+		},
 	}
 
 	result := artifact.State(registryimage.ArtifactStateURI)
@@ -128,6 +132,15 @@ func TestArtifactState_hcpPackerRegistryMetadata(t *testing.T) {
 			SourceImageID:  "ami-12345",
 		},
 	}
+
+	// Sort output to make comparison deterministic
+	sort.Slice(expected, func(i, j int) bool {
+		return expected[i].ImageID < expected[j].ImageID
+	})
+	sort.Slice(images, func(i, j int) bool {
+		return images[i].ImageID < images[j].ImageID
+	})
+
 	if !reflect.DeepEqual(images, expected) {
 		t.Fatalf("bad: %#v", images)
 	}
