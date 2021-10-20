@@ -6,6 +6,10 @@
 
 ## 1.0.2 (October 18, 2021)
 
+### NOTES:
+Support for the HCP Packer registry is currently in beta and requires 
+Packer v1.7.7 [GH-136]
+
 ### IMPROVEMENTS
 * Add `SourceAMI` to HCP Packer registry image metadata. [GH-136]
 * Add tag specification to supported resources to enable security tagging.
@@ -18,6 +22,9 @@
 
 
 ## 1.0.1 (September 13, 2021)
+
+### NOTES:
+HCP Packer private beta support requires Packer version 1.7.5 or 1.7.6 [GH-129]
 
 ### FEATURES:
 * Add HCP Packer registry image metadata to builder artifacts. [GH-129]
