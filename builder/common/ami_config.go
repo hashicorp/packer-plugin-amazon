@@ -277,7 +277,7 @@ func (c *AMIConfig) prepareRegions(accessConfig *AccessConfig) (errs []error) {
 
 // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html
 func ValidateKmsKey(kmsKey string) (valid bool) {
-	kmsKeyIdPattern := `[a-f0-9-]+$`
+	kmsKeyIdPattern := `(:?mrk-)?[a-f0-9]+-[a-f0-9-]+$`
 	aliasPattern := `alias/[a-zA-Z0-9:/_-]+$`
 	kmsArnStartPattern := `^arn:aws(-us-gov)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
 	if regexp.MustCompile(fmt.Sprintf("^%s", kmsKeyIdPattern)).MatchString(kmsKey) {
