@@ -1,7 +1,7 @@
 ## 1.0.4 (Upcoming)
 
 ### BUG FIXES:
-* Fix invalid KMS key error for multi-region keys. [GH-125]
+* Fix invalid KMS key error for multi-region keys. [GH-147]
 
 ## 1.0.3 (October 19, 2021)
 
