@@ -287,7 +287,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                      b.config.ctx,
 			Debug:                    b.config.PackerDebug,
 			EbsOptimized:             b.config.EbsOptimized,
-			EnableT2Unlimited:        b.config.EnableT2Unlimited,
+			EnableUnlimitedCredits:   b.config.EnableUnlimitedCredits,
 			InstanceType:             b.config.InstanceType,
 			IsRestricted:             b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			SourceAMI:                b.config.SourceAmi,

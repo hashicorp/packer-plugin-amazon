@@ -128,6 +128,37 @@ func TestRunConfigPrepare_EnableT2UnlimitedBadWithSpotInstanceRequest(t *testing
 	}
 }
 
+func TestRunConfigPrepare_EnableUnlimitedCredits(t *testing.T) {
+
+	tc := []struct {
+		name          string
+		instanceType  string
+		enableCredits bool
+		errorCount    int
+	}{
+		{"T2 instance", "t2.micro", true, 0},
+		{"T3 instance", "t3.micro", true, 0},
+		{"T4g instance", "t4g.micro", true, 0},
+		{"M5 instance", "m5.micro", true, 1},
+		{"bogus t4 instance", "t4.micro", true, 1},
+		{"bogus t23 instance", "t23.micro", true, 1},
+	}
+
+	for _, tt := range tc {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			c := testConfig()
+			c.InstanceType = tt.instanceType
+			c.EnableUnlimitedCredits = tt.enableCredits
+			err := c.Prepare(nil)
+			if len(err) != tt.errorCount {
+				t.Errorf("err: %s", err)
+			}
+
+		})
+	}
+}
+
 func TestRunConfigPrepare_SpotAuto(t *testing.T) {
 	c := testConfig()
 	c.SpotPrice = "auto"

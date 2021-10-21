@@ -27,7 +27,7 @@ type StepRunSourceInstance struct {
 	Ctx                               interpolate.Context
 	Debug                             bool
 	EbsOptimized                      bool
-	EnableT2Unlimited                 bool
+	EnableUnlimitedCredits            bool
 	ExpectedRootDevice                string
 	HttpEndpoint                      string
 	HttpTokens                        string
@@ -142,7 +142,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		}
 	}
 
-	if s.EnableT2Unlimited {
+	if s.EnableUnlimitedCredits {
 		creditOption := "unlimited"
 		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: &creditOption}
 	}

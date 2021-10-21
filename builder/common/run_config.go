@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -102,6 +101,7 @@ type RunConfig struct {
 	// Optimized](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html).
 	// Default `false`.
 	EbsOptimized bool `mapstructure:"ebs_optimized" required:"false"`
+	// Deprecated argument - please use "enable_unlimited_credits".
 	// Enabling T2 Unlimited allows the source instance to burst additional CPU
 	// beyond its available [CPU
 	// Credits](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/t2-credits-baseline-concepts.html)
@@ -125,6 +125,24 @@ type RunConfig struct {
 	// Unlimited - even for instances that would usually qualify for the
 	// [AWS Free Tier](https://aws.amazon.com/free/).
 	EnableT2Unlimited bool `mapstructure:"enable_t2_unlimited" required:"false"`
+	// Enabling Unlimited credits allows the source instance to burst additional CPU
+	// beyond its available [CPU
+	// Credits](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-unlimited-mode-concepts.html#unlimited-mode-surplus-credits)
+	// for as long as the demand exists. This is in contrast to the standard
+	// configuration that only allows an instance to consume up to its
+	// available CPU Credits. See the AWS documentation for [T2
+	// Unlimited](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-unlimited-mode-concepts.html)
+	// and the **Unlimited Pricing** section of the [Amazon EC2 On-Demand
+	// Pricing](https://aws.amazon.com/ec2/pricing/on-demand/) document for
+	// more information. By default this option is disabled and Packer will set
+	// up a [Standard](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-standard-mode.html)
+	// instance instead.
+	//
+	// To use Unlimited you must use a T2/T3/T4g instance type, e.g. (`t2.micro`, `t3.micro`).
+	// Additionally, Unlimited cannot be used in conjunction with Spot
+	// Instances, e.g. when the `spot_price` option has been configured.
+	// Attempting to do so will cause an error.
+	EnableUnlimitedCredits bool `mapstructure:"enable_unlimited_credits" required:"false"`
 	// The name of an [IAM instance
 	// profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html)
 	// to launch the EC2 instance with.
@@ -524,6 +542,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.RunTags = make(map[string]string)
 	}
 
+	// EnableT2Unlimited has been deprecated so we preserve any config settings.
+	if c.EnableT2Unlimited && !c.EnableUnlimitedCredits {
+		c.EnableUnlimitedCredits = c.EnableT2Unlimited
+	}
+
 	// Validation
 	errs := c.Comm.Prepare(ctx)
 
@@ -668,15 +691,14 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, fmt.Errorf("shutdown_behavior only accepts 'stop' or 'terminate' values."))
 	}
 
-	if c.EnableT2Unlimited {
+	if c.EnableUnlimitedCredits {
 		if c.SpotPrice != "" {
-			errs = append(errs, fmt.Errorf("Error: T2 Unlimited cannot be used in conjunction with Spot Instances"))
+			errs = append(errs, fmt.Errorf("Error: Unlimited credits cannot be used in conjunction with Spot Instances"))
 		}
-		firstDotIndex := strings.Index(c.InstanceType, ".")
-		if firstDotIndex == -1 {
-			errs = append(errs, fmt.Errorf("Error determining main Instance Type from: %s", c.InstanceType))
-		} else if c.InstanceType[0:firstDotIndex] != "t2" {
-			errs = append(errs, fmt.Errorf("Error: T2 Unlimited enabled with a non-T2 Instance Type: %s", c.InstanceType))
+
+		r := `^t(:?[23]?|4g)\.`
+		if !regexp.MustCompile(r).MatchString(c.InstanceType) {
+			errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
 		}
 	}
 

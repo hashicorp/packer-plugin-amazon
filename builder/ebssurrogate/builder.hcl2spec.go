@@ -87,6 +87,7 @@ type FlatConfig struct {
 	DisableStopInstance                       *bool                                  `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
 	EbsOptimized                              *bool                                  `mapstructure:"ebs_optimized" required:"false" cty:"ebs_optimized" hcl:"ebs_optimized"`
 	EnableT2Unlimited                         *bool                                  `mapstructure:"enable_t2_unlimited" required:"false" cty:"enable_t2_unlimited" hcl:"enable_t2_unlimited"`
+	EnableUnlimitedCredits                    *bool                                  `mapstructure:"enable_unlimited_credits" required:"false" cty:"enable_unlimited_credits" hcl:"enable_unlimited_credits"`
 	IamInstanceProfile                        *string                                `mapstructure:"iam_instance_profile" required:"false" cty:"iam_instance_profile" hcl:"iam_instance_profile"`
 	FleetTags                                 map[string]string                      `mapstructure:"fleet_tags" required:"false" cty:"fleet_tags" hcl:"fleet_tags"`
 	FleetTag                                  []config.FlatKeyValue                  `mapstructure:"fleet_tag" required:"false" cty:"fleet_tag" hcl:"fleet_tag"`
@@ -240,6 +241,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"disable_stop_instance":         &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
 		"ebs_optimized":                 &hcldec.AttrSpec{Name: "ebs_optimized", Type: cty.Bool, Required: false},
 		"enable_t2_unlimited":           &hcldec.AttrSpec{Name: "enable_t2_unlimited", Type: cty.Bool, Required: false},
+		"enable_unlimited_credits":      &hcldec.AttrSpec{Name: "enable_unlimited_credits", Type: cty.Bool, Required: false},
 		"iam_instance_profile":          &hcldec.AttrSpec{Name: "iam_instance_profile", Type: cty.String, Required: false},
 		"fleet_tags":                    &hcldec.AttrSpec{Name: "fleet_tags", Type: cty.Map(cty.String), Required: false},
 		"fleet_tag":                     &hcldec.BlockListSpec{TypeName: "fleet_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
