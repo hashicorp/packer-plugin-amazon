@@ -197,6 +197,8 @@ func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {
 		"ghij1234+e567_890f-a12b-a123b4cd56ef",
 		"foo/bar",
 		"arn:aws:kms:us-east-1:012345678910:foo/bar",
+		"arn:aws:kms:us-east-1:012345678910:key/zab-12345678-1234-abcd-0000-123456789012",
+		"arn:aws:kms:us-east-1:012345678910:key/mkr-12345678-1234-abcd-0000-123456789012",
 		"arn:foo:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 	}
 	for _, invalidCase := range invalidCases {
