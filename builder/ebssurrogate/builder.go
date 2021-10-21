@@ -157,6 +157,12 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			"understand how Packer requests Spot instances.")
 	}
 
+	if b.config.RunConfig.EnableT2Unlimited {
+		warns = append(warns, "enable_t2_unlimited is deprecated please use "+
+			"enable_unlimited_credits. In future versions of "+
+			"Packer, inclusion of enable_t2_unlimited will error your builds.")
+	}
+
 	if b.config.Architecture == "" {
 		b.config.Architecture = "x86_64"
 	}
@@ -266,7 +272,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Debug:                             b.config.PackerDebug,
 			EbsOptimized:                      b.config.EbsOptimized,
 			EnableNitroEnclave:                b.config.EnableNitroEnclave,
-			EnableT2Unlimited:                 b.config.EnableT2Unlimited,
+			IsBurstableInstanceType:           b.config.IsBurstableInstanceType(),
+			EnableUnlimitedCredits:            b.config.EnableUnlimitedCredits,
 			ExpectedRootDevice:                "ebs",
 			HttpEndpoint:                      b.config.Metadata.HttpEndpoint,
 			HttpTokens:                        b.config.Metadata.HttpTokens,
