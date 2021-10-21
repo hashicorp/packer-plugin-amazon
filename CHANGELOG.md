@@ -1,3 +1,8 @@
+## 1.0.4 (Upcoming)
+
+### BUG FIXES:
+* Fix invalid KMS key error for multi-region keys. [GH-125]
+
 ## 1.0.3 (October 19, 2021)
 
 ### BUG FIXES:
@@ -7,7 +12,7 @@
 ## 1.0.2 (October 18, 2021)
 
 ### NOTES:
-Support for the HCP Packer registry is currently in beta and requires 
+Support for the HCP Packer registry is currently in beta and requires
 Packer v1.7.7 [GH-136]
 
 ### IMPROVEMENTS
