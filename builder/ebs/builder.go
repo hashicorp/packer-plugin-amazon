@@ -274,8 +274,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Debug:        b.config.PackerDebug,
 			Comm:         &b.config.RunConfig.Comm,
 			IsRestricted: b.config.IsChinaCloud(),
-			Tags:         b.config.RunTags,
 			DebugKeyPath: fmt.Sprintf("ec2_%s.pem", b.config.PackerBuildName),
+			Tags:         b.config.RunTags,
+			Ctx:          b.config.ctx,
 		},
 		&awscommon.StepSecurityGroup{
 			SecurityGroupFilter:    b.config.SecurityGroupFilter,
@@ -285,6 +286,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			SkipSSHRuleCreation:    b.config.SSMAgentEnabled(),
 			IsRestricted:           b.config.IsChinaCloud(),
 			Tags:                   b.config.RunTags,
+			Ctx:                    b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
@@ -351,6 +353,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:      b.config.PollingConfig,
 			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			Tags:               b.config.RunTags,
+			Ctx:                b.config.ctx,
 		},
 		&stepEnableDeprecation{
 			DeprecationTime: b.config.DeprecationTime,
