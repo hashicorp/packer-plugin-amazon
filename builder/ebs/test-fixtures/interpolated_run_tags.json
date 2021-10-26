@@ -1,0 +1,41 @@
+{
+    "variables": {
+        "simple_string": "So Simple",
+        "my_timestamp": "{{timestamp}}"
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "region": "us-east-1",
+            "source_ami_filter": {
+                "filters": {
+                    "virtualization-type": "hvm",
+                    "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
+                    "root-device-type": "ebs"
+                },
+                "owners": [
+                    "099720109477"
+                ],
+                "most_recent": true
+            },
+            "instance_type": "t2.micro",
+            "ssh_username": "ubuntu",
+            "communicator": "ssh",
+            "ami_name": "packer-tags-regression-{{timestamp}}",
+            "tags": {
+                "Team": "myteamtag",
+                "OS_Version": "Ubuntu",
+                "Release": "Latest",
+                "Base_AMI_Name": "packer-example-8359-1578924903",
+                "Extra": "latest",
+                "UserVariable": "{{user `simple_string`}}"
+            },
+            "run_tags": {
+                "Base_AMI_Name": "packer-example-8359-1578924903",
+                "Build_Time": "{{user `my_timestamp`}}",
+                "BuildFunc": "{{build_name}}",
+                "UserVariable": "{{user `simple_string`}}"
+            }
+        }
+    ]
+}
