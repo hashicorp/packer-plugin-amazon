@@ -108,6 +108,36 @@ type BlockDevice struct {
 	KmsKeyId string `mapstructure:"kms_key_id" required:"false"`
 }
 
+func NewBlockDevice(blockDeviceMapping *ec2.BlockDeviceMapping) *BlockDevice {
+	var blockDevice BlockDevice
+
+	if blockDeviceMapping == nil {
+		return &blockDevice
+	}
+
+	blockDevice.DeviceName = aws.StringValue(blockDeviceMapping.DeviceName)
+	blockDevice.NoDevice = blockDeviceMapping.NoDevice != nil
+	blockDevice.VirtualName = aws.StringValue(blockDeviceMapping.VirtualName)
+
+	if blockDeviceMapping.Ebs == nil {
+		return &blockDevice
+	}
+
+	iops := aws.Int64Value(blockDeviceMapping.Ebs.Iops)
+	throughput := aws.Int64Value(blockDeviceMapping.Ebs.Throughput)
+
+	blockDevice.DeleteOnTermination = aws.BoolValue(blockDeviceMapping.Ebs.DeleteOnTermination)
+	blockDevice.Encrypted = config.NewTrilean(blockDeviceMapping.Ebs.Encrypted)
+	blockDevice.IOPS = &iops
+	blockDevice.SnapshotId = aws.StringValue(blockDeviceMapping.Ebs.SnapshotId)
+	blockDevice.Throughput = &throughput
+	blockDevice.VolumeType = aws.StringValue(blockDeviceMapping.Ebs.VolumeType)
+	blockDevice.VolumeSize = aws.Int64Value(blockDeviceMapping.Ebs.VolumeSize)
+	blockDevice.KmsKeyId = aws.StringValue(blockDeviceMapping.Ebs.KmsKeyId)
+
+	return &blockDevice
+}
+
 type BlockDevices []BlockDevice
 
 func (bds BlockDevices) BuildEC2BlockDeviceMappings() []*ec2.BlockDeviceMapping {
