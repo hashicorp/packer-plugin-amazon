@@ -86,12 +86,13 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 // FlatDatasourceOutput is an auto-generated flat version of DatasourceOutput.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatDatasourceOutput struct {
-	ID           *string           `mapstructure:"id" cty:"id" hcl:"id"`
-	Name         *string           `mapstructure:"name" cty:"name" hcl:"name"`
-	CreationDate *string           `mapstructure:"creation_date" cty:"creation_date" hcl:"creation_date"`
-	Owner        *string           `mapstructure:"owner" cty:"owner" hcl:"owner"`
-	OwnerName    *string           `mapstructure:"owner_name" cty:"owner_name" hcl:"owner_name"`
-	Tags         map[string]string `mapstructure:"tags" cty:"tags" hcl:"tags"`
+	ID                  *string                  `mapstructure:"id" cty:"id" hcl:"id"`
+	Name                *string                  `mapstructure:"name" cty:"name" hcl:"name"`
+	CreationDate        *string                  `mapstructure:"creation_date" cty:"creation_date" hcl:"creation_date"`
+	Owner               *string                  `mapstructure:"owner" cty:"owner" hcl:"owner"`
+	OwnerName           *string                  `mapstructure:"owner_name" cty:"owner_name" hcl:"owner_name"`
+	BlockDeviceMappings []common.FlatBlockDevice `mapstructure:"block_device_mappings" cty:"block_device_mappings" hcl:"block_device_mappings"`
+	Tags                map[string]string        `mapstructure:"tags" cty:"tags" hcl:"tags"`
 }
 
 // FlatMapstructure returns a new FlatDatasourceOutput.
@@ -106,12 +107,13 @@ func (*DatasourceOutput) FlatMapstructure() interface{ HCL2Spec() map[string]hcl
 // The decoded values from this spec will then be applied to a FlatDatasourceOutput.
 func (*FlatDatasourceOutput) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"id":            &hcldec.AttrSpec{Name: "id", Type: cty.String, Required: false},
-		"name":          &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
-		"creation_date": &hcldec.AttrSpec{Name: "creation_date", Type: cty.String, Required: false},
-		"owner":         &hcldec.AttrSpec{Name: "owner", Type: cty.String, Required: false},
-		"owner_name":    &hcldec.AttrSpec{Name: "owner_name", Type: cty.String, Required: false},
-		"tags":          &hcldec.AttrSpec{Name: "tags", Type: cty.Map(cty.String), Required: false},
+		"id":                    &hcldec.AttrSpec{Name: "id", Type: cty.String, Required: false},
+		"name":                  &hcldec.AttrSpec{Name: "name", Type: cty.String, Required: false},
+		"creation_date":         &hcldec.AttrSpec{Name: "creation_date", Type: cty.String, Required: false},
+		"owner":                 &hcldec.AttrSpec{Name: "owner", Type: cty.String, Required: false},
+		"owner_name":            &hcldec.AttrSpec{Name: "owner_name", Type: cty.String, Required: false},
+		"block_device_mappings": &hcldec.BlockListSpec{TypeName: "block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
+		"tags":                  &hcldec.AttrSpec{Name: "tags", Type: cty.Map(cty.String), Required: false},
 	}
 	return s
 }

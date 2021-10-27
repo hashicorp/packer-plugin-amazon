@@ -63,6 +63,8 @@ type DatasourceOutput struct {
 	Owner string `mapstructure:"owner"`
 	// The owner alias.
 	OwnerName string `mapstructure:"owner_name"`
+	// Any block device mapping entries.
+	BlockDeviceMappings []awscommon.BlockDevice `mapstructure:"block_device_mappings"`
 	// The key/value combination of the tags assigned to the AMI.
 	Tags map[string]string `mapstructure:"tags"`
 }
@@ -82,18 +84,24 @@ func (d *Datasource) Execute() (cty.Value, error) {
 		return cty.NullVal(cty.EmptyObject), err
 	}
 
+	imageBlockDeviceMappings := make([]awscommon.BlockDevice, len(image.BlockDeviceMappings))
+	for i, blockDeviceMapping := range image.BlockDeviceMappings {
+		imageBlockDeviceMappings[i] = *awscommon.NewBlockDevice(blockDeviceMapping)
+	}
+
 	imageTags := make(map[string]string, len(image.Tags))
 	for _, tag := range image.Tags {
 		imageTags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
 	}
 
 	output := DatasourceOutput{
-		ID:           aws.StringValue(image.ImageId),
-		Name:         aws.StringValue(image.Name),
-		CreationDate: aws.StringValue(image.CreationDate),
-		Owner:        aws.StringValue(image.OwnerId),
-		OwnerName:    aws.StringValue(image.ImageOwnerAlias),
-		Tags:         imageTags,
+		ID:                  aws.StringValue(image.ImageId),
+		Name:                aws.StringValue(image.Name),
+		CreationDate:        aws.StringValue(image.CreationDate),
+		Owner:               aws.StringValue(image.OwnerId),
+		OwnerName:           aws.StringValue(image.ImageOwnerAlias),
+		BlockDeviceMappings: imageBlockDeviceMappings,
+		Tags:                imageTags,
 	}
 	return hcl2helper.HCL2ValueFromConfig(output, d.OutputSpec()), nil
 }
