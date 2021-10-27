@@ -6,6 +6,7 @@ aws ec2 deregister-image --image-id $(aws ec2 describe-images --output text --fi
 package ebs
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -422,6 +423,61 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 
 	return nil
 }
+
+//go:embed test-fixtures/interpolated_run_tags.pkr.hcl
+var testHCLInterpolatedRunTagsSource string
+
+func TestAccBuilder_EbsRunTags(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-west-2",
+		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_hcl2_run_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: fmt.Sprintf(testHCLInterpolatedRunTagsSource, ami.Name),
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/interpolated_run_tags.json
+var testJSONInterpolatedRunTagsSource string
+
+func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-west-2",
+		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_json_run_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: testJSONInterpolatedRunTagsSource,
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 func testEC2Conn() (*ec2.EC2, error) {
 	access := &common.AccessConfig{RawRegion: "us-east-1"}
 	session, err := access.Session()

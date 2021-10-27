@@ -3,6 +3,7 @@ BINARY=packer-plugin-${NAME}
 
 COUNT?=1
 TEST?=$(shell go list ./...)
+TESTARGS?=
 
 .PHONY: dev
 
@@ -29,4 +30,4 @@ test:
 	@go test -count $(COUNT) $(TEST) -timeout=3m
 
 testacc: dev
-	@PACKER_ACC=1 go test -count $(COUNT) -v $(TEST) -timeout=120m
+	@PACKER_ACC=1 go test -count $(COUNT) -v $(TEST) $(TESTARGS) -timeout=120m
