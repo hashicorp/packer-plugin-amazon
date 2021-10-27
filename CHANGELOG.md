@@ -2,11 +2,12 @@
 
 ### BUG FIXES:
 * Fix invalid KMS key error for multi-region keys. [GH-147]
+* Fix variable interpolation for builder `run_tags`. [GH-151]
 
 ## 1.0.3 (October 19, 2021)
 
 ### BUG FIXES:
-* Fix panic in GetCredentials helper [GH-145]
+* Fix panic in GetCredentials helper. [GH-145]
 
 
 ## 1.0.2 (October 18, 2021)
