@@ -416,6 +416,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
 			Groups:         b.config.AMIGroups,
+			OrgArns:        b.config.AMIOrgArns,
+			OuArns:         b.config.AMIOuArns,
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,

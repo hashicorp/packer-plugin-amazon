@@ -41,6 +41,8 @@ type Config struct {
 	Description     string            `mapstructure:"ami_description"`
 	Users           []string          `mapstructure:"ami_users"`
 	Groups          []string          `mapstructure:"ami_groups"`
+	OrgArns         []string          `mapstructure:"ami_org_arns"`
+	OuArns          []string          `mapstructure:"ami_ou_arns"`
 	Encrypt         bool              `mapstructure:"ami_encrypt"`
 	KMSKey          string            `mapstructure:"ami_kms_key"`
 	LicenseType     string            `mapstructure:"license_type"`
@@ -425,6 +427,36 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		}
 		options["users"] = &ec2.ModifyImageAttributeInput{
 			UserIds: users,
+			LaunchPermission: &ec2.LaunchPermissionModifications{
+				Add: adds,
+			},
+		}
+	}
+
+	if len(p.config.OrgArns) > 0 {
+		orgArns := make([]*string, len(p.config.OrgArns))
+		adds := make([]*ec2.LaunchPermission, len(p.config.OrgArns))
+		for i, u := range p.config.OrgArns {
+			orgArns[i] = aws.String(u)
+			adds[i] = &ec2.LaunchPermission{OrganizationArn: aws.String(u)}
+		}
+		options["ami org arns"] = &ec2.ModifyImageAttributeInput{
+			OrganizationArns: orgArns,
+			LaunchPermission: &ec2.LaunchPermissionModifications{
+				Add: adds,
+			},
+		}
+	}
+
+	if len(p.config.OuArns) > 0 {
+		ouArns := make([]*string, len(p.config.OuArns))
+		adds := make([]*ec2.LaunchPermission, len(p.config.OuArns))
+		for i, u := range p.config.OuArns {
+			ouArns[i] = aws.String(u)
+			adds[i] = &ec2.LaunchPermission{OrganizationalUnitArn: aws.String(u)}
+		}
+		options["ami ou arns"] = &ec2.ModifyImageAttributeInput{
+			OrganizationalUnitArns: ouArns,
 			LaunchPermission: &ec2.LaunchPermissionModifications{
 				Add: adds,
 			},

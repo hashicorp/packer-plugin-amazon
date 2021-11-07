@@ -35,6 +35,14 @@ type AMIConfig struct {
 	// launch the resulting AMI(s). By default no groups have permission to launch
 	// the AMI. all will make the AMI publicly accessible.
 	AMIGroups []string `mapstructure:"ami_groups" required:"false"`
+	// A list of Amazon Resource Names (ARN) of a organizations that have access to
+	// launch the resulting AMI(s). By default no organizations have permission to launch
+	// the AMI.
+	AMIOrgArns []string `mapstructure:"ami_org_arns" required:"false"`
+	// A list of Amazon Resource Names (ARN) of a organizational units (OU) that have access to
+	// launch the resulting AMI(s). By default no organizational units have permission to launch
+	// the AMI.
+	AMIOuArns []string `mapstructure:"ami_ou_arns" required:"false"`
 	// A list of product codes to
 	// associate with the AMI. By default no product codes are associated with the
 	// AMI.
@@ -171,7 +179,7 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 	errs = append(errs, c.prepareRegions(accessConfig)...)
 
 	// Prevent sharing of default KMS key encrypted volumes with other aws users
-	if len(c.AMIUsers) > 0 {
+	if len(c.AMIUsers) > 0 || len(c.AMIOrgArns) > 0 || len(c.AMIOuArns) > 0 {
 		if len(c.AMIKmsKeyId) == 0 && len(c.AMIRegionKMSKeyIDs) == 0 && c.AMIEncryptBootVolume.True() {
 			errs = append(errs, fmt.Errorf("Cannot share AMI encrypted with default KMS key"))
 		}

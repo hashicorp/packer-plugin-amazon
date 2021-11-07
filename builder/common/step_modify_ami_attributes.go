@@ -18,6 +18,8 @@ type StepModifyAMIAttributes struct {
 
 	Users          []string
 	Groups         []string
+	OrgArns        []string
+	OuArns         []string
 	SnapshotUsers  []string
 	SnapshotGroups []string
 	ProductCodes   []string
@@ -45,6 +47,8 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	valid = valid || s.Description != ""
 	valid = valid || (s.Users != nil && len(s.Users) > 0)
 	valid = valid || (s.Groups != nil && len(s.Groups) > 0)
+	valid = valid || (s.OrgArns != nil && len(s.OrgArns) > 0)
+	valid = valid || (s.OuArns != nil && len(s.OuArns) > 0)
 	valid = valid || (s.ProductCodes != nil && len(s.ProductCodes) > 0)
 	valid = valid || (s.SnapshotUsers != nil && len(s.SnapshotUsers) > 0)
 	valid = valid || (s.SnapshotGroups != nil && len(s.SnapshotGroups) > 0)
@@ -138,6 +142,38 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 			UserIds: users,
 			CreateVolumePermission: &ec2.CreateVolumePermissionModifications{
 				Add: addsSnapshot,
+			},
+		}
+	}
+
+	if len(s.OrgArns) > 0 {
+		orgArns := make([]*string, len(s.OrgArns))
+		addsImage := make([]*ec2.LaunchPermission, len(s.OrgArns))
+		for i, u := range s.OrgArns {
+			orgArns[i] = aws.String(u)
+			addsImage[i] = &ec2.LaunchPermission{OrganizationArn: aws.String(u)}
+		}
+
+		options["ami org arns"] = &ec2.ModifyImageAttributeInput{
+			OrganizationArns: orgArns,
+			LaunchPermission: &ec2.LaunchPermissionModifications{
+				Add: addsImage,
+			},
+		}
+	}
+
+	if len(s.OuArns) > 0 {
+		ouArns := make([]*string, len(s.OuArns))
+		addsImage := make([]*ec2.LaunchPermission, len(s.OuArns))
+		for i, u := range s.OuArns {
+			ouArns[i] = aws.String(u)
+			addsImage[i] = &ec2.LaunchPermission{OrganizationalUnitArn: aws.String(u)}
+		}
+
+		options["ami ou arns"] = &ec2.ModifyImageAttributeInput{
+			OrganizationalUnitArns: ouArns,
+			LaunchPermission: &ec2.LaunchPermissionModifications{
+				Add: addsImage,
 			},
 		}
 	}
