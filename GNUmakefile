@@ -24,6 +24,9 @@ ci-release-docs: install-packer-sdc
 	@packer-sdc renderdocs -src docs -partials docs-partials/ -dst docs/
 	@/bin/sh -c "[ -d docs ] && zip -r docs.zip docs/"
 
+plugin-check: install-packer-sdc build
+	@packer-sdc plugin-check ${BINARY}
+
 testacc: dev
 	@PACKER_ACC=1 go test -count $(COUNT) -v $(TEST) -timeout=120m
 
