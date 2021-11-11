@@ -277,20 +277,38 @@ func (c *AMIConfig) prepareRegions(accessConfig *AccessConfig) (errs []error) {
 
 // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html
 func ValidateKmsKey(kmsKey string) (valid bool) {
-	kmsKeyIdPattern := `(:?mrk-)?[a-f0-9]+-[a-f0-9-]+$`
+	//Pattern for matching KMS Key ID for multi-region keys
+	// https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id-key-id
+	// We tolerate dashes for mrk keys because they seem to exist.
+	mrkKeyIdPattern := `mrk-[a-f0-9]+[a-f0-9-]+$`
+
+	//Pattern for matching KMS Key ID for single-region keys
+	kmsKeyIdPattern := `[a-f0-9]+[a-f0-9-]+$`
 	aliasPattern := `alias/[a-zA-Z0-9:/_-]+$`
-	kmsArnStartPattern := `^arn:aws(-us-gov)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
+
+	// Check if kmsKey  is just the KeyId or Alias
 	if regexp.MustCompile(fmt.Sprintf("^%s", kmsKeyIdPattern)).MatchString(kmsKey) {
+		return true
+	}
+	if regexp.MustCompile(fmt.Sprintf("^%s", mrkKeyIdPattern)).MatchString(kmsKey) {
 		return true
 	}
 	if regexp.MustCompile(fmt.Sprintf("^%s", aliasPattern)).MatchString(kmsKey) {
 		return true
 	}
+
+	// Check if kmsKey is the full ARN
+	kmsArnStartPattern := `^arn:aws(-us-gov)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
 	if regexp.MustCompile(fmt.Sprintf("%skey/%s", kmsArnStartPattern, kmsKeyIdPattern)).MatchString(kmsKey) {
 		return true
 	}
+	if regexp.MustCompile(fmt.Sprintf("%skey/%s", kmsArnStartPattern, mrkKeyIdPattern)).MatchString(kmsKey) {
+		return true
+	}
+
 	if regexp.MustCompile(fmt.Sprintf("%s%s", kmsArnStartPattern, aliasPattern)).MatchString(kmsKey) {
 		return true
 	}
+
 	return false
 }
