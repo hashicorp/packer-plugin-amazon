@@ -1,3 +1,10 @@
+## 1.0.5 (Upcoming)
+
+### IMPROVEMENTS
+* builder/chroot: Add support for i386 and x86_64_mac architectures. [GH-154]
+* builder/ebssurrogate: Add support for i386 and x86_64_mac architectures.
+    [GH-154]
+
 ## 1.0.4 (October 27, 2021)
 
 ### BUG FIXES:
