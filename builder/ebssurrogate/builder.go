@@ -67,8 +67,8 @@ type Config struct {
 	// [`dynamic_block`](https://packer.io/docs/templates/hcl_templates/expressions.html#dynamic-blocks)
 	// will allow you to create those programatically.
 	VolumeRunTag config.NameValues `mapstructure:"run_volume_tag" required:"false"`
-	// what architecture to use when registering the
-	// final AMI; valid options are "x86_64" or "arm64". Defaults to "x86_64".
+	// what architecture to use when registering the final AMI; valid options
+	// are "arm64", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
 	Architecture string `mapstructure:"ami_architecture" required:"false"`
 
 	ctx interpolate.Context
@@ -156,14 +156,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		b.config.Architecture = "x86_64"
 	}
 	valid := false
-	for _, validArch := range []string{"x86_64", "arm64"} {
+	for _, validArch := range []string{"arm64", "i386", "x86_64", "x86_64_mac"} {
 		if validArch == b.config.Architecture {
 			valid = true
 			break
 		}
 	}
 	if !valid {
-		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "x86_64" and "arm64"`))
+		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
 	}
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
