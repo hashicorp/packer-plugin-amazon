@@ -178,10 +178,12 @@ func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {
 
 	validCases := []string{
 		"abcd1234-e567-890f-a12b-a123b4cd56ef",
+		"mrk-f4224f9362ac4ed2b32a6bc77cf43510",
 		"alias/foo/bar",
 		"arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 		"arn:aws:kms:us-east-1:012345678910:alias/foo/bar",
 		"arn:aws:kms:us-east-1:012345678910:key/mrk-12345678-1234-abcd-0000-123456789012",
+		"arn:aws:kms:us-east-1:012345678910:key/mrk-f4224f9362ac4ed2b32a6bc77cf43510",
 		"arn:aws-us-gov:kms:us-gov-east-1:123456789012:key/12345678-1234-abcd-0000-123456789012",
 	}
 	for _, validCase := range validCases {
@@ -195,6 +197,8 @@ func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {
 		"ABCD1234-e567-890f-a12b-a123b4cd56ef",
 		"ghij1234-e567-890f-a12b-a123b4cd56ef",
 		"ghij1234+e567_890f-a12b-a123b4cd56ef",
+		"mrk-ghij1234+e567a12ba123b4cd56ef",
+		"mrk--f4224f9362ac4ed2b32a6bc77cf43510",
 		"foo/bar",
 		"arn:aws:kms:us-east-1:012345678910:foo/bar",
 		"arn:aws:kms:us-east-1:012345678910:key/zab-12345678-1234-abcd-0000-123456789012",
