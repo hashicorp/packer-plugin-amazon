@@ -35,11 +35,11 @@ type AMIConfig struct {
 	// launch the resulting AMI(s). By default no groups have permission to launch
 	// the AMI. all will make the AMI publicly accessible.
 	AMIGroups []string `mapstructure:"ami_groups" required:"false"`
-	// A list of Amazon Resource Names (ARN) of a organizations that have access to
+	// A list of Amazon Resource Names (ARN) of AWS Organizations that have access to
 	// launch the resulting AMI(s). By default no organizations have permission to launch
 	// the AMI.
 	AMIOrgArns []string `mapstructure:"ami_org_arns" required:"false"`
-	// A list of Amazon Resource Names (ARN) of a organizational units (OU) that have access to
+	// A list of Amazon Resource Names (ARN) of AWS Organizations organizational units (OU) that have access to
 	// launch the resulting AMI(s). By default no organizational units have permission to launch
 	// the AMI.
 	AMIOuArns []string `mapstructure:"ami_ou_arns" required:"false"`
