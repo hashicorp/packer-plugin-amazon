@@ -168,6 +168,36 @@ func TestAMIConfigPrepare_Share_EncryptedBoot(t *testing.T) {
 	if err := c.Prepare(accessConf, nil); err != nil {
 		t.Fatal("should be able to share ami with encrypted boot volume")
 	}
+
+	c = testAMIConfig()
+	c.AMIOrgArns = []string{"arn:aws:organizations::111122223333:organization/o-123example"}
+	c.AMIEncryptBootVolume = config.TriTrue
+
+	accessConf = FakeAccessConfig()
+
+	c.AMIKmsKeyId = ""
+	if err := c.Prepare(accessConf, nil); err == nil {
+		t.Fatal("shouldn't be able to share ami with encrypted boot volume")
+	}
+	c.AMIKmsKeyId = "89c3fb9a-de87-4f2a-aedc-fddc5138193c"
+	if err := c.Prepare(accessConf, nil); err != nil {
+		t.Fatal("should be able to share ami with encrypted boot volume")
+	}
+
+	c = testAMIConfig()
+	c.AMIOuArns = []string{"arn:aws:organizations::111122223333:ou/o-123example/ou-1234-5example"}
+	c.AMIEncryptBootVolume = config.TriTrue
+
+	accessConf = FakeAccessConfig()
+
+	c.AMIKmsKeyId = ""
+	if err := c.Prepare(accessConf, nil); err == nil {
+		t.Fatal("shouldn't be able to share ami with encrypted boot volume")
+	}
+	c.AMIKmsKeyId = "89c3fb9a-de87-4f2a-aedc-fddc5138193c"
+	if err := c.Prepare(accessConf, nil); err != nil {
+		t.Fatal("should be able to share ami with encrypted boot volume")
+	}
 }
 
 func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {

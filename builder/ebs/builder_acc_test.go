@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -222,12 +223,20 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name: "amazon-ebs_ami_sharing_test",
 		Setup: func() error {
-			if v := os.Getenv("TESTACC_AWS_ACCOUNT_ID"); v == "" {
-				return fmt.Errorf("TESTACC_AWS_ACCOUNT_ID must be set for acceptance tests")
+			missing_v := []string{}
+			env_vars := []string{"TESTACC_AWS_ACCOUNT_ID", "TESTACC_AWS_ORG_ARN", "TESTACC_AWS_OU_ARN"}
+			for _, var_name := range env_vars {
+				v := os.Getenv(var_name)
+				if v == "" {
+					missing_v = append(missing_v, var_name)
+				}
+			}
+			if len(missing_v) > 0 {
+				return fmt.Errorf("%s must be set for acceptance tests", strings.Join(missing_v, ","))
 			}
 			return nil
 		},
-		Template: buildSharingConfig(os.Getenv("TESTACC_AWS_ACCOUNT_ID"), ami.Name),
+		Template: buildSharingConfig(os.Getenv("TESTACC_AWS_ACCOUNT_ID"), os.Getenv("TESTACC_AWS_ORG_ARN"), os.Getenv("TESTACC_AWS_OU_ARN"), ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -237,7 +246,7 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 				}
 			}
-			return checkAMISharing(ami, 2, os.Getenv("TESTACC_AWS_ACCOUNT_ID"), "all")
+			return checkAMISharing(ami, 4, os.Getenv("TESTACC_AWS_ACCOUNT_ID"), "all")
 		},
 	}
 	acctest.TestPlugin(t, testCase)
@@ -552,9 +561,11 @@ const testBuilderAccSharing = `
 		"instance_type": "m3.medium",
 		"source_ami": "ami-76b2a71e",
 		"ssh_username": "ubuntu",
-		"ami_name": "%s",
 		"ami_users":["%s"],
-		"ami_groups":["all"]
+		"ami_groups":["all"],
+		"ami_org_arns": ["%s"],
+		"ami_ou_arns": ["%s"],
+		"ami_name": "%s"
 	}]
 }
 `
@@ -620,8 +631,8 @@ func buildForceDeleteSnapshotConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeleteSnapshot, val, val, name)
 }
 
-func buildSharingConfig(val, name string) string {
-	return fmt.Sprintf(testBuilderAccSharing, val, name)
+func buildSharingConfig(val, val2, val3, name string) string {
+	return fmt.Sprintf(testBuilderAccSharing, val, val2, val3, name)
 }
 
 func buildEnableDeprecationConfig(val, name string) string {

@@ -41,6 +41,8 @@ type FlatConfig struct {
 	AMIVirtType                               *string                                `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
 	AMIUsers                                  []string                               `mapstructure:"ami_users" required:"false" cty:"ami_users" hcl:"ami_users"`
 	AMIGroups                                 []string                               `mapstructure:"ami_groups" required:"false" cty:"ami_groups" hcl:"ami_groups"`
+	AMIOrgArns                                []string                               `mapstructure:"ami_org_arns" required:"false" cty:"ami_org_arns" hcl:"ami_org_arns"`
+	AMIOuArns                                 []string                               `mapstructure:"ami_ou_arns" required:"false" cty:"ami_ou_arns" hcl:"ami_ou_arns"`
 	AMIProductCodes                           []string                               `mapstructure:"ami_product_codes" required:"false" cty:"ami_product_codes" hcl:"ami_product_codes"`
 	AMIRegions                                []string                               `mapstructure:"ami_regions" required:"false" cty:"ami_regions" hcl:"ami_regions"`
 	AMISkipRegionValidation                   *bool                                  `mapstructure:"skip_region_validation" required:"false" cty:"skip_region_validation" hcl:"skip_region_validation"`
@@ -199,6 +201,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ami_virtualization_type":       &hcldec.AttrSpec{Name: "ami_virtualization_type", Type: cty.String, Required: false},
 		"ami_users":                     &hcldec.AttrSpec{Name: "ami_users", Type: cty.List(cty.String), Required: false},
 		"ami_groups":                    &hcldec.AttrSpec{Name: "ami_groups", Type: cty.List(cty.String), Required: false},
+		"ami_org_arns":                  &hcldec.AttrSpec{Name: "ami_org_arns", Type: cty.List(cty.String), Required: false},
+		"ami_ou_arns":                   &hcldec.AttrSpec{Name: "ami_ou_arns", Type: cty.List(cty.String), Required: false},
 		"ami_product_codes":             &hcldec.AttrSpec{Name: "ami_product_codes", Type: cty.List(cty.String), Required: false},
 		"ami_regions":                   &hcldec.AttrSpec{Name: "ami_regions", Type: cty.List(cty.String), Required: false},
 		"skip_region_validation":        &hcldec.AttrSpec{Name: "skip_region_validation", Type: cty.Bool, Required: false},

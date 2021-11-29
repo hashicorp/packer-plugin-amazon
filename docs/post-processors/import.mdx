@@ -104,6 +104,14 @@ Optional:
   launch the imported AMI. By default no additional users other than the user
   importing the AMI has permission to launch it.
 
+- `ami_org_arns` (array of strings) -  A list of Amazon Resource Names (ARN) of AWS Organizations that have access to
+	launch the resulting AMI(s). By default no organizations have permission to launch
+	the AMI.
+
+- `ami_ou_arns` (array of strings) - A list of Amazon Resource Names (ARN) of AWS Organizations organizational units (OU) that have access to
+	launch the resulting AMI(s). By default no organizational units have permission to launch
+	the AMI.
+
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
   like this `https://ec2.custom.endpoint.com`.
