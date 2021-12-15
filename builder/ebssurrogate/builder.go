@@ -245,6 +245,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			VolumeTags:                        b.config.VolumeRunTags,
 		}
 	} else {
+		var tenancy string
+		tenancies := []string{b.config.Placement.Tenancy, b.config.Tenancy}
+
+		for i := range tenancies {
+			if tenancies[i] != "" {
+				tenancy = tenancies[i]
+				break
+			}
+		}
+
 		instanceStep = &awscommon.StepRunSourceInstance{
 			PollingConfig:                     b.config.PollingConfig,
 			AssociatePublicIpAddress:          b.config.AssociatePublicIpAddress,
@@ -263,7 +273,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IsRestricted:                      b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			SourceAMI:                         b.config.SourceAmi,
 			Tags:                              b.config.RunTags,
-			Tenancy:                           b.config.Tenancy,
+			LicenseSpecifications:             b.config.LicenseSpecifications,
+			HostResourceGroupArn:              b.config.Placement.HostResourceGroupArn,
+			Tenancy:                           tenancy,
 			UserData:                          b.config.UserData,
 			UserDataFile:                      b.config.UserDataFile,
 			VolumeTags:                        b.config.VolumeRunTags,
