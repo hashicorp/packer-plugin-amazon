@@ -52,6 +52,8 @@ type FlatConfig struct {
 	LicenseType           *string                           `mapstructure:"license_type" cty:"license_type" hcl:"license_type"`
 	RoleName              *string                           `mapstructure:"role_name" cty:"role_name" hcl:"role_name"`
 	Format                *string                           `mapstructure:"format" cty:"format" hcl:"format"`
+	Architecture          *string                           `mapstructure:"architecture" cty:"architecture" hcl:"architecture"`
+	BootMode              *string                           `mapstructure:"boot_mode" cty:"boot_mode" hcl:"boot_mode"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -107,6 +109,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"license_type":                  &hcldec.AttrSpec{Name: "license_type", Type: cty.String, Required: false},
 		"role_name":                     &hcldec.AttrSpec{Name: "role_name", Type: cty.String, Required: false},
 		"format":                        &hcldec.AttrSpec{Name: "format", Type: cty.String, Required: false},
+		"architecture":                  &hcldec.AttrSpec{Name: "architecture", Type: cty.String, Required: false},
+		"boot_mode":                     &hcldec.AttrSpec{Name: "boot_mode", Type: cty.String, Required: false},
 	}
 	return s
 }

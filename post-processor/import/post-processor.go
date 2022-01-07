@@ -48,6 +48,8 @@ type Config struct {
 	LicenseType     string            `mapstructure:"license_type"`
 	RoleName        string            `mapstructure:"role_name"`
 	Format          string            `mapstructure:"format"`
+	Architecture    string            `mapstructure:"architecture"`
+	BootMode        string            `mapstructure:"boot_mode"`
 
 	ctx interpolate.Context
 }
@@ -83,6 +85,19 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		p.config.S3Key = "packer-import-{{timestamp}}." + p.config.Format
 	}
 
+	if p.config.Architecture == "" {
+		p.config.Architecture = "x86_64"
+	}
+
+	if p.config.BootMode == "" {
+		// Graviton instance types run uefi by default
+		if p.config.Architecture == "arm64" {
+			p.config.BootMode = "uefi"
+		} else {
+			p.config.BootMode = "legacy-bios"
+		}
+	}
+
 	errs := new(packersdk.MultiError)
 
 	// Check and render s3_key_name
@@ -116,6 +131,16 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.S3Encryption != "" && p.config.S3Encryption != "AES256" && p.config.S3Encryption != "aws:kms" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid s3 encryption format '%s'. Only 'AES256' and 'aws:kms' are allowed", p.config.S3Encryption))
+	}
+
+	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" {
+		errs = packersdk.MultiErrorAppend(
+			errs, fmt.Errorf("invalid boot mode '%s'. Only 'uefi' and 'legacy-bios' are allowed", p.config.BootMode))
+	}
+
+	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {
+		errs = packersdk.MultiErrorAppend(
+			errs, fmt.Errorf("invalid boot mode '%s' for 'arm64' architecture", p.config.BootMode))
 	}
 
 	// Anything which flagged return back up the stack
@@ -224,6 +249,8 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 				},
 			},
 		},
+		Architecture: &p.config.Architecture,
+		BootMode:     &p.config.BootMode,
 	}
 
 	if p.config.Encrypt && p.config.KMSKey != "" {
