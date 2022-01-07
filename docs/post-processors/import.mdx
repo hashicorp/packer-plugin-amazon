@@ -112,6 +112,13 @@ Optional:
 	launch the resulting AMI(s). By default no organizational units have permission to launch
 	the AMI.
 
+- `architecture` (string) - The architecture of the resultant AMI. One of:
+  `i386`, `x86_64`, or `arm64`. Defaults to `x86_64`.
+
+- `boot_mode` (string) - The supported boot mode of the resultant AMI. One of:
+  `legacy-bios` or `uefi`. If `architecture` is set to `arm64` then this value
+  must be set to  `uefi`.
+
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
   like this `https://ec2.custom.endpoint.com`.
