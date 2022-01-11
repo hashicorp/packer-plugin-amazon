@@ -315,11 +315,75 @@
   subnet-12345def, where Packer will launch the EC2 instance. This field is
   required if you are using an non-default VPC.
 
-- `tenancy` (string) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
-  when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
+- `license_specifications` ([]LicenseSpecification) - The license configurations.
   
-  The default is "default", meaning shared tenancy. Allowed values are "default",
-  "dedicated" and "host".
+  HCL2 example:
+  ```hcl
+  source "amazon-ebs" "basic-example" {
+    license_specifications {
+      license_configuration_request = {
+        license_configuration_arn = "${var.license_configuration_arn}"
+      }
+    }
+  }
+  ```
+  
+  JSON example:
+  ```json
+  "builders" [
+    {
+      "type": "amazon-ebs",
+      "license_specifications": [
+        {
+          "license_configuration_request": {
+            "license_configuration_arn": "{{user `license_configuration_arn`}}"
+          }
+        }
+      ]
+    }
+  ]
+  ```
+  
+    Each `license_configuration_request` describes a license configuration,
+    the properties of which are:
+  
+    - `license_configuration_arn` (string) - The Amazon Resource Name (ARN)
+      of the license configuration.
+
+- `placement` (Placement) - Describes the placement of an instance.
+  
+  HCL2 example:
+  ```hcl
+  source "amazon-ebs" "basic-example" {
+    placement = {
+      host_resource_group_arn = "${var.host_resource_group_arn}"
+      tenancy                 = "${var.placement_tenancy}"
+    }
+  }
+  ```
+  
+  JSON example:
+  ```json
+  "builders" [
+    {
+      "type": "amazon-ebs",
+      "placement": {
+        "host_resource_group_arn": "{{user `host_resource_group_arn`}}",
+        "tenancy": "{{user `placement_tenancy`}}"
+      }
+    }
+  ]
+  ```
+  
+    - `host_resource_group_arn` (string) - The ARN of the host resource
+      group in which to launch the instances. If you specify a host
+      resource group ARN, omit the Tenancy parameter or set it to `host`.
+    - `tenancy` (string) - The tenancy of the instance (if the instance is
+      running in a VPC). An instance with a tenancy of `dedicated` runs on
+      single-tenant hardware. The default is `default`, meaning shared
+      tenancy. Allowed values are `default`, `dedicated` and `host`.
+
+- `tenancy` (string) - Deprecated: Use Placement Tenancy instead.
 
 - `temporary_security_group_source_cidrs` ([]string) - A list of IPv4 CIDR blocks to be authorized access to the instance, when
   packer is creating a temporary security group.

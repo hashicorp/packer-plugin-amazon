@@ -35,6 +35,52 @@ func (*FlatAmiFilterOptions) HCL2Spec() map[string]hcldec.Spec {
 	return s
 }
 
+// FlatLicenseConfigurationRequest is an auto-generated flat version of LicenseConfigurationRequest.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatLicenseConfigurationRequest struct {
+	LicenseConfigurationArn *string `mapstructure:"license_configuration_arn" cty:"license_configuration_arn" hcl:"license_configuration_arn"`
+}
+
+// FlatMapstructure returns a new FlatLicenseConfigurationRequest.
+// FlatLicenseConfigurationRequest is an auto-generated flat version of LicenseConfigurationRequest.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*LicenseConfigurationRequest) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatLicenseConfigurationRequest)
+}
+
+// HCL2Spec returns the hcl spec of a LicenseConfigurationRequest.
+// This spec is used by HCL to read the fields of LicenseConfigurationRequest.
+// The decoded values from this spec will then be applied to a FlatLicenseConfigurationRequest.
+func (*FlatLicenseConfigurationRequest) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"license_configuration_arn": &hcldec.AttrSpec{Name: "license_configuration_arn", Type: cty.String, Required: false},
+	}
+	return s
+}
+
+// FlatLicenseSpecification is an auto-generated flat version of LicenseSpecification.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatLicenseSpecification struct {
+	LicenseConfigurationRequest *FlatLicenseConfigurationRequest `mapstructure:"license_configuration_request" cty:"license_configuration_request" hcl:"license_configuration_request"`
+}
+
+// FlatMapstructure returns a new FlatLicenseSpecification.
+// FlatLicenseSpecification is an auto-generated flat version of LicenseSpecification.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*LicenseSpecification) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatLicenseSpecification)
+}
+
+// HCL2Spec returns the hcl spec of a LicenseSpecification.
+// This spec is used by HCL to read the fields of LicenseSpecification.
+// The decoded values from this spec will then be applied to a FlatLicenseSpecification.
+func (*FlatLicenseSpecification) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"license_configuration_request": &hcldec.BlockSpec{TypeName: "license_configuration_request", Nested: hcldec.ObjectSpec((*FlatLicenseConfigurationRequest)(nil).HCL2Spec())},
+	}
+	return s
+}
+
 // FlatMetadataOptions is an auto-generated flat version of MetadataOptions.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatMetadataOptions struct {
@@ -58,6 +104,31 @@ func (*FlatMetadataOptions) HCL2Spec() map[string]hcldec.Spec {
 		"http_endpoint":               &hcldec.AttrSpec{Name: "http_endpoint", Type: cty.String, Required: false},
 		"http_tokens":                 &hcldec.AttrSpec{Name: "http_tokens", Type: cty.String, Required: false},
 		"http_put_response_hop_limit": &hcldec.AttrSpec{Name: "http_put_response_hop_limit", Type: cty.Number, Required: false},
+	}
+	return s
+}
+
+// FlatPlacement is an auto-generated flat version of Placement.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatPlacement struct {
+	HostResourceGroupArn *string `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
+	Tenancy              *string `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
+}
+
+// FlatMapstructure returns a new FlatPlacement.
+// FlatPlacement is an auto-generated flat version of Placement.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*Placement) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatPlacement)
+}
+
+// HCL2Spec returns the hcl spec of a Placement.
+// This spec is used by HCL to read the fields of Placement.
+// The decoded values from this spec will then be applied to a FlatPlacement.
+func (*FlatPlacement) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"host_resource_group_arn": &hcldec.AttrSpec{Name: "host_resource_group_arn", Type: cty.String, Required: false},
+		"tenancy":                 &hcldec.AttrSpec{Name: "tenancy", Type: cty.String, Required: false},
 	}
 	return s
 }

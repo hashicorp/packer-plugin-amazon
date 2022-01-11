@@ -1,5 +1,5 @@
 //go:generate packer-sdc struct-markdown
-//go:generate packer-sdc mapstructure-to-hcl2 -type AmiFilterOptions,SecurityGroupFilterOptions,SubnetFilterOptions,VpcFilterOptions,PolicyDocument,Statement,MetadataOptions
+//go:generate packer-sdc mapstructure-to-hcl2 -type AmiFilterOptions,SecurityGroupFilterOptions,SubnetFilterOptions,VpcFilterOptions,PolicyDocument,Statement,MetadataOptions,LicenseConfigurationRequest,LicenseSpecification,Placement
 
 package common
 
@@ -42,6 +42,27 @@ type PolicyDocument struct {
 
 type SecurityGroupFilterOptions struct {
 	config.NameValueFilter `mapstructure:",squash"`
+}
+
+type LicenseConfigurationRequest struct {
+	// The Amazon Resource Name (ARN) of the license configuration.
+	LicenseConfigurationArn string `mapstructure:"license_configuration_arn"`
+}
+
+type LicenseSpecification struct {
+	// Describes a license configuration.
+	LicenseConfigurationRequest LicenseConfigurationRequest `mapstructure:"license_configuration_request"`
+}
+
+type Placement struct {
+	// The ARN of the host resource group in which to launch the instances.
+	HostResourceGroupArn string `mapstructure:"host_resource_group_arn" required:"false"`
+	// [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
+	// when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
+	//
+	// The default is "default", meaning shared tenancy. Allowed values are "default",
+	// "dedicated" and "host".
+	Tenancy string `mapstructure:"tenancy" required:"false"`
 }
 
 // Configures the metadata options.
@@ -390,11 +411,77 @@ type RunConfig struct {
 	// subnet-12345def, where Packer will launch the EC2 instance. This field is
 	// required if you are using an non-default VPC.
 	SubnetId string `mapstructure:"subnet_id" required:"false"`
-	// [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
-	// when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
+	// The license configurations.
 	//
-	// The default is "default", meaning shared tenancy. Allowed values are "default",
-	// "dedicated" and "host".
+	// HCL2 example:
+	// ```hcl
+	// source "amazon-ebs" "basic-example" {
+	//   license_specifications {
+	//     license_configuration_request = {
+	//       license_configuration_arn = "${var.license_configuration_arn}"
+	//     }
+	//   }
+	// }
+	// ```
+	//
+	// JSON example:
+	// ```json
+	// "builders" [
+	//   {
+	//     "type": "amazon-ebs",
+	//     "license_specifications": [
+	//       {
+	//         "license_configuration_request": {
+	//           "license_configuration_arn": "{{user `license_configuration_arn`}}"
+	//         }
+	//       }
+	//     ]
+	//   }
+	// ]
+	// ```
+	//
+	//   Each `license_configuration_request` describes a license configuration,
+	//   the properties of which are:
+	//
+	//   - `license_configuration_arn` (string) - The Amazon Resource Name (ARN)
+	//     of the license configuration.
+	//
+	LicenseSpecifications []LicenseSpecification `mapstructure:"license_specifications" required:"false"`
+	// Describes the placement of an instance.
+	//
+	// HCL2 example:
+	// ```hcl
+	// source "amazon-ebs" "basic-example" {
+	//   placement = {
+	//     host_resource_group_arn = "${var.host_resource_group_arn}"
+	//     tenancy                 = "${var.placement_tenancy}"
+	//   }
+	// }
+	// ```
+	//
+	// JSON example:
+	// ```json
+	// "builders" [
+	//   {
+	//     "type": "amazon-ebs",
+	//     "placement": {
+	//       "host_resource_group_arn": "{{user `host_resource_group_arn`}}",
+	//       "tenancy": "{{user `placement_tenancy`}}"
+	//     }
+	//   }
+	// ]
+	// ```
+	//
+	//   - `host_resource_group_arn` (string) - The ARN of the host resource
+	//     group in which to launch the instances. If you specify a host
+	//     resource group ARN, omit the Tenancy parameter or set it to `host`.
+	//   - `tenancy` (string) - The tenancy of the instance (if the instance is
+	//     running in a VPC). An instance with a tenancy of `dedicated` runs on
+	//     single-tenant hardware. The default is `default`, meaning shared
+	//     tenancy. Allowed values are `default`, `dedicated` and `host`.
+	//
+	Placement Placement `mapstructure:"placement" required:"false"`
+	// Deprecated: Use Placement Tenancy instead.
 	Tenancy string `mapstructure:"tenancy" required:"false"`
 	// A list of IPv4 CIDR blocks to be authorized access to the instance, when
 	// packer is creating a temporary security group.
@@ -680,11 +767,23 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		}
 	}
 
-	if c.Tenancy != "" &&
-		c.Tenancy != "default" &&
-		c.Tenancy != "dedicated" &&
-		c.Tenancy != "host" {
-		errs = append(errs, fmt.Errorf("Error: Unknown tenancy type %s", c.Tenancy))
+	var tenancy string
+	tenancies := []string{c.Placement.Tenancy, c.Tenancy}
+
+	for i := range tenancies {
+		if tenancies[i] != "" {
+			if tenancy != "" {
+				errs = append(errs, fmt.Errorf("Error: Please set only one of placement.tenancy and tenancy (deprecated)"))
+			}
+			tenancy = tenancies[i]
+		}
+	}
+
+	if tenancy != "" &&
+		tenancy != "default" &&
+		tenancy != "dedicated" &&
+		tenancy != "host" {
+		errs = append(errs, fmt.Errorf("Error: Unknown tenancy type %s", tenancy))
 	}
 
 	return errs

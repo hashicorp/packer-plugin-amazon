@@ -125,7 +125,7 @@ func (d *Datasource) Execute() (cty.Value, error) {
 	output := DatasourceOutput{
 		Value:        value,
 		SecretString: aws.StringValue(secret.SecretString),
-		SecretBinary: fmt.Sprintf("%s", secret.SecretBinary),
+		SecretBinary: string(secret.SecretBinary),
 		VersionId:    versionId,
 	}
 	return hcl2helper.HCL2ValueFromConfig(output, d.OutputSpec()), nil

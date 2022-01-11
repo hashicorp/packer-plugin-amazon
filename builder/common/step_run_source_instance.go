@@ -37,6 +37,8 @@ type StepRunSourceInstance struct {
 	IsRestricted                      bool
 	SourceAMI                         string
 	Tags                              map[string]string
+	LicenseSpecifications             []LicenseSpecification
+	HostResourceGroupArn              string
 	Tenancy                           string
 	UserData                          string
 	UserDataFile                      string
@@ -202,6 +204,22 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	if s.ExpectedRootDevice == "ebs" {
 		runOpts.InstanceInitiatedShutdownBehavior = &s.InstanceInitiatedShutdownBehavior
+	}
+
+	if len(s.LicenseSpecifications) > 0 {
+		for i := range s.LicenseSpecifications {
+			licenseConfigurationArn := s.LicenseSpecifications[i].LicenseConfigurationRequest.LicenseConfigurationArn
+			licenseSpecifications := []*ec2.LicenseConfigurationRequest{
+				{
+					LicenseConfigurationArn: aws.String(licenseConfigurationArn),
+				},
+			}
+			runOpts.LicenseSpecifications = append(runOpts.LicenseSpecifications, licenseSpecifications...)
+		}
+	}
+
+	if s.HostResourceGroupArn != "" {
+		runOpts.Placement.HostResourceGroupArn = aws.String(s.HostResourceGroupArn)
 	}
 
 	if s.Tenancy != "" {

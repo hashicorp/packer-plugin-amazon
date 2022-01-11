@@ -108,6 +108,8 @@ type FlatConfig struct {
 	SpotTag                                   []config.FlatKeyValue                  `mapstructure:"spot_tag" required:"false" cty:"spot_tag" hcl:"spot_tag"`
 	SubnetFilter                              *common.FlatSubnetFilterOptions        `mapstructure:"subnet_filter" required:"false" cty:"subnet_filter" hcl:"subnet_filter"`
 	SubnetId                                  *string                                `mapstructure:"subnet_id" required:"false" cty:"subnet_id" hcl:"subnet_id"`
+	LicenseSpecifications                     []common.FlatLicenseSpecification      `mapstructure:"license_specifications" required:"false" cty:"license_specifications" hcl:"license_specifications"`
+	Placement                                 *common.FlatPlacement                  `mapstructure:"placement" required:"false" cty:"placement" hcl:"placement"`
 	Tenancy                                   *string                                `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 	TemporarySGSourceCidrs                    []string                               `mapstructure:"temporary_security_group_source_cidrs" required:"false" cty:"temporary_security_group_source_cidrs" hcl:"temporary_security_group_source_cidrs"`
 	UserData                                  *string                                `mapstructure:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
@@ -264,6 +266,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"spot_tag":                              &hcldec.BlockListSpec{TypeName: "spot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"subnet_filter":                         &hcldec.BlockSpec{TypeName: "subnet_filter", Nested: hcldec.ObjectSpec((*common.FlatSubnetFilterOptions)(nil).HCL2Spec())},
 		"subnet_id":                             &hcldec.AttrSpec{Name: "subnet_id", Type: cty.String, Required: false},
+		"license_specifications":                &hcldec.BlockListSpec{TypeName: "license_specifications", Nested: hcldec.ObjectSpec((*common.FlatLicenseSpecification)(nil).HCL2Spec())},
+		"placement":                             &hcldec.BlockSpec{TypeName: "placement", Nested: hcldec.ObjectSpec((*common.FlatPlacement)(nil).HCL2Spec())},
 		"tenancy":                               &hcldec.AttrSpec{Name: "tenancy", Type: cty.String, Required: false},
 		"temporary_security_group_source_cidrs": &hcldec.AttrSpec{Name: "temporary_security_group_source_cidrs", Type: cty.List(cty.String), Required: false},
 		"user_data":                             &hcldec.AttrSpec{Name: "user_data", Type: cty.String, Required: false},
