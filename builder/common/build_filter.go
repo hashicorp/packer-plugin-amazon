@@ -1,18 +1,35 @@
 package common
 
 import (
+	"encoding/csv"
+	"log"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 // Build a slice of EC2 (AMI/Subnet/VPC) filter options from the filters provided.
 func buildEc2Filters(input map[string]string) []*ec2.Filter {
 	var filters []*ec2.Filter
+
 	for k, v := range input {
+		var b []*string
+
 		a := k
-		b := v
+		csvReader := csv.NewReader(strings.NewReader(v))
+
+		values, err := csvReader.Read()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, r := range values {
+			b = append(b, &r)
+		}
+
 		filters = append(filters, &ec2.Filter{
 			Name:   &a,
-			Values: []*string{&b},
+			Values: b,
 		})
 	}
 	return filters
