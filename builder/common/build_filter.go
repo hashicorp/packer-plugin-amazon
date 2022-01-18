@@ -24,7 +24,8 @@ func buildEc2Filters(input map[string]string) []*ec2.Filter {
 		}
 
 		for _, r := range values {
-			b = append(b, &r)
+			var value = r
+			b = append(b, &value)
 		}
 
 		filters = append(filters, &ec2.Filter{
