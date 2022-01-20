@@ -66,6 +66,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
 	keypair := &ec2.CreateKeyPairInput{
 		KeyName: &s.Comm.SSHTemporaryKeyPairName,
+		KeyType: &s.Comm.SSHTemporaryKeyPairType,
 	}
 
 	if !s.IsRestricted {

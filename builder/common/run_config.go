@@ -603,6 +603,9 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.Comm.SSHPrivateKeyFile == "" && c.Comm.SSHPassword == "" {
 
 		c.Comm.SSHTemporaryKeyPairName = fmt.Sprintf("packer_%s", uuid.TimeOrderedUUID())
+		if c.Comm.SSHTemporaryKeyPairType != "ed25519" {
+			c.Comm.SSHTemporaryKeyPairType = "rsa"
+		}
 	}
 
 	if c.WindowsPasswordTimeout == 0 {
