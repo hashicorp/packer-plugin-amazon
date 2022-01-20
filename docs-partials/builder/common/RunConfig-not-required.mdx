@@ -11,7 +11,9 @@
   required duration for the Spot Instances (also known as Spot blocks). This
   value must be a multiple of 60 (60, 120, 180, 240, 300, or 360). You can't
   specify an Availability Zone group or a launch group if you specify a
-  duration.
+  duration. Note: This parameter is no longer available to new customers
+  from July 1, 2021. [See Amazon's
+  documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
 
 - `disable_stop_instance` (bool) - Packer normally stops the build instance after all provisioners have
   run. For Windows instances, it is sometimes desirable to [run
