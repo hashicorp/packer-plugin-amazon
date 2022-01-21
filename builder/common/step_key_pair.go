@@ -68,7 +68,8 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 
 	if !s.IsRestricted {
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+        region := state.Get("region").(string)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)

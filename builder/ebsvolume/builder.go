@@ -178,6 +178,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("iam", iam)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
+    state.Put("region", ec2conn.Config.Region)
 	generatedData := &packerbuilderdata.GeneratedData{State: state}
 
 	var instanceStep multistep.Step
