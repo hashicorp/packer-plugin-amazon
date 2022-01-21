@@ -1,5 +1,5 @@
 /*
-Deregister the test image with
+deregister the test image with
 aws ec2 deregister-image --image-id $(aws ec2 describe-images --output text --filters "Name=name,Values=packer-test-packer-test-dereg" --query 'Images[*].{ID:ImageId}')
 */
 //nolint:unparam
@@ -8,8 +8,10 @@ package ebs
 import (
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -481,6 +483,43 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 					return fmt.Errorf("bad exit code. logfile: %s", logfile)
 				}
 			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/rsa_ssh_keypair.pkr.hcl
+var testSSHKeyPairRSA string
+
+func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_rsa",
+		Template: testSSHKeyPairRSA,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logs, err := os.Open(logfile)
+			if err != nil {
+				return fmt.Errorf("Unable find %s", logfile)
+			}
+			defer logs.Close()
+
+			logsBytes, err := ioutil.ReadAll(logs)
+			if err != nil {
+				return fmt.Errorf("Unable to read %s", logfile)
+			}
+			logsString := string(logsBytes)
+
+			expectedKeyType := "rsa"
+			re := regexp.MustCompile(fmt.Sprintf(`(?:amazon-ebs.basic-example:\s+)+(ssh-%s)`, expectedKeyType))
+			matched := re.FindStringSubmatch(logsString)
+
+			if len(matched) != 2 {
+				return fmt.Errorf("unable to capture key information from  %q", logfile)
+			}
+
 			return nil
 		},
 	}
