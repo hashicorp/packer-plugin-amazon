@@ -512,16 +512,15 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 			}
 			logsString := string(logsBytes)
 
-			expectedKeyType := "rsa"
+			expectedKeyType := "ed25519"
 			re := regexp.MustCompile(fmt.Sprintf(`(?:amazon-ebs.basic-example:\s+)+(ssh-%s)`, expectedKeyType))
 			matched := re.FindStringSubmatch(logsString)
 
 			if len(matched) != 2 {
-				return fmt.Errorf("unable to capture key informationfrom  %q", logfile)
+				return fmt.Errorf("unable to capture key information from  %q", logfile)
 			}
 
 			return nil
-
 		},
 	}
 	acctest.TestPlugin(t, testcase)
@@ -535,42 +534,6 @@ func testEC2Conn() (*ec2.EC2, error) {
 	}
 
 	return ec2.New(session), nil
-}
-
-func checkCreatedKeyPair(keyName, keyType string) error {
-	var keyResp *ec2.DescribeKeyPairsOutput
-
-	keypair := &ec2.DescribeKeyPairsInput{
-		KeyNames: []*string{&keyName},
-	}
-
-	ec2conn, _ := testEC2Conn()
-	keyResp, err := ec2conn.DescribeKeyPairs(keypair)
-	if err != nil {
-		return err
-	}
-
-	if keyResp == nil {
-		return fmt.Errorf("no key information found for %s of type %s", keyName, keyType)
-	}
-
-	var found bool
-	for _, kp := range keyResp.KeyPairs {
-		if aws.StringValue(kp.KeyName) != keyName {
-			continue
-		}
-
-		found = true
-		if aws.StringValue(kp.KeyType) != keyType {
-			return fmt.Errorf("the key for %s does not match the expected type: got %s, wanted %s", keyName, aws.StringValue(kp.KeyType), keyType)
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("no key information found for %s of type %s", keyName, keyType)
-	}
-
-	return nil
 }
 
 const testBuilderAccBasic = `
