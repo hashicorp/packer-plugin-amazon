@@ -19,7 +19,6 @@ type mockEC2KeyPairConn struct {
 
 	CreateKeyPairCount int
 	CreateKeyPairArgs  []ec2.CreateKeyPairInput
-	waitCount          int
 
 	lock sync.Mutex
 }
