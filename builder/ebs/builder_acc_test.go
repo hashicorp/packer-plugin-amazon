@@ -1,5 +1,5 @@
 /*
-Deregister the test image with
+deregister the test image with
 aws ec2 deregister-image --image-id $(aws ec2 describe-images --output text --filters "Name=name,Values=packer-test-packer-test-dereg" --query 'Images[*].{ID:ImageId}')
 */
 //nolint:unparam
@@ -8,8 +8,10 @@ package ebs
 import (
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -487,6 +489,44 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+//go:embed test-fixtures/ed25519_ssh_keypair.pkr.hcl
+var testSSHKeyPairED25519 string
+
+func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_ed25519_keypair_test",
+		Template: testSSHKeyPairED25519,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logs, err := os.Open(logfile)
+			if err != nil {
+				return fmt.Errorf("Unable find %s", logfile)
+			}
+			defer logs.Close()
+
+			logsBytes, err := ioutil.ReadAll(logs)
+			if err != nil {
+				return fmt.Errorf("Unable to read %s", logfile)
+			}
+			logsString := string(logsBytes)
+
+			expectedKeyType := "rsa"
+			re := regexp.MustCompile(fmt.Sprintf(`(?:amazon-ebs.basic-example:\s+)+(ssh-%s)`, expectedKeyType))
+			matched := re.FindStringSubmatch(logsString)
+
+			if len(matched) != 2 {
+				return fmt.Errorf("unable to capture key informationfrom  %q", logfile)
+			}
+
+			return nil
+
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 func testEC2Conn() (*ec2.EC2, error) {
 	access := &common.AccessConfig{RawRegion: "us-east-1"}
 	session, err := access.Session()
@@ -495,6 +535,42 @@ func testEC2Conn() (*ec2.EC2, error) {
 	}
 
 	return ec2.New(session), nil
+}
+
+func checkCreatedKeyPair(keyName, keyType string) error {
+	var keyResp *ec2.DescribeKeyPairsOutput
+
+	keypair := &ec2.DescribeKeyPairsInput{
+		KeyNames: []*string{&keyName},
+	}
+
+	ec2conn, _ := testEC2Conn()
+	keyResp, err := ec2conn.DescribeKeyPairs(keypair)
+	if err != nil {
+		return err
+	}
+
+	if keyResp == nil {
+		return fmt.Errorf("no key information found for %s of type %s", keyName, keyType)
+	}
+
+	var found bool
+	for _, kp := range keyResp.KeyPairs {
+		if aws.StringValue(kp.KeyName) != keyName {
+			continue
+		}
+
+		found = true
+		if aws.StringValue(kp.KeyType) != keyType {
+			return fmt.Errorf("the key for %s does not match the expected type: got %s, wanted %s", keyName, aws.StringValue(kp.KeyType), keyType)
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("no key information found for %s of type %s", keyName, keyType)
+	}
+
+	return nil
 }
 
 const testBuilderAccBasic = `
