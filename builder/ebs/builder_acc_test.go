@@ -489,13 +489,13 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-//go:embed test-fixtures/ed25519_ssh_keypair.pkr.hcl
-var testSSHKeyPairED25519 string
+//go:embed test-fixtures/rsa_ssh_keypair.pkr.hcl
+var testSSHKeyPairRSA string
 
-func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
+func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 	testcase := &acctest.PluginTestCase{
-		Name:     "amazon-ebs_ed25519_keypair_test",
-		Template: testSSHKeyPairED25519,
+		Name:     "amazon-ebs_rsa",
+		Template: testSSHKeyPairRSA,
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState.ExitCode() != 0 {
 				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
@@ -512,7 +512,7 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 			}
 			logsString := string(logsBytes)
 
-			expectedKeyType := "ed25519"
+			expectedKeyType := "rsa"
 			re := regexp.MustCompile(fmt.Sprintf(`(?:amazon-ebs.basic-example:\s+)+(ssh-%s)`, expectedKeyType))
 			matched := re.FindStringSubmatch(logsString)
 
