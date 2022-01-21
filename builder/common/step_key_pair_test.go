@@ -9,17 +9,17 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer-plugin-sdk/communicator"
 )
 
 type mockEC2KeyPairConn struct {
 	ec2iface.EC2API
 
-	CreateKeyPairCount   int
-	CreateKeyPairArgs    []ec2.CreateKeyPairInput
-	waitCount            int
+	CreateKeyPairCount int
+	CreateKeyPairArgs  []ec2.CreateKeyPairInput
+	waitCount          int
 
 	lock sync.Mutex
 }
@@ -27,16 +27,16 @@ type mockEC2KeyPairConn struct {
 func (m *mockEC2KeyPairConn) CreateKeyPair(keyPairInput *ec2.CreateKeyPairInput) (*ec2.CreateKeyPairOutput, error) {
 	m.lock.Lock()
 	m.CreateKeyPairCount++
-        m.CreateKeyPairArgs = append(m.CreateKeyPairArgs, *keyPairInput)
+	m.CreateKeyPairArgs = append(m.CreateKeyPairArgs, *keyPairInput)
 	m.lock.Unlock()
-        keyMaterial := "I'm a cool key"
+	keyMaterial := "I'm a cool key"
 	output := &ec2.CreateKeyPairOutput{
-           KeyMaterial:  &keyMaterial,
+		KeyMaterial: &keyMaterial,
 	}
 	return output, nil
 }
 
-func getKeyPairMockConn() (ec2iface.EC2API) {
+func getKeyPairMockConn() ec2iface.EC2API {
 	return &mockEC2KeyPairConn{}
 }
 
@@ -57,14 +57,14 @@ func TestStepKeyPair_callsCreateKeyPairOnceWithName(t *testing.T) {
 	//testSSHTemporaryKeyPair := communicator.SSHTemporaryKeyPair{SSHTemporaryKeyPairType: "rsa"}
 	testSSH := communicator.SSH{
 		SSHTemporaryKeyPairName: "temp-key-name",
-		//SSHTemporaryKeyPair: testSSHTemporaryKeyPair, 
+		//SSHTemporaryKeyPair: testSSHTemporaryKeyPair,
 	}
 	comm := communicator.Config{
 		SSH: testSSH,
 	}
-	stepKeyPair := StepKeyPair {
-	    Debug: false,
-		Comm: &comm,
+	stepKeyPair := StepKeyPair{
+		Debug: false,
+		Comm:  &comm,
 	}
 
 	state := keyPairState()
@@ -72,14 +72,14 @@ func TestStepKeyPair_callsCreateKeyPairOnceWithName(t *testing.T) {
 	createKeyPairCallCount := state.Get("ec2").(*mockEC2KeyPairConn).CreateKeyPairCount
 	createKeyPairArgs := state.Get("ec2").(*mockEC2KeyPairConn).CreateKeyPairArgs
 	if createKeyPairCallCount != 1 {
-	   t.Fatalf(fmt.Sprintf("Expected CreateKeyPair to be called %d times, was called %d times", 1, createKeyPairCallCount))
+		t.Fatalf(fmt.Sprintf("Expected CreateKeyPair to be called %d times, was called %d times", 1, createKeyPairCallCount))
 	}
-	if *createKeyPairArgs[0].KeyName != "temp-key-name"{
-	   t.Fatalf(fmt.Sprintf("Unexpected Key Type expected %s, got %s" , "temp-key-name" , *createKeyPairArgs[0].KeyName))
+	if *createKeyPairArgs[0].KeyName != "temp-key-name" {
+		t.Fatalf(fmt.Sprintf("Unexpected Key Type expected %s, got %s", "temp-key-name", *createKeyPairArgs[0].KeyName))
 	}
 	// This case will pass when key type issue is fixed
 	//
-        //if *createKeyPairArgs[0].KeyType != "rsa" {
-	  // t.Fatalf(fmt.Sprintf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType))
+	//if *createKeyPairArgs[0].KeyType != "rsa" {
+	// t.Fatalf(fmt.Sprintf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType))
 	//}
 }
