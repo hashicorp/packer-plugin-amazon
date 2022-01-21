@@ -14,6 +14,7 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 type StepKeyPair struct {
@@ -69,7 +70,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 
 	if !s.IsRestricted {
 		region := state.Get("region").(*string)
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, region, state)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.StringValue(region), state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)
