@@ -7,7 +7,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -58,7 +60,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionContinue
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(ec2iface.EC2API)
 	var keyResp *ec2.CreateKeyPairOutput
 
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
@@ -67,7 +69,8 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 
 	if !s.IsRestricted {
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		region := state.Get("region").(*string)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.StringValue(region), state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)
