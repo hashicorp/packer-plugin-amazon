@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+    "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -47,7 +48,7 @@ func keyPairState() multistep.StateBag {
 	})
 	conn := getKeyPairMockConn()
 	state.Put("ec2", conn)
-	state.Put("region", "us-east-1")
+	state.Put("region", aws.String("us-east-1"))
 	return state
 }
 
