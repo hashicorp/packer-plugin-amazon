@@ -52,7 +52,7 @@ func keyPairState() multistep.StateBag {
 }
 
 //Add "AndType" to the name of this test
-func TestStepKeyPair_callsCreateKeyPairOnceWithName(t *testing.T) {
+func TestStepKeyPair_withDefault(t *testing.T) {
 	//testSSHTemporaryKeyPair := communicator.SSHTemporaryKeyPair{SSHTemporaryKeyPairType: "rsa"}
 	testSSH := communicator.SSH{
 		SSHTemporaryKeyPairName: "temp-key-name",
