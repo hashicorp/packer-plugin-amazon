@@ -56,7 +56,7 @@ func TestStepKeyPair_withDefault(t *testing.T) {
 	testSSHTemporaryKeyPair := communicator.SSHTemporaryKeyPair{SSHTemporaryKeyPairType: "rsa"}
 	testSSH := communicator.SSH{
 		SSHTemporaryKeyPairName: "temp-key-name",
-		SSHTemporaryKeyPair: testSSHTemporaryKeyPair,
+		SSHTemporaryKeyPair:     testSSHTemporaryKeyPair,
 	}
 	comm := communicator.Config{
 		SSH: testSSH,

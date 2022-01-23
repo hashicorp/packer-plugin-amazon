@@ -231,7 +231,7 @@ func TestRunConfigPrepare_TemporaryKeyPairName(t *testing.T) {
 }
 
 func TestRunConfigPrepare_TemporaryKeyPairTypeDefault(t *testing.T) {
-	c:= testConfig()
+	c := testConfig()
 	c.Comm.SSHTemporaryKeyPairType = ""
 	if err := c.Prepare(nil); len(err) != 0 {
 		t.Fatalf("err: %s", err)
@@ -243,7 +243,7 @@ func TestRunConfigPrepare_TemporaryKeyPairTypeDefault(t *testing.T) {
 }
 
 func TestRunConfigPrepare_TemporaryKeyPairTypeRSA(t *testing.T) {
-	c:= testConfig()
+	c := testConfig()
 	c.Comm.SSHTemporaryKeyPairType = "rsa"
 	if err := c.Prepare(nil); len(err) != 0 {
 		t.Fatalf("err: %s", err)
@@ -255,7 +255,7 @@ func TestRunConfigPrepare_TemporaryKeyPairTypeRSA(t *testing.T) {
 }
 
 func TestRunConfigPrepare_TemporaryKeyPairTypeED25519(t *testing.T) {
-	c:= testConfig()
+	c := testConfig()
 	c.Comm.SSHTemporaryKeyPairType = "ed25519"
 	if err := c.Prepare(nil); len(err) != 0 {
 		t.Fatalf("err: %s", err)
@@ -267,7 +267,7 @@ func TestRunConfigPrepare_TemporaryKeyPairTypeED25519(t *testing.T) {
 }
 
 func TestRunConfigPrepare_TemporaryKeyPairTypeBad(t *testing.T) {
-	c:= testConfig()
+	c := testConfig()
 	c.Comm.SSHTemporaryKeyPairType = "invalid"
 	if err := c.Prepare(nil); len(err) == 0 {
 		t.Fatalf("should error if temporary_key_pair_type is set to an invalid type")
