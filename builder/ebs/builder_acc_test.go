@@ -526,6 +526,43 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+//go:embed test-fixtures/ed25519_ssh_keypair.pkr.hcl
+var testSSHKeyPairED25519 string
+
+func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_ed25519",
+		Template: testSSHKeyPairED25519,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logs, err := os.Open(logfile)
+			if err != nil {
+				return fmt.Errorf("Unable find %s", logfile)
+			}
+			defer logs.Close()
+
+			logsBytes, err := ioutil.ReadAll(logs)
+			if err != nil {
+				return fmt.Errorf("Unable to read %s", logfile)
+			}
+			logsString := string(logsBytes)
+
+			expectedKeyType := "ed25519"
+			re := regexp.MustCompile(fmt.Sprintf(`(?:amazon-ebs.basic-example:\s+)+(ssh-%s)`, expectedKeyType))
+			matched := re.FindStringSubmatch(logsString)
+
+			if len(matched) != 2 {
+				return fmt.Errorf("unable to capture key information from  %q", logfile)
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 func testEC2Conn() (*ec2.EC2, error) {
 	access := &common.AccessConfig{RawRegion: "us-east-1"}
 	session, err := access.Session()
