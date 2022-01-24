@@ -595,6 +595,9 @@ type RunConfig struct {
 }
 
 func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
+	// Validation
+	errs := c.Comm.Prepare(ctx)
+
 	// If we are not given an explicit ssh_keypair_name or
 	// ssh_private_key_file, then create a temporary one, but only if the
 	// temporary_key_pair_name has not been provided and we are not using
@@ -603,6 +606,15 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.Comm.SSHPrivateKeyFile == "" && c.Comm.SSHPassword == "" {
 
 		c.Comm.SSHTemporaryKeyPairName = fmt.Sprintf("packer_%s", uuid.TimeOrderedUUID())
+
+		if c.Comm.SSHTemporaryKeyPairType == "" {
+			c.Comm.SSHTemporaryKeyPairType = "rsa"
+		}
+
+		if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
+			msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
+			errs = append(errs, msg)
+		}
 	}
 
 	if c.WindowsPasswordTimeout == 0 {
@@ -612,9 +624,6 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	if c.RunTags == nil {
 		c.RunTags = make(map[string]string)
 	}
-
-	// Validation
-	errs := c.Comm.Prepare(ctx)
 
 	if c.Metadata.HttpEndpoint == "" {
 		c.Metadata.HttpEndpoint = "enabled"

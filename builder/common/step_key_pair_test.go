@@ -53,10 +53,10 @@ func keyPairState() multistep.StateBag {
 }
 
 func TestStepKeyPair_withDefault(t *testing.T) {
-	//testSSHTemporaryKeyPair := communicator.SSHTemporaryKeyPair{SSHTemporaryKeyPairType: "rsa"}
+	testSSHTemporaryKeyPair := communicator.SSHTemporaryKeyPair{SSHTemporaryKeyPairType: "rsa"}
 	testSSH := communicator.SSH{
 		SSHTemporaryKeyPairName: "temp-key-name",
-		//SSHTemporaryKeyPair: testSSHTemporaryKeyPair,
+		SSHTemporaryKeyPair:     testSSHTemporaryKeyPair,
 	}
 	comm := communicator.Config{
 		SSH: testSSH,
@@ -76,9 +76,8 @@ func TestStepKeyPair_withDefault(t *testing.T) {
 	if *createKeyPairArgs[0].KeyName != "temp-key-name" {
 		t.Fatalf(fmt.Sprintf("Unexpected Key Type expected %s, got %s", "temp-key-name", *createKeyPairArgs[0].KeyName))
 	}
-	// This case will pass when key type issue is fixed
-	//
-	//if *createKeyPairArgs[0].KeyType != "rsa" {
-	// t.Fatalf(fmt.Sprintf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType))
-	//}
+
+	if *createKeyPairArgs[0].KeyType != "rsa" {
+		t.Fatalf(fmt.Sprintf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType))
+	}
 }
