@@ -19,8 +19,11 @@ func TestStepSourceAmiInfo_BuildFilter_SingleValue(t *testing.T) {
 		filter_key3: filter_value3,
 	}
 
-	outputFilter := buildEc2Filters(inputFilter)
+	outputFilter, err := buildEc2Filters(inputFilter)
 
+	if err != nil {
+		t.Fatalf("Fail: should not have failed to parse filter:")
+	}
 	testFilter := map[string]string{
 		filter_key:  filter_value,
 		filter_key2: strings.TrimSpace(filter_value2),
@@ -58,8 +61,11 @@ func TestStepSourceAmiInfo_BuildFilter_ListValue(t *testing.T) {
 		filter_key3: filter_value3,
 	}
 
-	outputFilter := buildEc2Filters(inputFilter)
+	outputFilter, err := buildEc2Filters(inputFilter)
 
+	if err != nil {
+		t.Fatalf("Fail: should not have failed to parse filter:")
+	}
 	testFilter := map[string][]string{
 		filter_key:  {"foo1", "foo1-2", "foo1-3"},
 		filter_key2: {"foo2-1", "foo2-2", "foo2-3"},

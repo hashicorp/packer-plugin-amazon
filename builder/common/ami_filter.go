@@ -44,7 +44,12 @@ func (d *AmiFilterOptions) NoOwner() bool {
 func (d *AmiFilterOptions) GetFilteredImage(params *ec2.DescribeImagesInput, ec2conn *ec2.EC2) (*ec2.Image, error) {
 	// We have filters to apply
 	if len(d.Filters) > 0 {
-		params.Filters = buildEc2Filters(d.Filters)
+		amiFilters, err := buildEc2Filters(d.Filters)
+		if err != nil {
+			err := fmt.Errorf("Couldn't parse ami filters: %s", err)
+			return nil, err
+		}
+		params.Filters = amiFilters
 	}
 	if len(d.Owners) > 0 {
 		params.Owners = d.GetOwners()
