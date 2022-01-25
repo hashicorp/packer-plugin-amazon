@@ -58,7 +58,14 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		if vpcId != "" {
 			s.SecurityGroupFilter.Filters["vpc-id"] = vpcId
 		}
-		params.Filters = buildEc2Filters(s.SecurityGroupFilter.Filters)
+		securityGroupFilters, err := buildEc2Filters(s.SecurityGroupFilter.Filters)
+		if err != nil {
+			err := fmt.Errorf("Couldn't parse security groups filters: %s", err)
+			log.Printf("[DEBUG] %s", err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		params.Filters = securityGroupFilters
 
 		log.Printf("Using SecurityGroup Filters %v", params)
 

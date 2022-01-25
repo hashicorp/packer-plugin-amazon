@@ -51,7 +51,14 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	// VPC
 	if s.VpcId == "" && !s.VpcFilter.Empty() {
 		params := &ec2.DescribeVpcsInput{}
-		params.Filters = buildEc2Filters(s.VpcFilter.Filters)
+		vpcFilters, err := buildEc2Filters(s.VpcFilter.Filters)
+		if err != nil {
+			err := fmt.Errorf("Couldn't parse vpc filters: %s", err)
+			log.Printf("[DEBUG] %s", err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		params.Filters = vpcFilters
 		s.VpcFilter.Filters["state"] = "available"
 
 		log.Printf("Using VPC Filters %v", params)
@@ -86,7 +93,14 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		if s.AvailabilityZone != "" {
 			s.SubnetFilter.Filters["availabilityZone"] = s.AvailabilityZone
 		}
-		params.Filters = buildEc2Filters(s.SubnetFilter.Filters)
+		subnetFilters, err := buildEc2Filters(s.SubnetFilter.Filters)
+		if err != nil {
+			err := fmt.Errorf("Couldn't parse subnet filters: %s", err)
+			log.Printf("[DEBUG] %s", err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		params.Filters = subnetFilters
 		log.Printf("Using Subnet Filters %v", params)
 
 		subnetsResp, err := ec2conn.DescribeSubnets(params)

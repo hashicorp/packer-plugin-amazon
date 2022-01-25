@@ -225,7 +225,7 @@ type RunConfig struct {
 	//
 	// This selects the SG's with tag `Class` with the value `packer`.
 	//
-	// -   `filters` (map of strings) - filters used to select a
+	// -   `filters` (map[string,string] | multiple filters are allowed when seperated by commas) - filters used to select a
 	//     `security_group_ids`. Any filter described in the docs for
 	//     [DescribeSecurityGroups](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html)
 	//     is valid.
@@ -297,7 +297,7 @@ type RunConfig struct {
 	//   This will fail unless *exactly* one AMI is returned. In the above example,
 	//   `most_recent` will cause this to succeed by selecting the newest image.
 	//
-	//   -   `filters` (map of strings) - filters used to select a `source_ami`.
+	//   -   `filters` (map[string,string] | multiple filters are allowed when seperated by commas) - filters used to select a `source_ami`.
 	//       NOTE: This will fail unless *exactly* one AMI is returned. Any filter
 	//       described in the docs for
 	//       [DescribeImages](http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html)
@@ -395,7 +395,7 @@ type RunConfig struct {
 	//   Subnet is returned. By using `most_free` or `random` one will be selected
 	//   from those matching the filter.
 	//
-	//   -   `filters` (map of strings) - filters used to select a `subnet_id`.
+	//   -   `filters` (map[string,string] | multiple filters are allowed when seperated by commas) - filters used to select a `subnet_id`.
 	//       NOTE: This will fail unless *exactly* one Subnet is returned. Any
 	//       filter described in the docs for
 	//       [DescribeSubnets](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSubnets.html)
@@ -535,7 +535,7 @@ type RunConfig struct {
 	// the default VPC, and have a IPv4 CIDR block of `/24`. NOTE: This will fail
 	// unless *exactly* one VPC is returned.
 	//
-	// -   `filters` (map of strings) - filters used to select a `vpc_id`. NOTE:
+	// -   `filters` (map[string,string] | multiple filters are allowed when seperated by commas) - filters used to select a `vpc_id`. NOTE:
 	//     This will fail unless *exactly* one VPC is returned. Any filter
 	//     described in the docs for
 	//     [DescribeVpcs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeVpcs.html)

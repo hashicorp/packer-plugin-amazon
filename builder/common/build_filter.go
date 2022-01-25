@@ -2,14 +2,13 @@ package common
 
 import (
 	"encoding/csv"
-	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 // Build a slice of EC2 (AMI/Subnet/VPC) filter options from the filters provided.
-func buildEc2Filters(input map[string]string) []*ec2.Filter {
+func buildEc2Filters(input map[string]string) ([]*ec2.Filter, error) {
 	var filters []*ec2.Filter
 
 	for k, v := range input {
@@ -21,9 +20,8 @@ func buildEc2Filters(input map[string]string) []*ec2.Filter {
 
 		values, err := csvReader.Read()
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-
 		for _, r := range values {
 			var value = r
 			b = append(b, &value)
@@ -34,5 +32,5 @@ func buildEc2Filters(input map[string]string) []*ec2.Filter {
 			Values: b,
 		})
 	}
-	return filters
+	return filters, nil
 }
