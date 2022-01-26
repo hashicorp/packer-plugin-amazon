@@ -232,13 +232,27 @@ func TestRunConfigPrepare_TemporaryKeyPairName(t *testing.T) {
 
 func TestRunConfigPrepare_TemporaryKeyPairTypeDefault(t *testing.T) {
 	c := testConfig()
-	c.Comm.SSHTemporaryKeyPairType = ""
-	if err := c.Prepare(nil); len(err) != 0 {
-		t.Fatalf("err: %s", err)
+	tc := []struct {
+		desc                     string
+		keyPairName, keyPairType string
+		expectedKeyType          string
+	}{
+		{desc: "no temporary_key_pair_* config settings should use defaults", expectedKeyType: "rsa"},
+		{desc: "setting a temporary_key_pair_name should set default key pair type", keyPairName: "local.name", expectedKeyType: "rsa"},
 	}
+	for _, tt := range tc {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			c.Comm.SSHTemporaryKeyPairName = tt.keyPairName
+			c.Comm.SSHTemporaryKeyPairType = tt.keyPairType
+			if err := c.Prepare(nil); len(err) != 0 {
+				t.Fatalf("err: %s", err)
+			}
 
-	if c.Comm.SSHTemporaryKeyPairType != "rsa" {
-		t.Fatal("keypair type should have defaulted to rsa")
+			if c.Comm.SSHTemporaryKeyPairType != tt.expectedKeyType {
+				t.Fatal("keypair type should have defaulted to rsa")
+			}
+		})
 	}
 }
 
