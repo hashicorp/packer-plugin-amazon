@@ -1,3 +1,5 @@
+See [Releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for latest CHANGELOG information.
+
 ## 1.0.5 (Upcoming)
 
 ### IMPROVEMENTS
