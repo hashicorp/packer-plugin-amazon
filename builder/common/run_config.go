@@ -607,14 +607,10 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 		c.Comm.SSHTemporaryKeyPairName = fmt.Sprintf("packer_%s", uuid.TimeOrderedUUID())
 
-		if c.Comm.SSHTemporaryKeyPairType == "" {
-			c.Comm.SSHTemporaryKeyPairType = "rsa"
-		}
+	}
 
-		if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
-			msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
-			errs = append(errs, msg)
-		}
+	if c.Comm.SSHTemporaryKeyPairType == "" {
+		c.Comm.SSHTemporaryKeyPairType = "rsa"
 	}
 
 	if c.WindowsPasswordTimeout == 0 {
@@ -635,6 +631,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	if c.Metadata.HttpPutResponseHopLimit == 0 {
 		c.Metadata.HttpPutResponseHopLimit = 1
+	}
+
+	if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
+		msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
+		errs = append(errs, msg)
 	}
 
 	if c.Metadata.HttpEndpoint != "enabled" && c.Metadata.HttpEndpoint != "disabled" {
