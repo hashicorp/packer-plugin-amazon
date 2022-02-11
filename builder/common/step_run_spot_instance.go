@@ -213,13 +213,6 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	var instanceId string
 
 	ui.Say("Interpolating tags for spot instance...")
-	// s.Tags will tag the eventually launched instance
-	// s.SpotTags apply to the spot request itself, and do not automatically
-	// get applied to the spot instance that is launched once the request is
-	// fulfilled
-	if _, exists := s.Tags["Name"]; !exists {
-		s.Tags["Name"] = "Packer Builder"
-	}
 
 	// Convert tags from the tag map provided by the user into *ec2.Tag s
 	ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, s.Region, state)
