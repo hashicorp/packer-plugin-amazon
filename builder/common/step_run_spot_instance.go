@@ -38,6 +38,7 @@ type StepRunSpotInstance struct {
 	HttpEndpoint                      string
 	HttpTokens                        string
 	HttpPutResponseHopLimit           int64
+	InstanceMetadataTags              string
 	InstanceInitiatedShutdownBehavior string
 	InstanceType                      string
 	Region                            string
@@ -147,7 +148,7 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 	}
 
 	if s.HttpEndpoint == "enabled" {
-		templateData.MetadataOptions = &ec2.LaunchTemplateInstanceMetadataOptionsRequest{HttpEndpoint: &s.HttpEndpoint, HttpTokens: &s.HttpTokens, HttpPutResponseHopLimit: &s.HttpPutResponseHopLimit}
+		templateData.MetadataOptions = &ec2.LaunchTemplateInstanceMetadataOptionsRequest{HttpEndpoint: &s.HttpEndpoint, HttpTokens: &s.HttpTokens, HttpPutResponseHopLimit: &s.HttpPutResponseHopLimit, InstanceMetadataTags: &s.InstanceMetadataTags}
 	}
 
 	// If instance type is not set, we'll just pick the lowest priced instance
