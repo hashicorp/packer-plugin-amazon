@@ -363,6 +363,24 @@ func (c *AccessConfig) GetCredentials(config *aws.Config) (*awsCredentials.Crede
 	return awsbase.GetCredentials(awsbaseConfig)
 }
 
+func (c *AccessConfig) getCredsFromVault(cli *vaultapi.Client) (*vaultapi.Secret, error) {
+	if len(c.VaultAWSEngine.RoleARN) > 0 {
+		data := map[string]interface{}{
+			"role_arn": c.VaultAWSEngine.RoleARN,
+		}
+		if len(c.VaultAWSEngine.TTL) > 0 {
+			data["ttl"] = c.VaultAWSEngine.TTL
+		}
+		path := fmt.Sprintf("/%s/sts/%s", c.VaultAWSEngine.EngineName,
+			c.VaultAWSEngine.Name)
+		return cli.Logical().Write(path, data)
+	}
+
+	path := fmt.Sprintf("/%s/creds/%s", c.VaultAWSEngine.EngineName,
+		c.VaultAWSEngine.Name)
+	return cli.Logical().Read(path)
+}
+
 func (c *AccessConfig) GetCredsFromVault() error {
 	// const EnvVaultAddress = "VAULT_ADDR"
 	// const EnvVaultToken = "VAULT_TOKEN"
@@ -374,9 +392,9 @@ func (c *AccessConfig) GetCredsFromVault() error {
 	if c.VaultAWSEngine.EngineName == "" {
 		c.VaultAWSEngine.EngineName = "aws"
 	}
-	path := fmt.Sprintf("/%s/creds/%s", c.VaultAWSEngine.EngineName,
-		c.VaultAWSEngine.Name)
-	secret, err := cli.Logical().Read(path)
+
+	secret, err := c.getCredsFromVault(cli)
+
 	if err != nil {
 		return fmt.Errorf("Error reading vault secret: %s", err)
 	}
