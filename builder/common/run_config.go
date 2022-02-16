@@ -68,7 +68,7 @@ type Placement struct {
 // Configures the metadata options.
 // See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) for details.
 type MetadataOptions struct {
-	// A string to enable or disble the IMDS endpoint for an instance. Defaults to enabled.
+	// A string to enable or disable the IMDS endpoint for an instance. Defaults to enabled.
 	// Accepts either "enabled" or "disabled"
 	HttpEndpoint string `mapstructure:"http_endpoint" required:"false"`
 	// A string to either set the use of IMDSv2 for the instance to optional or required. Defaults to "optional".
@@ -77,6 +77,9 @@ type MetadataOptions struct {
 	// A numerical value to set an upper limit for the amount of hops allowed when communicating with IMDS endpoints.
 	// Defaults to 1.
 	HttpPutResponseHopLimit int64 `mapstructure:"http_put_response_hop_limit" required:"false"`
+	// A string to enable or disable access to instance tags from the instance metadata. Defaults to disabled.
+	// Accepts either "enabled" or "disabled"
+	InstanceMetadataTags string `mapstructure:"instance_metadata_tags" required:"false"`
 }
 
 // RunConfig contains configuration for running an instance from a source
@@ -633,6 +636,10 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.Metadata.HttpPutResponseHopLimit = 1
 	}
 
+	if c.Metadata.InstanceMetadataTags == "" {
+		c.Metadata.InstanceMetadataTags = "disabled"
+	}
+
 	if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
 		msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
 		errs = append(errs, msg)
@@ -650,6 +657,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	if c.Metadata.HttpPutResponseHopLimit < 1 || c.Metadata.HttpPutResponseHopLimit > 64 {
 		msg := fmt.Errorf("http_put_response_hop_limit requires a number between 1 and 64")
+		errs = append(errs, msg)
+	}
+
+	if c.Metadata.InstanceMetadataTags != "enabled" && c.Metadata.InstanceMetadataTags != "disabled" {
+		msg := fmt.Errorf("instance_metadata_tags requires either disabled or enabled as its value")
 		errs = append(errs, msg)
 	}
 
