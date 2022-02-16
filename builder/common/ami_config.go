@@ -57,6 +57,8 @@ type AMIConfig struct {
 	// Key/value pair tags applied to the AMI. This is a [template
 	// engine](/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
+	//
+	// The builder no longer adds a "Name": "Packer Builder" entry to the tags.
 	AMITags map[string]string `mapstructure:"tags" required:"false"`
 	// Same as [`tags`](#tags) but defined as a singular repeatable block
 	// containing a `key` and a `value` field. In HCL2 mode the

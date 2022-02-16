@@ -91,11 +91,6 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	var instanceId string
 
-	ui.Say("Adding tags to source instance")
-	if _, exists := s.Tags["Name"]; !exists {
-		s.Tags["Name"] = "Packer Builder"
-	}
-
 	ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
 	if err != nil {
 		err := fmt.Errorf("Error tagging source instance: %s", err)
