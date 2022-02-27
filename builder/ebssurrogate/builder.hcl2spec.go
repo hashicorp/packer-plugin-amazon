@@ -370,6 +370,7 @@ type FlatRootBlockDevice struct {
 	DeviceName          *string `mapstructure:"device_name" required:"false" cty:"device_name" hcl:"device_name"`
 	DeleteOnTermination *bool   `mapstructure:"delete_on_termination" required:"false" cty:"delete_on_termination" hcl:"delete_on_termination"`
 	IOPS                *int64  `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
+	Throughput          *int64  `mapstructure:"throughput" required:"false" cty:"throughput" hcl:"throughput"`
 	VolumeType          *string `mapstructure:"volume_type" required:"false" cty:"volume_type" hcl:"volume_type"`
 	VolumeSize          *int64  `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
 }
@@ -390,6 +391,7 @@ func (*FlatRootBlockDevice) HCL2Spec() map[string]hcldec.Spec {
 		"device_name":           &hcldec.AttrSpec{Name: "device_name", Type: cty.String, Required: false},
 		"delete_on_termination": &hcldec.AttrSpec{Name: "delete_on_termination", Type: cty.Bool, Required: false},
 		"iops":                  &hcldec.AttrSpec{Name: "iops", Type: cty.Number, Required: false},
+		"throughput":            &hcldec.AttrSpec{Name: "throughput", Type: cty.Number, Required: false},
 		"volume_type":           &hcldec.AttrSpec{Name: "volume_type", Type: cty.String, Required: false},
 		"volume_size":           &hcldec.AttrSpec{Name: "volume_size", Type: cty.Number, Required: false},
 	}

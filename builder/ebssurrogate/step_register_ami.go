@@ -168,6 +168,9 @@ func (s *StepRegisterAMI) combineDevices(snapshotIds map[string]string) []*ec2.B
 		if *device.DeviceName == s.RootDevice.SourceDeviceName {
 			device.DeviceName = aws.String(s.RootDevice.DeviceName)
 		}
+		if s.RootDevice.Throughput != 0 && s.RootDevice.VolumeType == "gp3" {
+			*device.Ebs.Throughput = s.RootDevice.Throughput
+		}
 		devices[*device.DeviceName] = device
 	}
 

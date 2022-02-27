@@ -25,6 +25,11 @@ type RootBlockDevice struct {
 	// IOPs
 	// for more information
 	IOPS int64 `mapstructure:"iops" required:"false"`
+	// The throughput for gp3 volumes, only valid for gp3 types
+	// See the documentation on
+	// [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
+	// for more information
+	Throughput int64 `mapstructure:"throughput" required:"false"`
 	// The volume type. gp2 for General Purpose
 	// (SSD) volumes, io1 for Provisioned IOPS (SSD) volumes, st1 for
 	// Throughput Optimized HDD, sc1 for Cold HDD, and standard for
@@ -52,6 +57,14 @@ func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
 
 	if c.IOPS < 0 {
 		errs = append(errs, errors.New("iops must be greater than 0"))
+	}
+
+	if c.VolumeType == "gp2" && c.Throughput != 0 {
+		errs = append(errs, errors.New("throughput may not be specified for a gp2 volume"))
+	}
+
+	if c.Throughput < 0 {
+		errs = append(errs, errors.New("throughput must be greater than 0"))
 	}
 
 	if c.VolumeSize < 0 {
