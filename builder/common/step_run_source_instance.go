@@ -339,11 +339,14 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		},
 			RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-			_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
-				Tags:      ec2Tags,
-				Resources: []*string{instance.InstanceId},
-			})
-			return err
+			if len(ec2Tags) > 0 {
+				_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
+					Tags:      ec2Tags,
+					Resources: []*string{instance.InstanceId},
+				})
+				return err
+			}
+			return nil
 		})
 
 		if err != nil {
