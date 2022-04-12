@@ -410,6 +410,15 @@ generally during image copy/encryption. Possible reasons for the error include:
   - `AWS_POLL_DELAY_SECONDS` - How many seconds to wait in between status update
     requests. Generally defaults to 2 or 5 seconds, depending on the task.
 
+  Alternatively, you can configure these settings in source section of the packer
+  configuration file, for example:
+  ```
+  aws_polling {
+    delay_seconds = 40
+    max_attempts  = 5
+  }
+  ```
+
 - You are using short-lived credentials that expired during the build. If this
   is the problem, you may also see `RequestExpired: Request has expired.`
   errors displayed in the Packer output:
