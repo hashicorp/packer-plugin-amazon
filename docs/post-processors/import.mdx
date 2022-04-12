@@ -31,7 +31,7 @@ The import process itself run by AWS includes modifications to the image
 uploaded, to allow it to boot and operate in the AWS EC2 environment. However,
 not all modifications required to make the machine run well in EC2 are
 performed. Take care around console output from the machine, as debugging can
-be very difficult without it. On the source OVA artifact make sure to include 
+be very difficult without it. On the source OVA artifact make sure to include
 tools suitable for instances in EC2 such as the `cloud-init` package for Linux.
 
 Further information about the import process can be found in AWS's [EC2
@@ -47,7 +47,7 @@ Then, run [`packer init`](/docs/commands/init).
 packer {
   required_plugins {
     amazon = {
-      version = ">= 0.0.1"
+      version = ">= 1.0.9"
       source = "github.com/hashicorp/amazon"
     }
   }
