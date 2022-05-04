@@ -8,8 +8,8 @@ require (
 	github.com/hashicorp/aws-sdk-go-base v0.7.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/hcl/v2 v2.11.1
-	github.com/hashicorp/packer-plugin-sdk v0.2.11
+	github.com/hashicorp/hcl/v2 v2.12.0
+	github.com/hashicorp/packer-plugin-sdk v0.2.12
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/stretchr/testify v1.7.0
@@ -41,7 +41,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-getter/gcs/v2 v2.0.0-20200604122502-a6995fa1edad // indirect
 	github.com/hashicorp/go-getter/s3/v2 v2.0.0-20200604122502-a6995fa1edad // indirect
-	github.com/hashicorp/go-getter/v2 v2.0.0 // indirect
+	github.com/hashicorp/go-getter/v2 v2.0.2 // indirect
 	github.com/hashicorp/go-hclog v0.16.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/ugorji/go/codec v1.2.6 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
