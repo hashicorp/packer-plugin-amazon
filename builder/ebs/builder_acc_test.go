@@ -489,7 +489,7 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-//go:embed test-fixtures/rsa_ssh_keypair.pkr.hcl
+//go:embed test-fixtures/ssh-keys/rsa_ssh_keypair.pkr.hcl
 var testSSHKeyPairRSA string
 
 func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
@@ -526,7 +526,7 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-//go:embed test-fixtures/ed25519_ssh_keypair.pkr.hcl
+//go:embed test-fixtures/ssh-keys/ed25519_ssh_keypair.pkr.hcl
 var testSSHKeyPairED25519 string
 
 func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
@@ -555,6 +555,42 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 
 			if len(matched) != 2 {
 				return fmt.Errorf("unable to capture key information from  %q", logfile)
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/ssh-keys/rsa_sha2_only_server.pkr.hcl
+var testRSASHA2OnlyServer string
+
+func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_rsa_sha2_srv_test",
+		Template: testRSASHA2OnlyServer,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			logs, err := os.Open(logfile)
+			if err != nil {
+				return fmt.Errorf("Unable find %s", logfile)
+			}
+			defer logs.Close()
+
+			logsBytes, err := ioutil.ReadAll(logs)
+			if err != nil {
+				return fmt.Errorf("Unable to read %s", logfile)
+			}
+			logsString := string(logsBytes)
+
+			re := regexp.MustCompile(`amazon-ebs.basic-example:\s+Successful login`)
+			matched := re.FindString(logsString)
+
+			if matched == "" {
+				return fmt.Errorf("unable to success string from  %q", logfile)
 			}
 
 			return nil
