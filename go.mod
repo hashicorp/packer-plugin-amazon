@@ -9,12 +9,12 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.12.0
-	github.com/hashicorp/packer-plugin-sdk v0.2.12
+	github.com/hashicorp/packer-plugin-sdk v0.2.13
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/stretchr/testify v1.7.0
 	github.com/zclconf/go-cty v1.10.0
-	golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e
+	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654
 )
 
 require (
