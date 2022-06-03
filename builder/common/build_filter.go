@@ -17,6 +17,7 @@ func buildEc2Filters(input map[string]string) ([]*ec2.Filter, error) {
 		a := k
 		csvReader := csv.NewReader(strings.NewReader(v))
 		csvReader.TrimLeadingSpace = true
+		csvReader.LazyQuotes = true
 
 		values, err := csvReader.Read()
 		if err != nil {

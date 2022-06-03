@@ -94,3 +94,41 @@ func TestStepSourceAmiInfo_BuildFilter_ListValue(t *testing.T) {
 		}
 	}
 }
+
+func TestStepSourceAmiInfo_BuildFilter_ValueWithQuote(t *testing.T) {
+	filter_key := "tag:test"
+	filter_value := "{\"purpose\":\"testing\"}"
+	filter_key2 := "tag:test"
+	filter_value2 := " {\"purpose\":\"testing\"}"
+
+	inputFilter := map[string]string{
+		filter_key:  filter_value,
+		filter_key2: filter_value2,
+	}
+
+	outputFilter, err := buildEc2Filters(inputFilter)
+
+	if err != nil {
+		t.Fatalf("Fail: should not have failed to parse filter: %v", err)
+	}
+	testFilter := map[string]string{
+		filter_key:  filter_value,
+		filter_key2: strings.TrimSpace(filter_value2),
+	}
+
+	// deconstruct filter back into things we can test
+	foundMap := map[string]bool{filter_key: false, filter_key2: false}
+	for _, filter := range outputFilter {
+		for key, value := range testFilter {
+			if *filter.Name == key && *filter.Values[0] == value {
+				foundMap[key] = true
+			}
+		}
+	}
+
+	for k, v := range foundMap {
+		if !v {
+			t.Fatalf("Fail: should have found value for key: %s", k)
+		}
+	}
+}
