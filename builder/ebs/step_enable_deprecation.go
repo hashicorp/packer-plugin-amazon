@@ -11,18 +11,25 @@ import (
 )
 
 type stepEnableDeprecation struct {
-	DeprecationTime string
+	DeprecationTime    string
+	AMISkipCreateImage bool
 }
 
 func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
-	if s.DeprecationTime == "" {
+	if s.AMISkipCreateImage || s.DeprecationTime == "" {
 		ui.Say("Skipping Enable AMI deprecation...")
 		return multistep.ActionContinue
 	}
 
 	ec2conn := state.Get("ec2").(*ec2.EC2)
-	amis := state.Get("amis").(map[string]string)
+	amis, ok := state.Get("amis").(map[string]string)
+	if !ok {
+		err := fmt.Errorf("no AMIs found in state to deprecate")
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
 
 	deprecationTime, _ := time.Parse(time.RFC3339, s.DeprecationTime)
 	for _, ami := range amis {
