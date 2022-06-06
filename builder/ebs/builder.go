@@ -371,7 +371,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                b.config.ctx,
 		},
 		&stepEnableDeprecation{
-			DeprecationTime: b.config.DeprecationTime,
+			DeprecationTime:    b.config.DeprecationTime,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
