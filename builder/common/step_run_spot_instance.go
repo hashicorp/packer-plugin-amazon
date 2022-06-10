@@ -483,6 +483,10 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
+		if len(ec2Tags) == 0 {
+			return nil
+		}
+
 		_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
 			Tags:      ec2Tags,
 			Resources: []*string{instance.InstanceId},
@@ -490,7 +494,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		return err
 	})
 
-	if err != nil {
+	if len(ec2Tags) > 0 && err != nil {
 		err := fmt.Errorf("Error tagging source instance: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
