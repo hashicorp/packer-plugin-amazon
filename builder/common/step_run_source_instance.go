@@ -21,7 +21,7 @@ import (
 
 type StepRunSourceInstance struct {
 	PollingConfig                     *AWSPollingConfig
-	AssociatePublicIpAddress          bool
+	AssociatePublicIpAddress          *bool
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
 	Comm                              *communicator.Config
 	Ctx                               interpolate.Context
@@ -183,11 +183,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	subnetId := state.Get("subnet_id").(string)
 
-	if subnetId != "" && s.AssociatePublicIpAddress {
+	if subnetId != "" && s.AssociatePublicIpAddress != nil {
 		runOpts.NetworkInterfaces = []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				DeviceIndex:              aws.Int64(0),
-				AssociatePublicIpAddress: &s.AssociatePublicIpAddress,
+				AssociatePublicIpAddress: s.AssociatePublicIpAddress,
 				SubnetId:                 aws.String(subnetId),
 				Groups:                   securityGroupIds,
 				DeleteOnTermination:      aws.Bool(true),

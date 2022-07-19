@@ -88,7 +88,7 @@ type RunConfig struct {
 	// If using a non-default VPC,
 	// public IP addresses are not provided by default. If this is true, your
 	// new instance will get a Public IP. default: false
-	AssociatePublicIpAddress bool `mapstructure:"associate_public_ip_address" required:"false"`
+	AssociatePublicIpAddress *bool `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
 	AvailabilityZone string `mapstructure:"availability_zone" required:"false"`
