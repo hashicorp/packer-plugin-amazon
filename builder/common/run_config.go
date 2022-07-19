@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
+	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
@@ -88,8 +89,8 @@ type MetadataOptions struct {
 type RunConfig struct {
 	// If using a non-default VPC,
 	// public IP addresses are not provided by default. If this is true, your
-	// new instance will get a Public IP. default: false
-	AssociatePublicIpAddress bool `mapstructure:"associate_public_ip_address" required:"false"`
+	// new instance will get a Public IP. default: unset
+	AssociatePublicIpAddress confighelper.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
 	AvailabilityZone string `mapstructure:"availability_zone" required:"false"`
