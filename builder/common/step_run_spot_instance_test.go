@@ -366,7 +366,7 @@ func TestRun_NoSpotTags(t *testing.T) {
 	}
 
 	if action != multistep.ActionContinue {
-		t.Fatalf("shoul continue, but: %v", action)
+		t.Fatalf("should continue, but: %v", action)
 	}
 
 	if len(ec2Mock.CreateLaunchTemplateParams[0].TagSpecifications) != 0 {
