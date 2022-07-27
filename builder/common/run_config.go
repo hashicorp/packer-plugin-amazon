@@ -78,6 +78,7 @@ type MetadataOptions struct {
 	// Defaults to 1.
 	HttpPutResponseHopLimit int64 `mapstructure:"http_put_response_hop_limit" required:"false"`
 	// A string to enable or disable access to instance tags from the instance metadata. Defaults to disabled.
+	// Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
 	// Accepts either "enabled" or "disabled"
 	InstanceMetadataTags string `mapstructure:"instance_metadata_tags" required:"false"`
 }

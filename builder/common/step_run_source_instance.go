@@ -146,7 +146,15 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	if s.HttpEndpoint == "enabled" {
-		runOpts.MetadataOptions = &ec2.InstanceMetadataOptionsRequest{HttpEndpoint: &s.HttpEndpoint, HttpTokens: &s.HttpTokens, HttpPutResponseHopLimit: &s.HttpPutResponseHopLimit, InstanceMetadataTags: &s.InstanceMetadataTags}
+		runOpts.MetadataOptions = &ec2.InstanceMetadataOptionsRequest{
+			HttpEndpoint:            &s.HttpEndpoint,
+			HttpTokens:              &s.HttpTokens,
+			HttpPutResponseHopLimit: &s.HttpPutResponseHopLimit,
+		}
+	}
+
+	if s.InstanceMetadataTags == "enabled" {
+		runOpts.MetadataOptions.InstanceMetadataTags = aws.String(s.InstanceMetadataTags)
 	}
 
 	// Collect tags for tagging on resource creation
