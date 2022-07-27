@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 // Create statebag for running test
@@ -32,7 +33,7 @@ func tStateSpot() multistep.StateBag {
 func getBasicStep() *StepRunSpotInstance {
 	stepRunSpotInstance := StepRunSpotInstance{
 		PollingConfig:            new(AWSPollingConfig),
-		AssociatePublicIpAddress: nil,
+		AssociatePublicIpAddress: confighelper.TriUnset,
 		LaunchMappings:           BlockDevices{},
 		BlockDurationMinutes:     0,
 		Debug:                    false,

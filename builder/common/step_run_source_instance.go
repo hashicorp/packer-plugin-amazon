@@ -16,12 +16,13 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
+	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
 type StepRunSourceInstance struct {
 	PollingConfig                     *AWSPollingConfig
-	AssociatePublicIpAddress          *bool
+	AssociatePublicIpAddress          confighelper.Trilean
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
 	Comm                              *communicator.Config
 	Ctx                               interpolate.Context
@@ -183,11 +184,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	subnetId := state.Get("subnet_id").(string)
 
-	if subnetId != "" && s.AssociatePublicIpAddress != nil {
+	if subnetId != "" && s.AssociatePublicIpAddress != confighelper.TriUnset {
 		runOpts.NetworkInterfaces = []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				DeviceIndex:              aws.Int64(0),
-				AssociatePublicIpAddress: s.AssociatePublicIpAddress,
+				AssociatePublicIpAddress: s.AssociatePublicIpAddress.ToBoolPointer(),
 				SubnetId:                 aws.String(subnetId),
 				Groups:                   securityGroupIds,
 				DeleteOnTermination:      aws.Bool(true),
