@@ -500,6 +500,13 @@ type RunConfig struct {
 	// The default is [`0.0.0.0/0`] (i.e., allow any IPv4 source). This is only
 	// used when `security_group_id` or `security_group_ids` is not specified.
 	TemporarySGSourceCidrs []string `mapstructure:"temporary_security_group_source_cidrs" required:"false"`
+	// When enabled, use public IP of the host (obtained from https://checkip.amazonaws.com)
+	// as CIDR block to be authorized access to the instance, when packer
+	// is creating a temporary security group. Defaults to `false`.
+	//
+	// This is only used when `security_group_id`, `security_group_ids`,
+	// and `temporary_security_group_source_cidrs` are not specified.
+	TemporarySGSourcePublicIp bool `mapstructure:"temporary_security_group_source_public_ip" required:"false"`
 	// User data to apply when launching the instance. Note
 	// that you need to be careful about escaping characters due to the templates
 	// being JSON. It is often more convenient to use user_data_file, instead.
@@ -769,7 +776,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		}
 	}
 
-	if len(c.TemporarySGSourceCidrs) == 0 {
+	if len(c.TemporarySGSourceCidrs) == 0 && !c.TemporarySGSourcePublicIp {
 		c.TemporarySGSourceCidrs = []string{"0.0.0.0/0"}
 	} else {
 		for _, cidr := range c.TemporarySGSourceCidrs {
