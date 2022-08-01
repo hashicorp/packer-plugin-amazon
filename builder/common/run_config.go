@@ -497,8 +497,11 @@ type RunConfig struct {
 	// A list of IPv4 CIDR blocks to be authorized access to the instance, when
 	// packer is creating a temporary security group.
 	//
-	// The default is [`0.0.0.0/0`] (i.e., allow any IPv4 source). This is only
-	// used when `security_group_id` or `security_group_ids` is not specified.
+	// The default is [`0.0.0.0/0`] (i.e., allow any IPv4 source).
+	// Use `temporary_security_group_source_public_ip` to allow current host's
+	// public IP instead of any IPv4 source.
+	// This is only used when `security_group_id` or `security_group_ids` is not
+	// specified.
 	TemporarySGSourceCidrs []string `mapstructure:"temporary_security_group_source_cidrs" required:"false"`
 	// When enabled, use public IP of the host (obtained from https://checkip.amazonaws.com)
 	// as CIDR block to be authorized access to the instance, when packer
