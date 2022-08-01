@@ -18,14 +18,15 @@ import (
 )
 
 type StepSecurityGroup struct {
-	CommConfig             *communicator.Config
-	SecurityGroupFilter    SecurityGroupFilterOptions
-	SecurityGroupIds       []string
-	TemporarySGSourceCidrs []string
-	SkipSSHRuleCreation    bool
-	Ctx                    interpolate.Context
-	IsRestricted           bool
-	Tags                   map[string]string
+	CommConfig                *communicator.Config
+	SecurityGroupFilter       SecurityGroupFilterOptions
+	SecurityGroupIds          []string
+	TemporarySGSourceCidrs    []string
+	TemporarySGSourcePublicIp bool
+	SkipSSHRuleCreation       bool
+	Ctx                       interpolate.Context
+	IsRestricted              bool
+	Tags                      map[string]string
 
 	createdGroupId string
 }
@@ -136,10 +137,45 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	log.Printf("[DEBUG] Found security group %s", s.createdGroupId)
 
+	temporarySGSourceCidrs := s.TemporarySGSourceCidrs
+	if len(temporarySGSourceCidrs) != 0 && s.TemporarySGSourcePublicIp {
+		ui.Say("Using temporary_security_group_source_public_ip with" +
+			" temporary_security_group_source_cidrs is unsupported," +
+			" ignoring temporary_security_group_source_public_ip.")
+	}
+	if len(temporarySGSourceCidrs) == 0 && s.TemporarySGSourcePublicIp {
+		ui.Say("Checking current host's public IP...")
+
+		ip, err := CheckPublicIp()
+		if err != nil {
+			ui.Error(err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		// ensure 0.0.0.0 isn't used to configure the SG
+		if ip.IsUnspecified() {
+			err := fmt.Errorf("Current host's public IP is unspecified: %s", ip)
+			ui.Error(err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		ui.Say(fmt.Sprintf("Current host's public IP: %s", ip))
+
+		// ip.To4() attempts to parse the IP as IPv4, if this fails, we fallback to IPv6.
+		bits := 128
+		if tmp := ip.To4(); tmp != nil {
+			ip = tmp
+			bits = 32
+		}
+		temporarySGSourceCidrs = []string{fmt.Sprintf("%s/%d", ip, bits)}
+	}
+
 	// map the list of temporary security group CIDRs bundled with config to
 	// types expected by EC2.
 	groupIpRanges := []*ec2.IpRange{}
-	for _, cidr := range s.TemporarySGSourceCidrs {
+	for _, cidr := range temporarySGSourceCidrs {
 		ipRange := ec2.IpRange{
 			CidrIp: aws.String(cidr),
 		}
@@ -169,7 +205,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	ui.Say(fmt.Sprintf(
 		"Authorizing access to port %d from %v in the temporary security groups...",
-		port, s.TemporarySGSourceCidrs),
+		port, temporarySGSourceCidrs),
 	)
 	_, err = ec2conn.AuthorizeSecurityGroupIngress(groupRules)
 	if err != nil {
