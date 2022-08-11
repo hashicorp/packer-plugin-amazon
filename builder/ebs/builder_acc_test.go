@@ -325,6 +325,36 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
+	}
+
+	deprecationTime := time.Now().UTC().AddDate(0, 0, 1)
+	deprecationTimeStr := deprecationTime.Format(time.RFC3339)
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_encrypted_boot_with_deprecation_test",
+		Template: fmt.Sprintf(testBuilderAccEncryptedDeprecated, deprecationTimeStr, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			deprecationCheck := checkDeprecationEnabled(ami, deprecationTime)
+			if deprecationCheck != nil {
+				return deprecationCheck
+			}
+			return checkBootEncrypted(ami)
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
 func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
@@ -690,6 +720,21 @@ const testBuilderAccEncrypted = `
 		"instance_type": "m3.medium",
 		"source_ami":"ami-c15bebaa",
 		"ssh_username": "ubuntu",
+		"ami_name": "%s",
+		"encrypt_boot": true
+	}]
+}
+`
+
+const testBuilderAccEncryptedDeprecated = `
+{
+	"builders": [{
+		"type": "amazon-ebs",
+		"region": "us-east-1",
+		"instance_type": "m3.medium",
+		"source_ami":"ami-c15bebaa",
+		"ssh_username": "ubuntu",
+		"deprecate_at" : "%s",
 		"ami_name": "%s",
 		"encrypt_boot": true
 	}]
