@@ -370,10 +370,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:               b.config.RunTags,
 			Ctx:                b.config.ctx,
 		},
-		&stepEnableDeprecation{
-			DeprecationTime:    b.config.DeprecationTime,
-			AMISkipCreateImage: b.config.AMISkipCreateImage,
-		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,
@@ -384,6 +380,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			OriginalRegion:     *ec2conn.Config.Region,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+		},
+		&stepEnableDeprecation{
+			DeprecationTime:    b.config.DeprecationTime,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
 		},
 		&awscommon.StepModifyAMIAttributes{
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
