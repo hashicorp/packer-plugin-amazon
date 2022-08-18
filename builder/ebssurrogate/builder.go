@@ -48,6 +48,15 @@ type Config struct {
 	// from the source instance. See the
 	// [BlockDevices](#block-devices-configuration) documentation for fields.
 	LaunchMappings BlockDevices `mapstructure:"launch_block_device_mappings" required:"false"`
+	// Set the preference for using a capacity reservation if one exists.
+	// Either will be `open` or `none`. Defaults to `none`
+	CapacityReservationPreference string `mapstructure:"capacity_reservation_preference" required:"false"`
+	// Provide the specific EC2 Capacity Reservation ID that will be used
+	// by Packer.
+	CapacityReservationId string `mapstructure:"capacity_reservation_id" required:"false"`
+	// Provide the EC2 Capacity Reservation Group ARN that will be used by
+	// Packer.
+	CapacityReservationGroupArn string `mapstructure:"capacity_reservation_group_arn" required:"false"`
 	// A block device mapping describing the root device of the AMI. This looks
 	// like the mappings in `ami_block_device_mapping`, except with an
 	// additional field:
@@ -278,6 +287,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:                     b.config.PollingConfig,
 			AssociatePublicIpAddress:          b.config.AssociatePublicIpAddress,
 			LaunchMappings:                    b.config.LaunchMappings,
+			CapacityReservationPreference:     b.config.CapacityReservationPreference,
+			CapacityReservationId:             b.config.CapacityReservationId,
+			CapacityReservationGroupArn:       b.config.CapacityReservationGroupArn,
 			Comm:                              &b.config.RunConfig.Comm,
 			Ctx:                               b.config.ctx,
 			Debug:                             b.config.PackerDebug,

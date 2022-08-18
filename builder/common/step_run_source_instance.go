@@ -24,6 +24,9 @@ type StepRunSourceInstance struct {
 	PollingConfig                     *AWSPollingConfig
 	AssociatePublicIpAddress          confighelper.Trilean
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
+	CapacityReservationPreference     string
+	CapacityReservationId             string
+	CapacityReservationGroupArn       string
 	Comm                              *communicator.Config
 	Ctx                               interpolate.Context
 	Debug                             bool
@@ -230,6 +233,16 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 				},
 			}
 			runOpts.LicenseSpecifications = append(runOpts.LicenseSpecifications, licenseSpecifications...)
+		}
+	}
+
+	if s.CapacityReservationPreference != "" {
+		runOpts.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
+			CapacityReservationPreference: aws.String(s.CapacityReservationPreference),
+			CapacityReservationTarget: &ec2.CapacityReservationTarget{
+				CapacityReservationId:               aws.String(s.CapacityReservationId),
+				CapacityReservationResourceGroupArn: aws.String(s.CapacityReservationGroupArn),
+			},
 		}
 	}
 
