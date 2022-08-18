@@ -239,10 +239,18 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	if s.CapacityReservationPreference != "" {
 		runOpts.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
 			CapacityReservationPreference: aws.String(s.CapacityReservationPreference),
-			CapacityReservationTarget: &ec2.CapacityReservationTarget{
-				CapacityReservationId:               aws.String(s.CapacityReservationId),
-				CapacityReservationResourceGroupArn: aws.String(s.CapacityReservationGroupArn),
-			},
+		}
+	}
+
+	if s.CapacityReservationId != "" || s.CapacityReservationGroupArn != "" {
+		runOpts.CapacityReservationSpecification.CapacityReservationTarget = &ec2.CapacityReservationTarget{}
+
+		if s.CapacityReservationId != "" {
+			runOpts.CapacityReservationSpecification.CapacityReservationTarget.CapacityReservationId = aws.String(s.CapacityReservationId)
+		}
+
+		if s.CapacityReservationGroupArn != "" {
+			runOpts.CapacityReservationSpecification.CapacityReservationTarget.CapacityReservationResourceGroupArn = aws.String(s.CapacityReservationGroupArn)
 		}
 	}
 
