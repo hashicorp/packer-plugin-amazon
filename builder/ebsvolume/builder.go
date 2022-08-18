@@ -43,6 +43,15 @@ type Config struct {
 	// networking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html#enabling_enhanced_networking).
 	// Default `false`.
 	AMISriovNetSupport bool `mapstructure:"sriov_support" required:"false"`
+	// Set the preference for using a capacity reservation if one exists.
+	// Either will be `open` or `none`. Defaults to `none`
+	CapacityReservationPreference string `mapstructure:"capacity_reservation_preference" required:"false"`
+	// Provide the specific EC2 Capacity Reservation ID that will be used
+	// by Packer.
+	CapacityReservationId string `mapstructure:"capacity_reservation_id" required:"false"`
+	// Provide the EC2 Capacity Reservation Group ARN that will be used by
+	// Packer.
+	CapacityReservationGroupArn string `mapstructure:"capacity_reservation_group_arn" required:"false"`
 
 	// Add the block device mappings to the AMI. If you add instance store
 	// volumes or EBS volumes in addition to the root device volume, the
@@ -234,6 +243,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:                     b.config.PollingConfig,
 			AssociatePublicIpAddress:          b.config.AssociatePublicIpAddress,
 			LaunchMappings:                    b.config.launchBlockDevices,
+			CapacityReservationPreference:     b.config.CapacityReservationPreference,
+			CapacityReservationId:             b.config.CapacityReservationId,
+			CapacityReservationGroupArn:       b.config.CapacityReservationGroupArn,
 			Comm:                              &b.config.RunConfig.Comm,
 			Ctx:                               b.config.ctx,
 			Debug:                             b.config.PackerDebug,

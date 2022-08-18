@@ -43,6 +43,15 @@ type Config struct {
 	// here may vary depending on the type of VM you use. See the
 	// [BlockDevices](#block-devices-configuration) documentation for fields.
 	AMIMappings awscommon.BlockDevices `mapstructure:"ami_block_device_mappings" required:"false"`
+	// Set the preference for using a capacity reservation if one exists.
+	// Either will be `open` or `none`. Defaults to `none`
+	CapacityReservationPreference string `mapstructure:"capacity_reservation_preference" required:"false"`
+	// Provide the specific EC2 Capacity Reservation ID that will be used
+	// by Packer.
+	CapacityReservationId string `mapstructure:"capacity_reservation_id" required:"false"`
+	// Provide the EC2 Capacity Reservation Group ARN that will be used by
+	// Packer.
+	CapacityReservationGroupArn string `mapstructure:"capacity_reservation_group_arn" required:"false"`
 	// Add one or more block devices before the Packer build starts. If you add
 	// instance store volumes or EBS volumes in addition to the root device
 	// volume, the created AMI will contain block device mapping information
@@ -309,25 +318,28 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 
 		instanceStep = &awscommon.StepRunSourceInstance{
-			PollingConfig:            b.config.PollingConfig,
-			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
-			LaunchMappings:           b.config.LaunchMappings,
-			Comm:                     &b.config.RunConfig.Comm,
-			Ctx:                      b.config.ctx,
-			Debug:                    b.config.PackerDebug,
-			EbsOptimized:             b.config.EbsOptimized,
-			EnableNitroEnclave:       b.config.EnableNitroEnclave,
-			IsBurstableInstanceType:  b.config.RunConfig.IsBurstableInstanceType(),
-			EnableUnlimitedCredits:   b.config.EnableUnlimitedCredits,
-			InstanceType:             b.config.InstanceType,
-			IsRestricted:             b.config.IsChinaCloud(),
-			SourceAMI:                b.config.SourceAmi,
-			Tags:                     b.config.RunTags,
-			LicenseSpecifications:    b.config.LicenseSpecifications,
-			HostResourceGroupArn:     b.config.Placement.HostResourceGroupArn,
-			Tenancy:                  tenancy,
-			UserData:                 b.config.UserData,
-			UserDataFile:             b.config.UserDataFile,
+			PollingConfig:                 b.config.PollingConfig,
+			AssociatePublicIpAddress:      b.config.AssociatePublicIpAddress,
+			LaunchMappings:                b.config.LaunchMappings,
+			CapacityReservationPreference: b.config.CapacityReservationPreference,
+			CapacityReservationId:         b.config.CapacityReservationId,
+			CapacityReservationGroupArn:   b.config.CapacityReservationGroupArn,
+			Comm:                          &b.config.RunConfig.Comm,
+			Ctx:                           b.config.ctx,
+			Debug:                         b.config.PackerDebug,
+			EbsOptimized:                  b.config.EbsOptimized,
+			EnableNitroEnclave:            b.config.EnableNitroEnclave,
+			IsBurstableInstanceType:       b.config.RunConfig.IsBurstableInstanceType(),
+			EnableUnlimitedCredits:        b.config.EnableUnlimitedCredits,
+			InstanceType:                  b.config.InstanceType,
+			IsRestricted:                  b.config.IsChinaCloud(),
+			SourceAMI:                     b.config.SourceAmi,
+			Tags:                          b.config.RunTags,
+			LicenseSpecifications:         b.config.LicenseSpecifications,
+			HostResourceGroupArn:          b.config.Placement.HostResourceGroupArn,
+			Tenancy:                       tenancy,
+			UserData:                      b.config.UserData,
+			UserDataFile:                  b.config.UserDataFile,
 		}
 	}
 
