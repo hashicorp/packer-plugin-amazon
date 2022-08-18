@@ -211,11 +211,12 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			errs, fmt.Errorf("x509_key_path points to bad file: %s", err))
 	}
 
-	if b.config.IsSpotInstance() && ((b.config.AMIENASupport.True()) || b.config.AMISriovNetSupport) {
+	if b.config.IsSpotInstance() && ((b.config.AMIENASupport.True()) || b.config.AMISriovNetSupport || b.config.EnableNitroEnclave) {
 		errs = packersdk.MultiErrorAppend(errs,
 			fmt.Errorf("Spot instances do not support modification, which is required "+
-				"when either `ena_support` or `sriov_support` are set. Please ensure "+
-				"you use an AMI that already has either SR-IOV or ENA enabled."))
+				"when either `ena_support`, `sriov_support`, or `enable_nitro_enclave` "+
+				"are set. Please ensure you use an AMI that already has either SR-IOV "+
+				"or ENA enabled."))
 	}
 
 	if b.config.RunConfig.SpotPriceAutoProduct != "" {
@@ -298,6 +299,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                      b.config.ctx,
 			Debug:                    b.config.PackerDebug,
 			EbsOptimized:             b.config.EbsOptimized,
+			EnableNitroEnclave:       b.config.EnableNitroEnclave,
 			EnableT2Unlimited:        b.config.EnableT2Unlimited,
 			InstanceType:             b.config.InstanceType,
 			IsRestricted:             b.config.IsChinaCloud(),

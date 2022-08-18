@@ -130,6 +130,10 @@ type RunConfig struct {
 	// Optimized](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html).
 	// Default `false`.
 	EbsOptimized bool `mapstructure:"ebs_optimized" required:"false"`
+	// Enable support for Nitro Enclaves on the instance.  Note that the instance type must
+	// be able to [support Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/faqs/).
+	// This option is not supported for spot instances.
+	EnableNitroEnclave bool `mapstructure:"enable_nitro_enclave" required:"false"`
 	// Enabling T2 Unlimited allows the source instance to burst additional CPU
 	// beyond its available [CPU
 	// Credits](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/t2-credits-baseline-concepts.html)
@@ -810,6 +814,16 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		tenancy != "dedicated" &&
 		tenancy != "host" {
 		errs = append(errs, fmt.Errorf("Error: Unknown tenancy type %s", tenancy))
+	}
+
+	if c.EnableNitroEnclave {
+		if c.SpotPrice != "" {
+			errs = append(errs, fmt.Errorf("Error: Nitro Enclave cannot be used in conjunction with Spot Instances"))
+		}
+		// check if we have an instance in the t-line (burstable instances)
+		if strings.HasPrefix(c.InstanceType, "t") {
+			errs = append(errs, fmt.Errorf("Error: Nitro Enclaves cannot be used in conjunction with burstable instance types: %s", c.InstanceType))
+		}
 	}
 
 	return errs

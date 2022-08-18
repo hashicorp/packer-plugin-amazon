@@ -43,6 +43,10 @@
   Optimized](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html).
   Default `false`.
 
+- `enable_nitro_enclave` (bool) - Enable support for Nitro Enclaves on the instance.  Note that the instance type must
+  be able to [support Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/faqs/).
+  This option is not supported for spot instances.
+
 - `enable_t2_unlimited` (bool) - Enabling T2 Unlimited allows the source instance to burst additional CPU
   beyond its available [CPU
   Credits](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/t2-credits-baseline-concepts.html)

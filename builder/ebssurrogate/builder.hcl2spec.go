@@ -86,6 +86,7 @@ type FlatConfig struct {
 	BlockDurationMinutes                      *int64                                 `mapstructure:"block_duration_minutes" required:"false" cty:"block_duration_minutes" hcl:"block_duration_minutes"`
 	DisableStopInstance                       *bool                                  `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
 	EbsOptimized                              *bool                                  `mapstructure:"ebs_optimized" required:"false" cty:"ebs_optimized" hcl:"ebs_optimized"`
+	EnableNitroEnclave                        *bool                                  `mapstructure:"enable_nitro_enclave" required:"false" cty:"enable_nitro_enclave" hcl:"enable_nitro_enclave"`
 	EnableT2Unlimited                         *bool                                  `mapstructure:"enable_t2_unlimited" required:"false" cty:"enable_t2_unlimited" hcl:"enable_t2_unlimited"`
 	IamInstanceProfile                        *string                                `mapstructure:"iam_instance_profile" required:"false" cty:"iam_instance_profile" hcl:"iam_instance_profile"`
 	FleetTags                                 map[string]string                      `mapstructure:"fleet_tags" required:"false" cty:"fleet_tags" hcl:"fleet_tags"`
@@ -244,6 +245,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"block_duration_minutes":        &hcldec.AttrSpec{Name: "block_duration_minutes", Type: cty.Number, Required: false},
 		"disable_stop_instance":         &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
 		"ebs_optimized":                 &hcldec.AttrSpec{Name: "ebs_optimized", Type: cty.Bool, Required: false},
+		"enable_nitro_enclave":          &hcldec.AttrSpec{Name: "enable_nitro_enclave", Type: cty.Bool, Required: false},
 		"enable_t2_unlimited":           &hcldec.AttrSpec{Name: "enable_t2_unlimited", Type: cty.Bool, Required: false},
 		"iam_instance_profile":          &hcldec.AttrSpec{Name: "iam_instance_profile", Type: cty.String, Required: false},
 		"fleet_tags":                    &hcldec.AttrSpec{Name: "fleet_tags", Type: cty.Map(cty.String), Required: false},
