@@ -307,3 +307,37 @@ func TestRunConfigPrepare_TenancyGood(t *testing.T) {
 		}
 	}
 }
+
+func TestRunConfigPrepare_EnableNitroEnclaveBadWithSpotInstanceRequest(t *testing.T) {
+	c := testConfig()
+	// Nitro Enclaves cannot be used with Spot Instances
+	c.InstanceType = "c5.xlarge"
+	c.EnableNitroEnclave = true
+	c.SpotPrice = "auto"
+	err := c.Prepare(nil)
+	if len(err) != 1 {
+		t.Fatalf("Should error if Nitro Enclaves has been used in conjuntion with a Spot Price request")
+	}
+}
+
+func TestRunConfigPrepare_EnableNitroEnclaveBadWithBurstableInstanceType(t *testing.T) {
+	c := testConfig()
+	// Nitro Enclaves cannot be used with burstable instances
+	c.InstanceType = "t2.micro"
+	c.EnableNitroEnclave = true
+	err := c.Prepare(nil)
+	if len(err) != 1 {
+		t.Fatalf("Should error if Nitro Enclaves has been used in conjuntion with a burstable instance type")
+	}
+}
+
+func TestRunConfigPrepare_EnableNitroEnclaveGood(t *testing.T) {
+	c := testConfig()
+	// Nitro Enclaves cannot be used with burstable instances
+	c.InstanceType = "c5.xlarge"
+	c.EnableNitroEnclave = true
+	err := c.Prepare(nil)
+	if len(err) != 0 {
+		t.Fatalf("Should not error with valid Nitro Enclave config")
+	}
+}

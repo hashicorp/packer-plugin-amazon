@@ -46,6 +46,7 @@ type StepRunSourceInstance struct {
 	UserDataFile                      string
 	VolumeTags                        map[string]string
 	NoEphemeral                       bool
+	EnableNitroEnclave                bool
 
 	instanceId string
 }
@@ -109,6 +110,10 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		return multistep.ActionHalt
 	}
 
+	enclaveOptions := ec2.EnclaveOptionsRequest{
+		Enabled: &s.EnableNitroEnclave,
+	}
+
 	az := state.Get("availability_zone").(string)
 	runOpts := &ec2.RunInstancesInput{
 		ImageId:             &s.SourceAMI,
@@ -120,6 +125,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		BlockDeviceMappings: s.LaunchMappings.BuildEC2BlockDeviceMappings(),
 		Placement:           &ec2.Placement{AvailabilityZone: &az},
 		EbsOptimized:        &s.EbsOptimized,
+		EnclaveOptions:      &enclaveOptions,
 	}
 
 	if s.NoEphemeral {
