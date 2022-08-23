@@ -382,7 +382,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 		},
-		&stepEnableDeprecation{
+		&awscommon.StepEnableDeprecation{
 			DeprecationTime:    b.config.DeprecationTime,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 		},
