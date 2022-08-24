@@ -13,15 +13,6 @@
   networking](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html#enabling_enhanced_networking).
   Default `false`.
 
-- `capacity_reservation_preference` (string) - Set the preference for using a capacity reservation if one exists.
-  Either will be `open` or `none`. Defaults to `none`
-
-- `capacity_reservation_id` (string) - Provide the specific EC2 Capacity Reservation ID that will be used
-  by Packer.
-
-- `capacity_reservation_group_arn` (string) - Provide the EC2 Capacity Reservation Group ARN that will be used by
-  Packer.
-
 - `ebs_volumes` (BlockDevices) - Add the block device mappings to the AMI. If you add instance store
   volumes or EBS volumes in addition to the root device volume, the
   created AMI will contain block device mapping information for those
