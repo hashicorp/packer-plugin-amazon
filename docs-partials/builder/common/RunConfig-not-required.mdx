@@ -15,6 +15,15 @@
   from July 1, 2021. [See Amazon's
   documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
 
+- `capacity_reservation_preference` (string) - Set the preference for using a capacity reservation if one exists.
+  Either will be `open` or `none`. Defaults to `none`
+
+- `capacity_reservation_id` (string) - Provide the specific EC2 Capacity Reservation ID that will be used
+  by Packer.
+
+- `capacity_reservation_group_arn` (string) - Provide the EC2 Capacity Reservation Group ARN that will be used by
+  Packer.
+
 - `disable_stop_instance` (bool) - Packer normally stops the build instance after all provisioners have
   run. For Windows instances, it is sometimes desirable to [run
   Sysprep](https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/Creating_EBSbacked_WinAMI.html)

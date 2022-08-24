@@ -16,15 +16,6 @@
   from the source instance. See the
   [BlockDevices](#block-devices-configuration) documentation for fields.
 
-- `capacity_reservation_preference` (string) - Set the preference for using a capacity reservation if one exists.
-  Either will be `open` or `none`. Defaults to `none`
-
-- `capacity_reservation_id` (string) - Provide the specific EC2 Capacity Reservation ID that will be used
-  by Packer.
-
-- `capacity_reservation_group_arn` (string) - Provide the EC2 Capacity Reservation Group ARN that will be used by
-  Packer.
-
 - `run_volume_tags` (map[string]string) - Tags to apply to the volumes that are *launched* to create the AMI.
   These tags are *not* applied to the resulting AMI unless they're
   duplicated in `tags`. This is a [template

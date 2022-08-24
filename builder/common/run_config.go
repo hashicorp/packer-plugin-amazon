@@ -108,6 +108,16 @@ type RunConfig struct {
 	// from July 1, 2021. [See Amazon's
 	//documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
 	BlockDurationMinutes int64 `mapstructure:"block_duration_minutes" required:"false"`
+	// Set the preference for using a capacity reservation if one exists.
+	// Either will be `open` or `none`. Defaults to `none`
+	CapacityReservationPreference string `mapstructure:"capacity_reservation_preference" required:"false"`
+	// Provide the specific EC2 Capacity Reservation ID that will be used
+	// by Packer.
+	CapacityReservationId string `mapstructure:"capacity_reservation_id" required:"false"`
+	// Provide the EC2 Capacity Reservation Group ARN that will be used by
+	// Packer.
+	CapacityReservationGroupArn string `mapstructure:"capacity_reservation_group_arn" required:"false"`
+
 	// Packer normally stops the build instance after all provisioners have
 	// run. For Windows instances, it is sometimes desirable to [run
 	// Sysprep](https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/Creating_EBSbacked_WinAMI.html)
