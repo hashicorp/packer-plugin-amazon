@@ -174,7 +174,7 @@ func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
 	}
 }
 
-func getRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error) {
+func GetRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error) {
 	// Connect to the region where the AMI will be copied to
 	session, err := config.Session()
 	if err != nil {
@@ -195,7 +195,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	snapshotIds := []string{}
 
 	if s.getRegionConn == nil {
-		s.getRegionConn = getRegionConn
+		s.getRegionConn = GetRegionConn
 	}
 
 	regionconn, err := s.getRegionConn(config, target)
