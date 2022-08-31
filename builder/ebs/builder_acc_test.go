@@ -162,7 +162,7 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 
 	// Get image data by AMI name
-	ec2conn, _ := testEC2Conn()
+	ec2conn, _ := testEC2Conn("us-east-1")
 	describeInput := &ec2.DescribeImagesInput{Filters: []*ec2.Filter{
 		{
 			Name:   aws.String("name"),
@@ -205,7 +205,7 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 
 func checkSnapshotsDeleted(snapshotIds []*string) error {
 	// Verify the snapshots are gone
-	ec2conn, _ := testEC2Conn()
+	ec2conn, _ := testEC2Conn("us-east-1")
 	snapshotResp, _ := ec2conn.DescribeSnapshots(
 		&ec2.DescribeSnapshotsInput{SnapshotIds: snapshotIds},
 	)
@@ -260,7 +260,7 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
 
-	ec2conn, _ := testEC2Conn()
+	ec2conn, _ := testEC2Conn("us-east-1")
 	imageResp, err := ec2conn.DescribeImageAttribute(&ec2.DescribeImageAttributeInput{
 		Attribute: aws.String("launchPermission"),
 		ImageId:   images[0].ImageId,
@@ -362,7 +362,7 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 	}
 
 	// describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn()
+	ec2conn, _ := testEC2Conn(ami.Region)
 	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: []*string{images[0].ImageId},
 	})
@@ -439,7 +439,11 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
 
-	ec2conn, _ := testEC2Conn()
+	ec2conn, err := testEC2Conn(ami.Region)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
+	}
+
 	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: []*string{images[0].ImageId},
 	})
@@ -629,8 +633,8 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-func testEC2Conn() (*ec2.EC2, error) {
-	access := &common.AccessConfig{RawRegion: "us-east-1"}
+func testEC2Conn(region string) (*ec2.EC2, error) {
+	access := &common.AccessConfig{RawRegion: region}
 	session, err := access.Session()
 	if err != nil {
 		return nil, err
