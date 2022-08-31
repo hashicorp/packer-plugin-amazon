@@ -18,6 +18,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
@@ -71,6 +72,69 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 				}
 			}
 			return checkRegionCopy(amiName, []string{"us-east-1", "us-west-2"})
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbsRegionsCopyWithDeprecation(t *testing.T) {
+	amiName := fmt.Sprintf("packer-test-builder-region-copy-deprecate-acc-test-%d", time.Now().Unix())
+
+	amis := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiName,
+		},
+		{
+			Region: "us-west-1",
+			Name:   amiName,
+		},
+	}
+
+	deprecationTime := time.Now().UTC().AddDate(0, 0, 1)
+	deprecationTimeStr := deprecationTime.Format(time.RFC3339)
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_region_copy_with_deprecation_test",
+		Template: fmt.Sprintf(testBuilderAccRegionCopyDeprecated, deprecationTimeStr, amiName),
+		Teardown: func() error {
+			err := amis[0].CleanUpAmi()
+			if err != nil {
+				t.Logf("ami %s cleanup failed: %s", amis[0].Name, err)
+			}
+			err = amis[1].CleanUpAmi()
+			if err != nil {
+				t.Logf("ami %s cleanup failed: %s", amis[1].Name, err)
+			}
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+
+			var errors error
+
+			err := checkRegionCopy(
+				amiName,
+				[]string{"us-east-1", "us-west-1"})
+			if err != nil {
+				errors = multierror.Append(errors, err)
+			}
+
+			for _, ami := range amis {
+				err := checkDeprecationEnabled(ami, deprecationTime)
+				if err != nil {
+					errors = multierror.Append(errors,
+						fmt.Errorf(
+							"AMI region %s: %s",
+							ami.Region,
+							err))
+				}
+			}
+
+			return errors
 		},
 	}
 	acctest.TestPlugin(t, testCase)
@@ -352,6 +416,79 @@ func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
 			return checkBootEncrypted(ami)
 		},
 	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbsCopyRegionEncryptedBootWithDeprecation(t *testing.T) {
+	amiName := fmt.Sprintf(
+		"packer-test-builder-region-copy-encrypt-deprecate-acc-test-%d",
+		time.Now().Unix())
+
+	amis := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiName,
+		},
+		{
+			Region: "us-west-1",
+			Name:   amiName,
+		},
+	}
+
+	deprecationTime := time.Now().UTC().AddDate(0, 0, 1)
+	deprecationTimeStr := deprecationTime.Format(time.RFC3339)
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_region_copy_encrypted_boot_with_deprecation_test",
+		Template: fmt.Sprintf(testBuilderAccRegionCopyEncryptedAndDeprecated, deprecationTimeStr, amiName),
+		Teardown: func() error {
+			err := amis[0].CleanUpAmi()
+			if err != nil {
+				t.Logf("ami %s cleanup failed: %s", amis[0].Name, err)
+			}
+			err = amis[1].CleanUpAmi()
+			if err != nil {
+				t.Logf("ami %s cleanup failed: %s", amis[1].Name, err)
+			}
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			var result error
+
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+
+			err := checkRegionCopy(
+				amiName,
+				[]string{"us-east-1", "us-west-1"})
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+
+			for _, ami := range amis {
+				err := checkDeprecationEnabled(ami, deprecationTime)
+				if err != nil {
+					result = multierror.Append(result, fmt.Errorf(
+						"Deprectiation failed, AMI region %s: %s",
+						ami.Region,
+						err))
+				}
+
+				err = checkBootEncrypted(ami)
+				if err != nil {
+					result = multierror.Append(result, fmt.Errorf(
+						"Encryption check failed, AMI region %s: %s",
+						ami.Region,
+						err))
+				}
+			}
+
+			return result
+		},
+	}
+
 	acctest.TestPlugin(t, testCase)
 }
 
@@ -670,6 +807,21 @@ const testBuilderAccRegionCopy = `
 }
 `
 
+const testBuilderAccRegionCopyDeprecated = `
+{
+	"builders": [{
+		"type": "amazon-ebs",
+		"region": "us-east-1",
+		"instance_type": "m3.medium",
+		"source_ami":"ami-76b2a71e",
+		"ssh_username": "ubuntu",
+		"deprecate_at" : "%s",
+		"ami_name": "%s",
+		"ami_regions": ["us-east-1", "us-west-1"]
+	}]
+}
+`
+
 const testBuilderAccForceDeregister = `
 {
 	"builders": [{
@@ -741,6 +893,22 @@ const testBuilderAccEncryptedDeprecated = `
 		"deprecate_at" : "%s",
 		"ami_name": "%s",
 		"encrypt_boot": true
+	}]
+}
+`
+
+const testBuilderAccRegionCopyEncryptedAndDeprecated = `
+{
+	"builders": [{
+		"type": "amazon-ebs",
+		"region": "us-east-1",
+		"instance_type": "m3.medium",
+		"source_ami":"ami-76b2a71e",
+		"ssh_username": "ubuntu",
+		"deprecate_at" : "%s",
+		"ami_name": "%s",
+		"encrypt_boot": true,
+		"ami_regions": ["us-east-1", "us-west-1"]
 	}]
 }
 `

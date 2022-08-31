@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type stepEnableDeprecation struct {
+	AccessConfig       *common.AccessConfig
 	DeprecationTime    string
 	AMISkipCreateImage bool
 }
@@ -22,7 +24,6 @@ func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 		return multistep.ActionContinue
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
 	amis, ok := state.Get("amis").(map[string]string)
 	if !ok {
 		err := fmt.Errorf("no AMIs found in state to deprecate")
@@ -32,10 +33,18 @@ func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	deprecationTime, _ := time.Parse(time.RFC3339, s.DeprecationTime)
-	for _, ami := range amis {
-		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s)...", ami))
+	for region, ami := range amis {
+		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s) in region %q ...", ami, region))
 
-		_, err := ec2conn.EnableImageDeprecation(&ec2.EnableImageDeprecationInput{
+		conn, err := common.GetRegionConn(s.AccessConfig, region)
+		if err != nil {
+			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
+			state.Put("error", err.Error())
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		_, err = conn.EnableImageDeprecation(&ec2.EnableImageDeprecationInput{
 			ImageId:     &ami,
 			DeprecateAt: &deprecationTime,
 		})
