@@ -62,7 +62,7 @@ func checkTags(ami amazon_acc.AMIHelper) error {
 	snapshotTags := config.Builders[0].SnapshotTags
 
 	// Describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn()
+	ec2conn, _ := testEC2Conn("us-east-1")
 	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: []*string{images[0].ImageId},
 	})
