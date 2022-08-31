@@ -383,6 +383,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 		},
 		&stepEnableDeprecation{
+			AccessConfig:       &b.config.AccessConfig,
 			DeprecationTime:    b.config.DeprecationTime,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 		},
