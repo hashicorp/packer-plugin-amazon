@@ -27,7 +27,6 @@ issues:
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - goimports
     - gosimple
@@ -36,7 +35,6 @@ linters:
     - staticcheck
     - unconvert
     - unused
-    - varcheck
   fast: true
 
 # options for analysis running

@@ -1,7 +1,6 @@
 package common
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -87,7 +86,7 @@ func TestAMIConfigPrepare_regions(t *testing.T) {
 		"us-east-2": "456-789-0123",
 	}
 	if errs = c.prepareRegions(accessConf); len(errs) > 0 {
-		t.Fatal(fmt.Sprintf("shouldn't have error: %s", errs[0]))
+		t.Fatalf("shouldn't have error: %s", errs[0])
 	}
 
 	c.AMIRegions = []string{"us-east-1", "us-east-2", "us-west-1"}
