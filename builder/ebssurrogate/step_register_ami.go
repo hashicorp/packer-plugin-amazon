@@ -26,6 +26,7 @@ type StepRegisterAMI struct {
 	LaunchOmitMap            map[string]bool
 	AMISkipBuildRegion       bool
 	BootMode                 string
+	UefiData                 string
 	IMDSSupport              string
 }
 
@@ -76,6 +77,9 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 	if s.BootMode != "" {
 		registerOpts.BootMode = aws.String(s.BootMode)
+	}
+	if s.UefiData != "" {
+		registerOpts.UefiData = aws.String(s.UefiData)
 	}
 	if s.IMDSSupport != "" {
 		registerOpts.ImdsSupport = aws.String(s.IMDSSupport)

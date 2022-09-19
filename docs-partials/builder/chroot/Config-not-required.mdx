@@ -159,6 +159,9 @@
   more information. Defaults to `legacy-bios` when `ami_architecture` is `x86_64` and
   `uefi` when `ami_architecture` is `arm64`.
 
+- `uefi_data` (string) - Base64 representation of the non-volatile UEFI variable store. For more information
+  see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
+
 - `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on
   [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
