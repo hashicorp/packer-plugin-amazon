@@ -202,6 +202,15 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		}
 	}
 
+	if b.config.UefiData != "" {
+		if b.config.BootMode == "legacy-bios" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You can't use uefi_data with boot_mode set to "legacy-bios".`))
+		} else if b.config.BootMode == "" && b.config.Architecture != "arm64" {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You need boot_mode set to "uefi" to use uefi_data, `+
+				`"%s" architecture defaults to "legacy-bios".`, b.config.Architecture))
+		}
+	}
+
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
 	}

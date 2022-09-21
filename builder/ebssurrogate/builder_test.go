@@ -57,6 +57,67 @@ func TestBuilderPrepare_InvalidKey(t *testing.T) {
 	}
 }
 
+func TestBuilderPrepare_UefiData(t *testing.T) {
+	var b Builder
+	// Basic configuration
+	b.config.RootDevice = RootBlockDevice{
+		SourceDeviceName: "device name",
+		DeviceName:       "device name",
+	}
+	b.config.LaunchMappings = BlockDevices{
+		BlockDevice{
+			BlockDevice: common.BlockDevice{
+				DeviceName: "device name",
+			},
+			OmitFromArtifact: false,
+		},
+	}
+	b.config.AMIVirtType = "type"
+	config := testConfig()
+	config["ami_name"] = "name"
+
+	// Test bad
+	config["uefi_data"] = "foo"
+	_, warnings, err := b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err == nil {
+		t.Fatal("should have error")
+	}
+
+	// Test good
+	config["ami_architecture"] = "arm64"
+	_, warnings, err = b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err != nil {
+		t.Fatalf("should not have error: %s", err)
+	}
+
+	// Test bad
+	config["boot_mode"] = "legacy-bios"
+	_, warnings, err = b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err == nil {
+		t.Fatal("should have error")
+	}
+
+	// Test good
+	config["ami_architecture"] = "x86_64"
+	config["boot_mode"] = "uefi"
+	_, warnings, err = b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err != nil {
+		t.Fatalf("should not have error: %s", err)
+	}
+}
+
 func TestBuilderPrepare_ReturnGeneratedData(t *testing.T) {
 	var b Builder
 	// Basic configuration
