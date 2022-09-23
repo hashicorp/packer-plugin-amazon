@@ -149,13 +149,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	if s.IsBurstableInstanceType {
-		creditOption := "standard"
-		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: &creditOption}
+		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsStandard)}
 	}
 
 	if s.EnableUnlimitedCredits {
-		creditOption := "unlimited"
-		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: &creditOption}
+		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
 	}
 
 	if s.HttpEndpoint == "enabled" {

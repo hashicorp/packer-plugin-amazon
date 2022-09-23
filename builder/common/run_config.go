@@ -18,6 +18,12 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
 
+const (
+	// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreditSpecificationRequest.html#API_CreditSpecificationRequest_Contents
+	CPUCreditsStandard  = "standard"
+	CPUCreditsUnlimited = "unlimited"
+)
+
 var reShutdownBehavior = regexp.MustCompile("^(stop|terminate)$")
 
 type SubnetFilterOptions struct {
@@ -821,13 +827,14 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	}
 
 	if c.EnableUnlimitedCredits {
-		if c.SpotPrice != "" {
-			errs = append(errs, fmt.Errorf("Error: Unlimited credits cannot be used in conjunction with Spot Instances"))
-		}
-
 		if !c.IsBurstableInstanceType() {
 			errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
 		}
+
+		if c.SpotPrice != "" && regexp.MustCompile(`^t2\.`).MatchString(c.InstanceType) {
+			errs = append(errs, fmt.Errorf("Error: Unlimited credits cannot be used in conjunction with Spot Instances"))
+		}
+
 	}
 
 	var tenancy string

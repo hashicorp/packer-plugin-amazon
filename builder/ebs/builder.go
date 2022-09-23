@@ -206,6 +206,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Comm:                              &b.config.RunConfig.Comm,
 			Debug:                             b.config.PackerDebug,
 			EbsOptimized:                      b.config.EbsOptimized,
+			IsBurstableInstanceType:           b.config.RunConfig.IsBurstableInstanceType(),
+			EnableUnlimitedCredits:            b.config.EnableUnlimitedCredits,
 			ExpectedRootDevice:                "ebs",
 			FleetTags:                         b.config.FleetTags,
 			HttpEndpoint:                      b.config.Metadata.HttpEndpoint,
