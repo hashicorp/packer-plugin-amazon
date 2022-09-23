@@ -177,10 +177,12 @@ type RunConfig struct {
 	// up a [Standard](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-standard-mode.html)
 	// instance instead.
 	//
-	// To use Unlimited you must use a T2/T3/T4g instance type, e.g. (`t2.micro`, `t3.micro`).
+	// To use Unlimited you must use a T2/T3/T3a/T4g instance type, e.g. (`t2.micro`, `t3.micro`).
 	// Additionally, Unlimited cannot be used in conjunction with Spot
-	// Instances, e.g. when the `spot_price` option has been configured.
-	// Attempting to do so will cause an error.
+	// Instances for T2 type instances, e.g. when the `spot_price` option has been configured.
+	// Attempting to do so will cause an error if the underlying instance type is a T2 type instance.
+	// By default the supported burstable instance types (including t3/t3a/t4g) will be provisioned with its cpu credits set to standard,
+	// only when `enable_unlimited_credits` is true will the instance be provisioned with unlimited cpu credits.
 	EnableUnlimitedCredits bool `mapstructure:"enable_unlimited_credits" required:"false"`
 	// The name of an [IAM instance
 	// profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html)
