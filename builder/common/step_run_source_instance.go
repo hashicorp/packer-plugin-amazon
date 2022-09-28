@@ -28,7 +28,7 @@ type StepRunSourceInstance struct {
 	Ctx                               interpolate.Context
 	Debug                             bool
 	EbsOptimized                      bool
-	EnableT2Unlimited                 bool
+	EnableUnlimitedCredits            bool
 	ExpectedRootDevice                string
 	HttpEndpoint                      string
 	HttpTokens                        string
@@ -47,6 +47,7 @@ type StepRunSourceInstance struct {
 	VolumeTags                        map[string]string
 	NoEphemeral                       bool
 	EnableNitroEnclave                bool
+	IsBurstableInstanceType           bool
 
 	instanceId string
 }
@@ -147,9 +148,12 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		}
 	}
 
-	if s.EnableT2Unlimited {
-		creditOption := "unlimited"
-		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: &creditOption}
+	if s.IsBurstableInstanceType {
+		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsStandard)}
+	}
+
+	if s.EnableUnlimitedCredits {
+		runOpts.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
 	}
 
 	if s.HttpEndpoint == "enabled" {

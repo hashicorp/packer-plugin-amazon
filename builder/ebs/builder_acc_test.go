@@ -770,6 +770,40 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+//go:embed test-fixtures/unlimited-credits/burstable_instances.pkr.hcl
+var testBurstableInstanceTypes string
+
+func TestAccBuilder_EnableUnlimitedCredits(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_unlimited_credits_test",
+		Template: testBurstableInstanceTypes,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/unlimited-credits/burstable_spot_instances.pkr.hcl
+var testBurstableSpotInstanceTypes string
+
+func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_unlimited_credits_spot_instance_test",
+		Template: testBurstableSpotInstanceTypes,
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 func testEC2Conn(region string) (*ec2.EC2, error) {
 	access := &common.AccessConfig{RawRegion: region}
 	session, err := access.Session()

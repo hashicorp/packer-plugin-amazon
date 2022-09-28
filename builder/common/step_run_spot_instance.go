@@ -53,6 +53,8 @@ type StepRunSpotInstance struct {
 	UserDataFile                      string
 	Ctx                               interpolate.Context
 	NoEphemeral                       bool
+	IsBurstableInstanceType           bool
+	EnableUnlimitedCredits            bool
 
 	instanceId string
 }
@@ -146,6 +148,14 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 	} else {
 		templateData.SetSecurityGroupIds(securityGroupIds)
 
+	}
+
+	if s.IsBurstableInstanceType {
+		templateData.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsStandard)}
+	}
+
+	if s.EnableUnlimitedCredits {
+		templateData.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
 	}
 
 	if s.HttpEndpoint == "enabled" {
