@@ -21,6 +21,7 @@ type StepRegisterAMI struct {
 	EnableAMISriovNetSupport bool
 	AMISkipBuildRegion       bool
 	BootMode                 string
+	IMDSSupport              string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -71,6 +72,10 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	if s.BootMode != "" {
 		registerOpts.BootMode = aws.String(s.BootMode)
 	}
+	if s.IMDSSupport != "" {
+		registerOpts.ImdsSupport = aws.String(s.IMDSSupport)
+	}
+
 	registerResp, err := ec2conn.RegisterImage(registerOpts)
 	if err != nil {
 		state.Put("error", fmt.Errorf("Error registering AMI: %s", err))
