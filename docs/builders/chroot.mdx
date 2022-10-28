@@ -30,7 +30,7 @@ the extra fast build.
 
 ~> **This is an advanced builder** If you're just getting started with
 Packer, we recommend starting with the [amazon-ebs
-builder](/docs/builders/amazon-ebs), which is much easier to use.
+builder](builders/amazon-ebs), which is much easier to use.
 
 The builder does _not_ manage AMIs. Once it creates an AMI and stores it in
 your account, it is up to you to use, delete, etc., the AMI.
@@ -132,7 +132,7 @@ Here is a basic example. It is completely valid except for the access keys:
 // set the environment variables to have the same name as the declared
 // variables, with the prefix PKR_VAR_.
 
-// There are other ways to [set variables](/docs/templates/hcl_templates/variables#assigning-values-to-build-variables), including from a var
+// There are other ways to [set variables](templates/hcl_templates/variables#assigning-values-to-build-variables), including from a var
 // file or as a command argument.
 
 // export PKR_VAR_aws_access_key=$YOURKEY
@@ -517,7 +517,7 @@ variables are available:
 
 ## Build Shared Information Variables
 
-This builder generates data that are shared with provisioner and post-processor via build function of [template engine](/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](/docs/templates/hcl_templates/contextual-variables) for HCL2.
+This builder generates data that are shared with provisioner and post-processor via build function of [template engine](templates/legacy_json_templates/engine) for JSON and [contextual variables](templates/hcl_templates/contextual-variables) for HCL2.
 
 The generated variables available for this builder are:
 
