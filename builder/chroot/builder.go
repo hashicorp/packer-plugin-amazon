@@ -163,12 +163,12 @@ type Config struct {
 	//filter, but will cause Packer to fail if the `source_ami` does not exist.
 	SourceAmiFilter awscommon.AmiFilterOptions `mapstructure:"source_ami_filter" required:"false"`
 	// Key/value pair tags to apply to the volumes that are *launched*. This is
-	// a [template engine](/docs/templates/legacy_json_templates/engine), see [Build template
+	// a [template engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
 	RootVolumeTags map[string]string `mapstructure:"root_volume_tags" required:"false"`
 	// Same as [`root_volume_tags`](#root_volume_tags) but defined as a
 	// singular block containing a `key` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	RootVolumeTag config.KeyValues `mapstructure:"root_volume_tag" required:"false"`
 	// Whether or not to encrypt the volumes that are *launched*. By default, Packer will keep

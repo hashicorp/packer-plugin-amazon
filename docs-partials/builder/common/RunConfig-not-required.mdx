@@ -21,7 +21,7 @@
   which will stop the instance for you. If this is set to `true`, Packer
   *will not* stop the instance but will assume that you will send the stop
   signal yourself through your final provisioner. You can do this with a
-  [windows-shell provisioner](/docs/provisioners/windows-shell). Note that
+  [windows-shell provisioner](/packer/plugins/provisioners/windows-shell). Note that
   Packer will still wait for the instance to be stopped, and failing to
   send the stop signal yourself, when you have set this flag to `true`,
   will cause a timeout.
@@ -99,7 +99,7 @@
 
 - `fleet_tag` ([]{key string, value string}) - Same as [`fleet_tags`](#fleet_tags) but defined as a singular repeatable block
   containing a `key` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `skip_profile_validation` (bool) - Whether or not to check if the IAM instance profile exists. Defaults to false
@@ -174,12 +174,12 @@
 - `run_tags` (map[string]string) - Key/value pair tags to apply to the generated key-pair, security group, snapshot and instance
   that is *launched* to create the EBS volumes. The resulting AMI will also inherit these tags.
   This is a [template
-  engine](/docs/templates/legacy_json_templates/engine), see [Build template
+  engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
   data](#build-template-data) for more information.
 
 - `run_tag` ([]{key string, value string}) - Same as [`run_tags`](#run_tags) but defined as a singular repeatable
   block containing a `key` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `security_group_id` (string) - The ID (not the name) of the security
@@ -284,7 +284,7 @@
 
 - `spot_tag` ([]{key string, value string}) - Same as [`spot_tags`](#spot_tags) but defined as a singular repeatable block
   containing a `key` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `subnet_filter` (SubnetFilterOptions) - Filters used to populate the `subnet_id` field.

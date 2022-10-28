@@ -43,7 +43,7 @@ machine. This can be done within a provisioner, but must be done before the
 builder finishes running.
 
 ~> Instance builds are not supported for Windows. Use
-[`amazon-ebs`](/docs/builders/amazon-ebs) instead.
+[`amazon-ebs`](/packer/plugins/builders/amazon/ebs) instead.
 
 ## Configuration Reference
 
@@ -221,7 +221,7 @@ variables are available:
 
 ## Build Shared Information Variables
 
-This builder generates data that are shared with provisioner and post-processor via build function of [template engine](/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](/docs/templates/hcl_templates/contextual-variables) for HCL2.
+This builder generates data that are shared with provisioner and post-processor via build function of [template engine](/packer/docs/templates/legacy_json_templates/engine) for JSON and [contextual variables](/packer/docs/templates/hcl_templates/contextual-variables) for HCL2.
 
 The generated variables available for this builder are:
 
@@ -300,7 +300,7 @@ upload the AMI.
 
 These are configured with `bundle_vol_command` and `bundle_upload_command`.
 Both of these configurations are [configuration
-templates](/docs/templates/legacy_json_templates/engine) and have support for their own set of
+templates](/packer/docs/templates/legacy_json_templates/engine) and have support for their own set of
 template variables.
 
 ### Bundle Volume Command
