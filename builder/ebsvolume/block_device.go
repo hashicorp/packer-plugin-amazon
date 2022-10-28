@@ -12,12 +12,12 @@ import (
 type BlockDevice struct {
 	awscommon.BlockDevice `mapstructure:",squash"`
 	// Key/value pair tags to apply to the volume. These are retained after the builder
-	// completes. This is a [template engine](/docs/templates/legacy_json_templates/engine), see
+	// completes. This is a [template engine](/packer/docs/templates/legacy_json_templates/engine), see
 	// [Build template data](#build-template-data) for more information.
 	Tags map[string]string `mapstructure:"tags" required:"false"`
 	// Same as [`tags`](#tags) but defined as a singular repeatable block
 	// containing a `key` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	Tag config.KeyValues `mapstructure:"tag" required:"false"`
 

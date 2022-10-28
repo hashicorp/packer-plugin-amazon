@@ -8,12 +8,12 @@ import "github.com/hashicorp/packer-plugin-sdk/template/config"
 type SnapshotConfig struct {
 	// Key/value pair tags to apply to snapshot. They will override AMI tags if
 	// already applied to snapshot. This is a [template
-	// engine](/docs/templates/legacy_json_templates/engine), see [Build template
+	// engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
 	SnapshotTags map[string]string `mapstructure:"snapshot_tags" required:"false"`
 	// Same as [`snapshot_tags`](#snapshot_tags) but defined as a singular
 	// repeatable block containing a `key` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	SnapshotTag config.KeyValues `mapstructure:"snapshot_tag" required:"false"`
 	// A list of account IDs that have

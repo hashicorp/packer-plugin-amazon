@@ -2,7 +2,7 @@
 
 - `ami_description` (string) - The description to set for the resulting
   AMI(s). By default this description is empty.  This is a
-  [template engine](/docs/templates/legacy_json_templates/engine), see [Build template
+  [template engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
   data](#build-template-data) for more information.
 
 - `ami_virtualization_type` (string) - The type of virtualization for the AMI
@@ -38,14 +38,14 @@
   validation of the ami_regions configuration option. Default false.
 
 - `tags` (map[string]string) - Key/value pair tags applied to the AMI. This is a [template
-  engine](/docs/templates/legacy_json_templates/engine), see [Build template
+  engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
   data](#build-template-data) for more information.
   
   The builder no longer adds a "Name": "Packer Builder" entry to the tags.
 
 - `tag` ([]{key string, value string}) - Same as [`tags`](#tags) but defined as a singular repeatable block
   containing a `key` and a `value` field. In HCL2 mode the
-  [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+  [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
   will allow you to create those programatically.
 
 - `ena_support` (boolean) - Enable enhanced networking (ENA but not SriovNetSupport) on

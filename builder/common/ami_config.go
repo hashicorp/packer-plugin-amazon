@@ -16,11 +16,11 @@ type AMIConfig struct {
 	// The name of the resulting AMI that will appear when managing AMIs in the
 	// AWS console or via APIs. This must be unique. To help make this unique,
 	// use a function like timestamp (see [template
-	// engine](/docs/templates/legacy_json_templates/engine) for more info).
+	// engine](/packer/docs/templates/legacy_json_templates/engine) for more info).
 	AMIName string `mapstructure:"ami_name" required:"true"`
 	// The description to set for the resulting
 	// AMI(s). By default this description is empty.  This is a
-	// [template engine](/docs/templates/legacy_json_templates/engine), see [Build template
+	// [template engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
 	AMIDescription string `mapstructure:"ami_description" required:"false"`
 	// The type of virtualization for the AMI
@@ -56,14 +56,14 @@ type AMIConfig struct {
 	// validation of the ami_regions configuration option. Default false.
 	AMISkipRegionValidation bool `mapstructure:"skip_region_validation" required:"false"`
 	// Key/value pair tags applied to the AMI. This is a [template
-	// engine](/docs/templates/legacy_json_templates/engine), see [Build template
+	// engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
 	//
 	// The builder no longer adds a "Name": "Packer Builder" entry to the tags.
 	AMITags map[string]string `mapstructure:"tags" required:"false"`
 	// Same as [`tags`](#tags) but defined as a singular repeatable block
 	// containing a `key` and a `value` field. In HCL2 mode the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	AMITag config.KeyValues `mapstructure:"tag" required:"false"`
 	// Enable enhanced networking (ENA but not SriovNetSupport) on

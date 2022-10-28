@@ -58,7 +58,7 @@ type Config struct {
 	// *launched* to create EBS Volumes. These tags will *not* appear in the
 	// tags of the resulting EBS volumes unless they're duplicated under `tags`
 	// in the `ebs_volumes` setting. This is a [template
-	// engine](/docs/templates/legacy_json_templates/engine), see [Build template
+	// engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
 	// data](#build-template-data) for more information.
 	//
 	//  Note: The tags specified here will be *temporarily* applied to volumes
@@ -70,7 +70,7 @@ type Config struct {
 	// Same as [`run_volume_tags`](#run_volume_tags) but defined as a singular
 	// repeatable block containing a `key` and a `value` field. In HCL2 mode
 	// the
-	// [`dynamic_block`](/docs/templates/hcl_templates/expressions#dynamic-blocks)
+	// [`dynamic_block`](/packer/docs/templates/hcl_templates/expressions#dynamic-blocks)
 	// will allow you to create those programatically.
 	VolumeRunTag config.KeyValues `mapstructure:"run_volume_tag"`
 
