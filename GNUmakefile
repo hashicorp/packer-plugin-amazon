@@ -32,6 +32,4 @@ testacc: dev
 
 generate: install-packer-sdc
 	@go generate ./...
-	packer-sdc renderdocs -src ./docs -dst ./.docs -partials ./docs-partials
-	# checkout the .docs folder for a preview of the docs
 
