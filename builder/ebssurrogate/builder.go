@@ -75,9 +75,10 @@ type Config struct {
 	// more information. Defaults to `legacy-bios` when `ami_architecture` is `x86_64` and
 	// `uefi` when `ami_architecture` is `arm64`.
 	BootMode string `mapstructure:"boot_mode" required:"false"`
-	// Default version of the Instance Metadata Service. Valid options are unset (legacy) and
-	// `v2.0`. See the documentation on [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to unset.
+	// Enforce version of the Instance Metadata Service on the built AMI.
+	// Valid options are unset (legacy) and `v2.0`. See the documentation on
+	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+	// for more information. Defaults to legacy.
 	IMDSSupport string `mapstructure:"imds_support" required:"false"`
 
 	ctx interpolate.Context
@@ -425,6 +426,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
 			BootMode:                 b.config.BootMode,
+			IMDSSupport:              b.config.IMDSSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
