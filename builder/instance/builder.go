@@ -238,6 +238,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			"Packer, inclusion of enable_t2_unlimited will error your builds.")
 	}
 
+	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	}
+
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
 	}
