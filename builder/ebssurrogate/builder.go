@@ -182,6 +182,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
+	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	}
+
 	if b.config.BootMode != "" {
 		valid := false
 		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
