@@ -216,7 +216,7 @@ type RunConfig struct {
 	//	Statement {
 	//		Action   = ["logs:*"]
 	//		Effect   = "Allow"
-	//		Resource = "*"
+	//		Resource = ["*"]
 	//	}
 	//	Version = "2012-10-17"
 	//}
@@ -232,7 +232,7 @@ type RunConfig struct {
 	//			"logs:*"
 	//			],
 	//			"Effect": "Allow",
-	//			"Resource": "*"
+	//			"Resource": ["*"]
 	//		}
 	//	]
 	//}
