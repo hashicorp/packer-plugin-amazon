@@ -1,5 +1,8 @@
-See [Releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for latest CHANGELOG information.
+# Latest Release
 
+Please refer to [releases](https://github.com/hashicorp/packer-plugin-vsphere/releases) for the latest CHANGELOG information.
+
+---
 ## 1.0.5 (Upcoming)
 
 ### IMPROVEMENTS
