@@ -58,63 +58,74 @@ func TestBuilderPrepare_InvalidKey(t *testing.T) {
 }
 
 func TestBuilderPrepare_UefiData(t *testing.T) {
-	var b Builder
-	// Basic configuration
-	b.config.RootDevice = RootBlockDevice{
-		SourceDeviceName: "device name",
-		DeviceName:       "device name",
-	}
-	b.config.LaunchMappings = BlockDevices{
-		BlockDevice{
-			BlockDevice: common.BlockDevice{
-				DeviceName: "device name",
-			},
-			OmitFromArtifact: false,
+	tests := []struct {
+		name         string
+		bootMode     string
+		uefiData     string
+		architecture string
+		expectError  bool
+	}{
+		{
+			name:        "OK - boot mode set to uefi",
+			uefiData:    "foo",
+			bootMode:    "uefi",
+			expectError: false,
+		},
+		{
+			name:        "Error - boot mode set to legacy-bios",
+			uefiData:    "foo",
+			bootMode:    "legacy-bios",
+			expectError: true,
+		},
+		{
+			name:        "Error - default boot mode is legacy-bios",
+			uefiData:    "foo",
+			expectError: true,
+		},
+		{
+			name:         "OK - default boot mode for arm64 is uefi",
+			uefiData:     "foo",
+			architecture: "arm64",
+			expectError:  false,
 		},
 	}
-	b.config.AMIVirtType = "type"
-	config := testConfig()
-	config["ami_name"] = "name"
 
-	// Test bad
-	config["uefi_data"] = "foo"
-	_, warnings, err := b.Prepare(config)
-	if len(warnings) > 0 {
-		t.Fatalf("bad: %#v", warnings)
-	}
-	if err == nil {
-		t.Fatal("should have error")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := testConfig()
+			config["ami_name"] = "name"
+			config["ami_virtualization_type"] = "kvm"
+			config["uefi_data"] = tt.uefiData
+			config["boot_mode"] = tt.bootMode
+			config["ami_architecture"] = tt.architecture
 
-	// Test good
-	config["ami_architecture"] = "arm64"
-	_, warnings, err = b.Prepare(config)
-	if len(warnings) > 0 {
-		t.Fatalf("bad: %#v", warnings)
-	}
-	if err != nil {
-		t.Fatalf("should not have error: %s", err)
-	}
+			b := &Builder{}
+			// Basic configuration
+			b.config.RootDevice = RootBlockDevice{
+				SourceDeviceName: "device name",
+				DeviceName:       "device name",
+			}
+			b.config.LaunchMappings = BlockDevices{
+				BlockDevice{
+					BlockDevice: common.BlockDevice{
+						DeviceName: "device name",
+					},
+					OmitFromArtifact: false,
+				},
+			}
 
-	// Test bad
-	config["boot_mode"] = "legacy-bios"
-	_, warnings, err = b.Prepare(config)
-	if len(warnings) > 0 {
-		t.Fatalf("bad: %#v", warnings)
-	}
-	if err == nil {
-		t.Fatal("should have error")
-	}
+			_, _, err := b.Prepare(config)
+			if err != nil && !tt.expectError {
+				t.Fatalf("got unexpected error: %s", err)
+			}
+			if err == nil && tt.expectError {
+				t.Fatalf("expected an error, got a success instead")
+			}
 
-	// Test good
-	config["ami_architecture"] = "x86_64"
-	config["boot_mode"] = "uefi"
-	_, warnings, err = b.Prepare(config)
-	if len(warnings) > 0 {
-		t.Fatalf("bad: %#v", warnings)
-	}
-	if err != nil {
-		t.Fatalf("should not have error: %s", err)
+			if err != nil {
+				t.Logf("OK: b.Prepare produced expected error: %s", err)
+			}
+		})
 	}
 }
 
