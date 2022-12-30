@@ -398,6 +398,13 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
 		},
+		&awscommon.StepEC2InstanceConnect{
+			AWSSession:    session,
+			Region:        *ec2conn.Config.Region,
+			SSHAgentAuth:  b.config.Comm.SSHAgentAuth,
+			SSHPrivateKey: b.config.Comm.SSHPrivateKey,
+			SSHUsername:   b.config.Comm.SSHUsername,
+		},
 		&communicator.StepConnect{
 			// StepConnect is provided settings for WinRM and SSH, but
 			// the communicator will ultimately determine which port to use.
