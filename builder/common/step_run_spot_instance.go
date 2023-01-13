@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -203,7 +202,7 @@ func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 }
 
 func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	ec2conn := state.Get("ec2").(*ec2.EC2)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Launching a spot AWS instance...")
@@ -438,8 +437,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	instanceId = *createOutput.Instances[0].InstanceIds[0]
 	// Set the instance ID so that the cleanup works properly
 	s.instanceId = instanceId
-
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
+	if err := waitForInstanceReadiness(ctx, instanceId, ec2conn, ui, state, s.PollingConfig.WaitUntilInstanceRunning); err != nil {
+		return multistep.ActionHalt
+	}
 
 	// Get information about the created instance
 	var describeOutput *ec2.DescribeInstancesOutput

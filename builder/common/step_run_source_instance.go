@@ -294,31 +294,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	// Set the instance ID so that the cleanup works properly
 	s.instanceId = instanceId
-
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
-	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
-
+	if err := waitForInstanceReadiness(ctx, instanceId, ec2conn, ui, state, s.PollingConfig.WaitUntilInstanceRunning); err != nil {
+		return multistep.ActionHalt
+	}
 	describeInstance := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{aws.String(instanceId)},
-	}
-
-	if err := s.PollingConfig.WaitUntilInstanceRunning(ctx, ec2conn, instanceId); err != nil {
-		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-
-		// try to get some context from AWS on why was instance
-		// transitioned to the unexpected state
-		if resp, e := ec2conn.DescribeInstances(describeInstance); e == nil {
-			if len(resp.Reservations) > 0 && len(resp.Reservations[0].Instances) > 0 {
-				instance := resp.Reservations[0].Instances[0]
-				if instance.StateTransitionReason != nil && instance.StateReason != nil && instance.StateReason.Message != nil {
-					ui.Error(fmt.Sprintf("Instance state change details: %s: %s",
-						*instance.StateTransitionReason, *instance.StateReason.Message))
-				}
-			}
-		}
-		return multistep.ActionHalt
 	}
 
 	// there's a race condition that can happen because of AWS's eventual
@@ -432,6 +412,42 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	return multistep.ActionContinue
+}
+
+func waitForInstanceReadiness(
+	ctx context.Context,
+	instanceId string,
+	ec2conn *ec2.EC2,
+	ui packersdk.Ui,
+	state multistep.StateBag,
+	wait func(context.Context, *ec2.EC2, string) error,
+) error {
+	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
+	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
+
+	describeInstance := &ec2.DescribeInstancesInput{
+		InstanceIds: []*string{aws.String(instanceId)},
+	}
+
+	if err := wait(ctx, ec2conn, instanceId); err != nil {
+		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+
+		// try to get some context from AWS on why was instance
+		// transitioned to the unexpected state
+		if resp, e := ec2conn.DescribeInstances(describeInstance); e == nil {
+			if len(resp.Reservations) > 0 && len(resp.Reservations[0].Instances) > 0 {
+				instance := resp.Reservations[0].Instances[0]
+				if instance.StateTransitionReason != nil && instance.StateReason != nil && instance.StateReason.Message != nil {
+					ui.Error(fmt.Sprintf("Instance state change details: %s: %s",
+						*instance.StateTransitionReason, *instance.StateReason.Message))
+				}
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *StepRunSourceInstance) Cleanup(state multistep.StateBag) {
