@@ -60,7 +60,9 @@ func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.St
 			} else if i.VpcId != nil && *i.VpcId != "" {
 				if i.PublicIpAddress != nil && *i.PublicIpAddress != "" {
 					host = *i.PublicIpAddress
-				} else if i.PrivateIpAddress != nil && *i.PrivateIpAddress != "" {
+				} else if i.PrivateIpAddress != nil && *i.PrivateIpAddress != "" && j == tries {
+					// if this is the final try, fallback to private ip address, otherwise continue
+					// trying to get a public ip address.
 					host = *i.PrivateIpAddress
 				}
 			} else if i.PublicDnsName != nil && *i.PublicDnsName != "" {
