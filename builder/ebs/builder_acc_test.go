@@ -770,6 +770,33 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_PrivateKeyFile(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-pkey-file-acc-test-%d", time.Now().Unix()),
+	}
+
+	sshFile, err := amazon_acc.GenerateSSHPrivateKeyFile()
+	if err != nil {
+		t.Fatalf("failed to generate SSH key file: %s", err)
+	}
+
+	defer os.Remove(sshFile)
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_test_private_key_file",
+		Template: buildPrivateKeyFileConfig(ami.Name, sshFile),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+			return nil
+		},
+	}
+
+	acctest.TestPlugin(t, testcase)
+}
+
 //go:embed test-fixtures/unlimited-credits/burstable_instances.pkr.hcl
 var testBurstableInstanceTypes string
 
@@ -986,6 +1013,24 @@ const testBuilderAccEnableDeprecation = `
 }
 `
 
+const testPrivateKeyFile = `
+source "amazon-ebs" "test" {
+	ami_name             = "%s"
+	source_ami           = "ami-0b5eea76982371e91" # Amazon Linux 2 AMI - kernel 5.10
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ssh_username         = "ec2-user"
+	ssh_interface        = "session_manager"
+	iam_instance_profile = "SSMInstanceProfile"
+	communicator         = "ssh"
+	ssh_private_key_file = "%s"
+}
+
+build {
+	sources = ["amazon-ebs.test"]
+}
+`
+
 func buildForceDeregisterConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeregister, val, name)
 }
@@ -1000,4 +1045,8 @@ func buildSharingConfig(val, val2, val3, name string) string {
 
 func buildEnableDeprecationConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccEnableDeprecation, val, name)
+}
+
+func buildPrivateKeyFileConfig(name, keyPath string) string {
+	return fmt.Sprintf(testPrivateKeyFile, name, keyPath)
 }
