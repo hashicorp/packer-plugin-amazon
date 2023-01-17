@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -417,10 +418,10 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 func waitForInstanceReadiness(
 	ctx context.Context,
 	instanceId string,
-	ec2conn *ec2.EC2,
+	ec2conn ec2iface.EC2API,
 	ui packersdk.Ui,
 	state multistep.StateBag,
-	wait func(context.Context, *ec2.EC2, string) error,
+	waitUntilInstanceRunning func(context.Context, ec2iface.EC2API, string) error,
 ) error {
 	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
 	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
@@ -429,7 +430,7 @@ func waitForInstanceReadiness(
 		InstanceIds: []*string{aws.String(instanceId)},
 	}
 
-	if err := wait(ctx, ec2conn, instanceId); err != nil {
+	if err := waitUntilInstanceRunning(ctx, ec2conn, instanceId); err != nil {
 		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
 		state.Put("error", err)
 		ui.Error(err.Error())

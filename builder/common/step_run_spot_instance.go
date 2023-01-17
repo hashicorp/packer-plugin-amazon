@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -202,7 +203,7 @@ func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 }
 
 func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(ec2iface.EC2API)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Launching a spot AWS instance...")
