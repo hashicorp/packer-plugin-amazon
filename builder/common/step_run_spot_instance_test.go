@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -180,6 +181,10 @@ func (m *runSpotEC2ConnMock) DescribeInstances(req *ec2.DescribeInstancesInput) 
 	} else {
 		return nil, nil
 	}
+}
+
+func (m *runSpotEC2ConnMock) WaitUntilInstanceRunningWithContext(ctx context.Context, _ *ec2.DescribeInstancesInput, opts ...request.WaiterOption) error {
+	return nil
 }
 
 func (m *runSpotEC2ConnMock) CreateTags(req *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
