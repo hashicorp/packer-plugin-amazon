@@ -45,18 +45,22 @@ type StateChangeConf struct {
 //
 // HCL2 example:
 // ```hcl
-// aws_polling {
-//	 delay_seconds = 30
-//	 max_attempts = 50
-// }
+//
+//	aws_polling {
+//		 delay_seconds = 30
+//		 max_attempts = 50
+//	}
+//
 // ```
 //
 // JSON example:
 // ```json
-// "aws_polling" : {
-// 	 "delay_seconds": 30,
-// 	 "max_attempts": 50
-// }
+//
+//	"aws_polling" : {
+//		 "delay_seconds": 30,
+//		 "max_attempts": 50
+//	}
+//
 // ```
 type AWSPollingConfig struct {
 	// Specifies the maximum number of attempts the waiter will check for resource state.
@@ -99,7 +103,7 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, conn ec2iface.
 	return err
 }
 
-func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx aws.Context, conn *ec2.EC2, instanceId string) error {
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx aws.Context, conn ec2iface.EC2API, instanceId string) error {
 
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&instanceId},
