@@ -322,6 +322,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
+			SSHConfig:        &b.config.Comm.SSH,
 		},
 		&communicator.StepConnect{
 			Config: &b.config.RunConfig.Comm,
