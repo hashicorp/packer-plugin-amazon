@@ -74,6 +74,12 @@ func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
 }
 
 func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
+	if os.Getenv(acctest.TestEnvVar) == "" {
+		t.Skipf("Acceptance tests skipped unless env '%s' set",
+			acctest.TestEnvVar)
+		return
+	}
+
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebssurrogate-pkey-file-acc-test-%d", time.Now().Unix()),

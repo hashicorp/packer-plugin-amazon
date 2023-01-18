@@ -771,6 +771,12 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFile(t *testing.T) {
+	if os.Getenv(acctest.TestEnvVar) == "" {
+		t.Skipf("Acceptance tests skipped unless env '%s' set",
+			acctest.TestEnvVar)
+		return
+	}
+
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-pkey-file-acc-test-%d", time.Now().Unix()),
