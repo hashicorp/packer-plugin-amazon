@@ -3,13 +3,18 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	pssm "github.com/hashicorp/packer-plugin-amazon/builder/common/ssm"
+	"github.com/hashicorp/packer-plugin-sdk/communicator"
+	"github.com/hashicorp/packer-plugin-sdk/communicator/sshkey"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/net"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -21,6 +26,7 @@ type StepCreateSSMTunnel struct {
 	LocalPortNumber  int
 	RemotePortNumber int
 	SSMAgentEnabled  bool
+	SSHConfig        *communicator.SSH
 	PauseBeforeSSM   time.Duration
 	stopSSMCommand   func()
 }
@@ -81,7 +87,47 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 		}
 	}()
 
+	if len(s.SSHConfig.SSHPrivateKey) != 0 {
+		ui.Say("Uploading SSH public key to instance")
+		err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
+		if err != nil {
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+	}
+
 	return multistep.ActionContinue
+}
+
+func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
+	instance *ec2.Instance,
+	privateKey []byte,
+) error {
+	publicKey, err := sshkey.PublicKeyFromPrivate(privateKey)
+	if err != nil {
+		return fmt.Errorf("Error getting public key from private key: %s", err)
+	}
+	svc := ec2instanceconnect.New(s.AWSSession)
+	input := &ec2instanceconnect.SendSSHPublicKeyInput{
+		AvailabilityZone: aws.String(*instance.Placement.AvailabilityZone),
+		InstanceId:       aws.String(*instance.InstanceId),
+		InstanceOSUser:   aws.String(s.SSHConfig.SSHUsername),
+		SSHPublicKey:     aws.String(strings.TrimSuffix(string(publicKey), "\n")),
+	}
+	log.Printf("Sending public key to instance: %s", *input.InstanceId)
+	result, err := svc.SendSSHPublicKey(input)
+	if err != nil {
+		err := fmt.Errorf(`
+        error encountered in sending public key to instance: %s
+      Check the key type and length are valid in AWS API.
+      https://docs.aws.amazon.com/ec2-instance-connect/latest/APIReference/API_SendSSHPublicKey.html`, err)
+		return err
+	} else {
+		if *result.Success {
+			return nil
+		}
+	}
+	return fmt.Errorf("Failed to send public key to instance")
 }
 
 // Cleanup terminates an active session on AWS, which in turn terminates the associated tunnel process running on the local machine.
