@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	pssm "github.com/hashicorp/packer-plugin-amazon/builder/common/ssm"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/communicator/sshkey"
@@ -72,31 +73,61 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 	ssmCtx, ssmCancel := context.WithCancel(ctx)
 	s.stopSSMCommand = ssmCancel
 
-	go func() {
-		ssmconn := ssm.New(s.AWSSession)
-		err := pssm.Session{
-			SvcClient:  ssmconn,
-			InstanceID: aws.StringValue(instance.InstanceId),
-			RemotePort: s.RemotePortNumber,
-			LocalPort:  s.LocalPortNumber,
-			Region:     s.Region,
-		}.Start(ssmCtx, ui)
-
-		if err != nil {
-			ui.Error(fmt.Sprintf("ssm error: %s", err))
-		}
-	}()
-
-	if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
-		ui.Say("Uploading SSH public key to instance")
-		err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
-		if err != nil {
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+	ssmconn := ssm.New(s.AWSSession)
+	session := pssm.Session{
+		SvcClient:  ssmconn,
+		InstanceID: aws.StringValue(instance.InstanceId),
+		RemotePort: s.RemotePortNumber,
+		LocalPort:  s.LocalPortNumber,
+		Region:     s.Region,
 	}
+	go s.CreatePersistentSSMSession(ssmCtx, ui, &session, ssmconn, instance)
 
 	return multistep.ActionContinue
+}
+
+func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui packersdk.Ui, session *pssm.Session, ssmConn *ssm.SSM, instance *ec2.Instance) {
+	go func() {
+		for ctx.Err() == nil {
+			ssmAvailable, err := ssmConn.GetConnectionStatus(&ssm.GetConnectionStatusInput{
+				Target: instance.InstanceId,
+			})
+			if err != nil {
+				log.Printf("error getting ssm connection status: %s", err)
+			}
+			switch *ssmAvailable.Status {
+			case "connected":
+				ui.Say(fmt.Sprintf("ssm: start PortForwarding session to instance %s", *instance.InstanceId))
+				err = session.Start(ctx, ui)
+				if err != nil {
+					ui.Error(fmt.Sprintf("ssm error: %s", err))
+				}
+			}
+		}
+		ui.Say("ssm: PortForwarding session to instance is finished")
+	}()
+
+	// SSH public key sent expires every minute.
+	// We need to send it again in case of disconnection.
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for ctx.Err() == nil {
+		select {
+		case <-ticker.C:
+			err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
+			if err != nil {
+				match := !awserrors.Matches(err, "EC2InstanceStateInvalidException", "")
+				if match {
+					log.Printf("ssm: instance is stopeed, stopping sending ssh public key")
+					break
+				} else {
+					ui.Error(err.Error())
+				}
+			}
+		case <-ctx.Done():
+			break
+		}
+	}
 }
 
 func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
