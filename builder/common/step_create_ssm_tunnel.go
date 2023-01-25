@@ -87,7 +87,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 		}
 	}()
 
-	if len(s.SSHConfig.SSHPrivateKey) != 0 {
+	if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
 		ui.Say("Uploading SSH public key to instance")
 		err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
 		if err != nil {
