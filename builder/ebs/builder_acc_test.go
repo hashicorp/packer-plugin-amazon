@@ -540,6 +540,15 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 				}
 			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+			if strings.Contains(string(logs), "Uploading SSH public key") {
+				return fmt.Errorf("SSH key was uploaded, but shouldn't have been")
+			}
+
 			return nil
 		},
 	}
