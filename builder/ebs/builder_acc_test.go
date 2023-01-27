@@ -555,6 +555,38 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ssm-reboot-acc-test %d", time.Now().Unix()),
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_sessionmanager_interface_test_with_reboot",
+		Template: fmt.Sprintf(testBuilderAccSSMWithReboot, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+			if strings.Contains(string(logs), "Uploading SSH public key") {
+				return fmt.Errorf("SSH key was uploaded, but shouldn't have been")
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
 func TestAccBuilder_EbsEnableDeprecation(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
@@ -806,6 +838,42 @@ func TestAccBuilder_PrivateKeyFile(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-pkey-file-reboot-acc-test-%d", time.Now().Unix()),
+	}
+
+	sshFile, err := amazon_acc.GenerateSSHPrivateKeyFile()
+	if err != nil {
+		t.Fatalf("failed to generate SSH key file: %s", err)
+	}
+
+	defer os.Remove(sshFile)
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_test_private_key_file_reboot",
+		Template: buildPrivateKeyFileRebootConfig(ami.Name, sshFile),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+			if !strings.Contains(string(logs), "Uploading SSH public key") {
+				return fmt.Errorf("SSH key was not uploaded, but should have been")
+			}
+
+			return nil
+		},
+	}
+
+	acctest.TestPlugin(t, testcase)
+}
+
 //go:embed test-fixtures/unlimited-credits/burstable_instances.pkr.hcl
 var testBurstableInstanceTypes string
 
@@ -1017,6 +1085,32 @@ const testBuilderAccSessionManagerInterface = `
 }
 `
 
+const testBuilderAccSSMWithReboot = `
+source "amazon-ebs" "test" {
+	ami_name             = "%s"
+	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ssh_username         = "ubuntu"
+	ssh_interface        = "session_manager"
+	iam_instance_profile = "SSMInstanceProfile"
+	communicator         = "ssh"
+}
+
+build {
+	sources = ["amazon-ebs.test"]
+
+	provisioner "shell" {
+		expect_disconnect = true
+		inline = ["echo 'waiting for 1 minute'; sleep 60; echo 'rebooting VM'; sudo reboot now"]
+	}
+
+	provisioner "shell" {
+		inline = ["echo 'reboot done!'"]
+	}
+}
+`
+
 const testBuilderAccEnableDeprecation = `
 {
 	"builders": [{
@@ -1049,6 +1143,33 @@ build {
 }
 `
 
+const testPrivateKeyFileWithReboot = `
+source "amazon-ebs" "test" {
+	ami_name             = "%s"
+	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ssh_username         = "ubuntu"
+	ssh_interface        = "session_manager"
+	iam_instance_profile = "SSMInstanceProfile"
+	communicator         = "ssh"
+	ssh_private_key_file = "%s"
+}
+
+build {
+	sources = ["amazon-ebs.test"]
+
+	provisioner "shell" {
+		expect_disconnect = true
+		inline = ["echo 'waiting for 1 minute'; sleep 60; echo 'rebooting VM'; sudo reboot now"]
+	}
+
+	provisioner "shell" {
+		inline = ["echo 'reboot done!'"]
+	}
+}
+`
+
 func buildForceDeregisterConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeregister, val, name)
 }
@@ -1067,4 +1188,8 @@ func buildEnableDeprecationConfig(val, name string) string {
 
 func buildPrivateKeyFileConfig(name, keyPath string) string {
 	return fmt.Sprintf(testPrivateKeyFile, name, keyPath)
+}
+
+func buildPrivateKeyFileRebootConfig(name, keyPath string) string {
+	return fmt.Sprintf(testPrivateKeyFileWithReboot, name, keyPath)
 }
