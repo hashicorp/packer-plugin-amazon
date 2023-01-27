@@ -834,6 +834,15 @@ func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
 			if buildCommand.ProcessState.ExitCode() != 0 {
 				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+			if !strings.Contains(string(logs), "Uploading SSH public key") {
+				return fmt.Errorf("SSH key was not uploaded, but should have been")
+			}
+
 			return nil
 		},
 	}
