@@ -90,28 +90,53 @@ func (s Session) getCommand(ctx context.Context) ([]string, string, error) {
 // StopSession on a instance of this driver will terminate the active session
 // created from calling StartSession.
 func (s Session) Start(ctx context.Context, ui packersdk.Ui) error {
-	for ctx.Err() == nil {
-		log.Printf("ssm: Starting PortForwarding session to instance %s", s.InstanceID)
-		args, sessionID, err := s.getCommand(ctx)
-		if sessionID != "" {
-			defer func() {
-				_, err := s.SvcClient.TerminateSession(&ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
-				if err != nil {
-					ui.Error(fmt.Sprintf("Error terminating SSM Session %q. Please terminate the session manually: %s", sessionID, err))
-				}
-			}()
-		}
-		if err != nil {
-			return err
-		}
-
-		cmd := exec.CommandContext(ctx, "session-manager-plugin", args...)
-
-		ui.Message(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
-		err = localexec.RunAndStream(cmd, ui, nil)
-		if err != nil {
-			ui.Error(err.Error())
-		}
+	log.Printf("ssm: Starting PortForwarding session to instance %s", s.InstanceID)
+	args, sessionID, err := s.getCommand(ctx)
+	if sessionID != "" {
+		defer func() {
+			_, err := s.SvcClient.TerminateSession(&ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
+			if err != nil {
+				ui.Error(fmt.Sprintf("Error terminating SSM Session %q. Please terminate the session manually: %s", sessionID, err))
+			}
+		}()
 	}
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, "session-manager-plugin", args...)
+
+	ui.Message(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
+	err = localexec.RunAndStream(cmd, ui, nil)
+	if err != nil {
+		ui.Error(err.Error())
+	}
+	return nil
+}
+
+// Behaves like Start but will reconnect if the session is disconnected
+// To stop the session you must cancell the context.
+// The channel is used to notify when a new session is started
+func (s Session) StartWithReconnect(ctx context.Context, ui packersdk.Ui, sessionChan chan struct{}) error {
+	for ctx.Err() == nil {
+		ssmAvailable, err := s.SvcClient.GetConnectionStatus(&ssm.GetConnectionStatusInput{
+			Target: &s.InstanceID,
+		})
+		if err != nil {
+			log.Printf("error getting ssm connection status: %s", err)
+		}
+		switch *ssmAvailable.Status {
+		case "connected":
+			ui.Say(fmt.Sprintf("ssm: start PortForwarding session to instance %s", s.InstanceID))
+			sessionChan <- struct{}{}
+			err = s.Start(ctx, ui)
+			if err != nil {
+				ui.Error(fmt.Sprintf("ssm error: %s", err))
+			}
+		}
+		time.Sleep(30 * time.Second)
+	}
+	ui.Say("ssm: PortForwarding session is finished")
+	close(sessionChan)
 	return nil
 }
