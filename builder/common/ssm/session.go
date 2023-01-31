@@ -115,7 +115,7 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui) error {
 }
 
 // Behaves like Start but will reconnect if the session is disconnected
-// To stop the session you must cancell the context.
+// To stop the session you must cancel the context.
 // The channel is used to notify when a new session is started
 func (s Session) StartWithReconnect(ctx context.Context, ui packersdk.Ui, sessionChan chan struct{}) error {
 	for ctx.Err() == nil {
