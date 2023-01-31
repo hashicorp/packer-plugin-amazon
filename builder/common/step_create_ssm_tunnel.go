@@ -93,13 +93,11 @@ func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui
 	if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
 		// SSH public key sent expires every minute.
 		// Send it upon each reconnect to ensure it is always valid.
-		if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
-			for range sessionChan {
-				ui.Say("Uploading SSH public key to instance")
-				err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
-				if err != nil {
-					ui.Error(err.Error())
-				}
+		for range sessionChan {
+			ui.Say("Uploading SSH public key to instance")
+			err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
+			if err != nil {
+				ui.Error(err.Error())
 			}
 		}
 	}
