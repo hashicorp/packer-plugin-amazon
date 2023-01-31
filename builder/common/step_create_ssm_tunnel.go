@@ -88,15 +88,19 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui packersdk.Ui, session *pssm.Session, instance *ec2.Instance) {
 	sessionChan := make(chan struct{})
 
-	go session.StartWithReconnect(ctx, ui, sessionChan)
+	go session.Start(ctx, ui, sessionChan)
 
-	// SSH public key sent expires every minute.
-	// Sent it upon each reconnect to ensure it is always valid.
-	for range sessionChan {
-		ui.Say("Uploading SSH public key to instance")
-		err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
-		if err != nil {
-			ui.Error(err.Error())
+	if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
+		// SSH public key sent expires every minute.
+		// Send it upon each reconnect to ensure it is always valid.
+		if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
+			for range sessionChan {
+				ui.Say("Uploading SSH public key to instance")
+				err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
+				if err != nil {
+					ui.Error(err.Error())
+				}
+			}
 		}
 	}
 }
