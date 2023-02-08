@@ -50,6 +50,7 @@ type Config struct {
 	Format          string            `mapstructure:"format"`
 	Architecture    string            `mapstructure:"architecture"`
 	BootMode        string            `mapstructure:"boot_mode"`
+	CopyImageTags   bool              `mapstructure:"copy_image_tags"`
 
 	ctx interpolate.Context
 }
@@ -330,6 +331,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			Name:          &p.config.Name,
 			SourceImageId: &createdami,
 			SourceRegion:  config.Region,
+			CopyImageTags: &p.config.CopyImageTags,
 		}
 		if p.config.Encrypt {
 			copyInput.Encrypted = aws.Bool(p.config.Encrypt)

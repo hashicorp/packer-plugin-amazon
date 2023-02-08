@@ -104,20 +104,20 @@ Optional:
   launch the imported AMI. By default no additional users other than the user
   importing the AMI has permission to launch it.
 
-- `ami_org_arns` (array of strings) -  A list of Amazon Resource Names (ARN) of AWS Organizations that have access to
-	launch the resulting AMI(s). By default no organizations have permission to launch
-	the AMI.
+- `ami_org_arns` (array of strings) - A list of Amazon Resource Names (ARN) of AWS Organizations that have access to
+  launch the resulting AMI(s). By default no organizations have permission to launch
+  the AMI.
 
 - `ami_ou_arns` (array of strings) - A list of Amazon Resource Names (ARN) of AWS Organizations organizational units (OU) that have access to
-	launch the resulting AMI(s). By default no organizational units have permission to launch
-	the AMI.
+  launch the resulting AMI(s). By default no organizational units have permission to launch
+  the AMI.
 
 - `architecture` (string) - The architecture of the resultant AMI. One of:
   `i386`, `x86_64`, or `arm64`. Defaults to `x86_64`.
 
 - `boot_mode` (string) - The supported boot mode of the resultant AMI. One of:
   `legacy-bios` or `uefi`. If `architecture` is set to `arm64` then this value
-  must be set to  `uefi`.
+  must be set to `uefi`.
 
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
@@ -182,6 +182,10 @@ Optional:
 
 - `tags` (object of key/value strings) - Tags applied to the created AMI and
   relevant snapshots.
+
+- `copy_image_tags` include AMI tags when [copying the AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps).
+  System tags (prefixed with aws:) and user-defined tags
+  that are attached by other AWS accounts will not be copied.
 
 - `token` (string) - The access token to use. This is different from the
   access key and secret key. If you're not sure what this is, then you
