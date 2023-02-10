@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
 
@@ -21,6 +22,8 @@ type StepIamInstanceProfile struct {
 	createdRoleName                           string
 	createdPolicyName                         string
 	roleIsAttached                            bool
+	Tags                                      map[string]string
+	Ctx                                       interpolate.Context
 }
 
 func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -61,8 +64,16 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Say(fmt.Sprintf("Creating temporary instance profile for this instance: %s", profileName))
 
+		region := state.Get("region").(*string)
+		iamProfileTags, err := TagMap(s.Tags).IamTags(s.Ctx, *region, state)
+		if err != nil {
+			err := fmt.Errorf("Error creating IAM tags: %s", err)
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
 		profileResp, err := iamsvc.CreateInstanceProfile(&iam.CreateInstanceProfileInput{
 			InstanceProfileName: aws.String(profileName),
+			Tags:                iamProfileTags,
 		})
 		if err != nil {
 			ui.Error(err.Error())
@@ -91,6 +102,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			RoleName:                 aws.String(profileName),
 			Description:              aws.String("Temporary role for Packer"),
 			AssumeRolePolicyDocument: aws.String("{\"Version\": \"2012-10-17\",\"Statement\": [{\"Effect\": \"Allow\",\"Principal\": {\"Service\": \"ec2.amazonaws.com\"},\"Action\": \"sts:AssumeRole\"}]}"),
+			Tags:                     iamProfileTags,
 		})
 		if err != nil {
 			ui.Error(err.Error())

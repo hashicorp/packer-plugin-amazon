@@ -321,6 +321,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
+			Tags: b.config.RunTags,
+			Ctx:  b.config.ctx,
 		},
 		&awscommon.StepCleanupVolumes{
 			LaunchMappings: b.config.LaunchMappings,
