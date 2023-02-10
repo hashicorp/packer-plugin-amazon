@@ -970,6 +970,134 @@ func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
+	tests := []struct {
+		name     string
+		amiName  string
+		template string
+	}{
+		{
+			name: "amazon-ebs_region_copy_keep_tags",
+			amiName: fmt.Sprintf(
+				"packer-test-builder-region-copy-keep-tags-%d",
+				time.Now().Unix()),
+			template: testAMIRunTagsCopyKeepTags,
+		},
+		{
+			name: "amazon-ebs_region_copy_keep_run_tags",
+			amiName: fmt.Sprintf(
+				"packer-test-builder-region-copy-keep-run-tags-%d",
+				time.Now().Unix()),
+			template: testAMIRunTagsCopyKeepRunTags,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			amis := []amazon_acc.AMIHelper{
+				{
+					Region: "us-east-1",
+					Name:   tt.amiName,
+				},
+				{
+					Region: "us-west-1",
+					Name:   tt.amiName,
+				},
+			}
+
+			expectedTags := map[string]string{
+				"build_name": "build_name",
+				"version":    "packer",
+				"built_by":   "ebs",
+				"simple":     "Simple String",
+			}
+
+			testCase := &acctest.PluginTestCase{
+				Name:     tt.name,
+				Template: fmt.Sprintf(tt.template, tt.amiName),
+				Teardown: func() error {
+					err := amis[0].CleanUpAmi()
+					if err != nil {
+						t.Logf("ami %s cleanup failed: %s", amis[0].Name, err)
+					}
+					err = amis[1].CleanUpAmi()
+					if err != nil {
+						t.Logf("ami %s cleanup failed: %s", amis[1].Name, err)
+					}
+					return nil
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					var result error
+
+					if buildCommand.ProcessState != nil {
+						if buildCommand.ProcessState.ExitCode() != 0 {
+							return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+						}
+					}
+
+					err := checkRegionCopy(
+						tt.amiName,
+						[]string{"us-east-1", "us-west-1"})
+					if err != nil {
+						result = multierror.Append(result, err)
+					}
+
+					for _, ami := range amis {
+						err := checkAMITags(ami, expectedTags)
+						if err != nil {
+							result = multierror.Append(result, err)
+						}
+					}
+
+					return result
+				},
+			}
+
+			acctest.TestPlugin(t, testCase)
+		})
+	}
+}
+
+func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) == 0 {
+		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
+
+	// describe the image, get block devices with a snapshot
+	ec2conn, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: []*string{images[0].ImageId},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
+	}
+
+	var errs error
+	image := imageResp.Images[0] // Only requested a single AMI ID
+	for tagKey, tagVal := range tagList {
+		found := false
+		for _, imgTag := range image.Tags {
+			if *imgTag.Key != tagKey {
+				continue
+			}
+			found = true
+			if *imgTag.Value != tagVal {
+				errs = multierror.Append(errs, fmt.Errorf("wrong value for tag %q, expected %q, got %q",
+					tagKey, tagVal, *imgTag.Value))
+			}
+			break
+		}
+		if !found {
+			errs = multierror.Append(errs, fmt.Errorf("tag %q not found in image tags", tagKey))
+		}
+	}
+
+	return errs
+}
+
 const testBuilderAccBasic = `
 {
 	"builders": [{
@@ -1228,6 +1356,56 @@ source "amazon-ebs" "test" {
 
 build {
 	sources = ["amazon-ebs.test"]
+}
+`
+
+const testAMIRunTagsCopyKeepRunTags = `
+source "amazon-ebs" "test" {
+	region        = "us-east-1"
+	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type = "m3.medium"
+	ami_name      = "%s"
+	communicator  = "ssh"
+	ssh_username  = "ubuntu"
+	ami_regions   = ["us-west-1"]
+
+	run_tags = {
+		"build_name"  = "build_name"
+		"version"     = "packer"
+		"built_by"    = "ebs"
+		"simple"      = "Simple String"
+	}
+}
+
+build {
+	sources = [
+		"source.amazon-ebs.test"
+	]
+}
+`
+
+const testAMIRunTagsCopyKeepTags = `
+source "amazon-ebs" "test" {
+	region        = "us-east-1"
+	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type = "m3.medium"
+	ami_name      = "%s"
+	communicator  = "ssh"
+	ssh_username  = "ubuntu"
+	ami_regions   = ["us-west-1"]
+
+	tags = {
+		"build_name"  = "build_name"
+		"version"     = "packer"
+		"built_by"    = "ebs"
+		"simple"      = "Simple String"
+	}
+}
+
+build {
+	sources = [
+		"source.amazon-ebs.test"
+	]
 }
 `
 

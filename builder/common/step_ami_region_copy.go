@@ -202,12 +202,14 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	if err != nil {
 		return "", snapshotIds, err
 	}
+	t := true
 	resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
 		SourceRegion:  &source,
 		SourceImageId: &imageId,
 		Name:          &name,
 		Encrypted:     encrypt,
 		KmsKeyId:      aws.String(keyId),
+		CopyImageTags: &t,
 	})
 
 	if err != nil {
