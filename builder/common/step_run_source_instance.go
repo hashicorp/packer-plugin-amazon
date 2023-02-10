@@ -392,7 +392,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 				})
 				log.Printf("Tagging network interface %s", *networkInterface.NetworkInterfaceId)
 				if err != nil {
-					ui.Say(fmt.Sprintf("Error tagging source instance's network interface: %s, skip tagging network interfaces", err))
+					ui.Say(fmt.Sprintf("Error tagging source instance's network interface %q: %s", *networkInterface.NetworkInterfaceId, err))
 				}
 			}
 		}
