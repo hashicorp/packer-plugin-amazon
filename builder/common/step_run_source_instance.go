@@ -386,13 +386,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 		if len(ec2Tags) > 0 {
 			for _, networkInterface := range instance.NetworkInterfaces {
+				log.Printf("Tagging network interface %s", *networkInterface.NetworkInterfaceId)
 				_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
 					Tags:      ec2Tags,
 					Resources: []*string{networkInterface.NetworkInterfaceId},
 				})
-				log.Printf("Tagging network interface %s", *networkInterface.NetworkInterfaceId)
 				if err != nil {
-					ui.Say(fmt.Sprintf("Error tagging source instance's network interface %q: %s", *networkInterface.NetworkInterfaceId, err))
+					ui.Error(fmt.Sprintf("Error tagging source instance's network interface %q: %s", *networkInterface.NetworkInterfaceId, err))
 				}
 			}
 		}
