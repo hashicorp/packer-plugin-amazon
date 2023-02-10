@@ -316,6 +316,14 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 				Tags:         ec2Tags,
 			},
 		)
+
+		launchTemplate.LaunchTemplateData.TagSpecifications = append(
+			launchTemplate.LaunchTemplateData.TagSpecifications,
+			&ec2.LaunchTemplateTagSpecificationRequest{
+				ResourceType: aws.String("network-interface"),
+				Tags:         ec2Tags,
+			},
+		)
 	}
 
 	if len(volumeTags) > 0 {

@@ -182,6 +182,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		}
 
 		tagSpecs = append(tagSpecs, runTags)
+
+		networkInterfaceTags := &ec2.TagSpecification{
+			ResourceType: aws.String("network-interface"),
+			Tags:         ec2Tags,
+		}
+
+		tagSpecs = append(tagSpecs, networkInterfaceTags)
 	}
 
 	if len(volTags) > 0 {
@@ -377,6 +384,18 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 			return multistep.ActionHalt
 		}
 
+		if len(ec2Tags) > 0 {
+			for _, networkInterface := range instance.NetworkInterfaces {
+				log.Printf("Tagging network interface %s", *networkInterface.NetworkInterfaceId)
+				_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
+					Tags:      ec2Tags,
+					Resources: []*string{networkInterface.NetworkInterfaceId},
+				})
+				if err != nil {
+					ui.Error(fmt.Sprintf("Error tagging source instance's network interface %q: %s", *networkInterface.NetworkInterfaceId, err))
+				}
+			}
+		}
 		// Now tag volumes
 
 		volumeIds := make([]*string, 0)

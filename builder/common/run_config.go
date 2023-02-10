@@ -278,7 +278,7 @@ type RunConfig struct {
 	//
 	// `security_group_ids` take precedence over this.
 	SecurityGroupFilter SecurityGroupFilterOptions `mapstructure:"security_group_filter" required:"false"`
-	// Key/value pair tags to apply to the generated key-pair, security group, iam profile and role, snapshot and instance
+	// Key/value pair tags to apply to the generated key-pair, security group, iam profile and role, snapshot, network interfaces and instance
 	// that is *launched* to create the EBS volumes. The resulting AMI will also inherit these tags.
 	// This is a [template
 	// engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
