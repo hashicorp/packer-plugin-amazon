@@ -212,8 +212,8 @@ func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
 				minIopsGp3, maxIopsGp3, b.DeviceName)
 		}
 	} else if b.Throughput != nil {
-		return fmt.Errorf("Throughput is not available for device %s",
-			b.DeviceName)
+		return fmt.Errorf("Throughput is only valid for gp3 volumes, %q is of type %s",
+			b.DeviceName, b.VolumeType)
 	}
 
 	_, err := interpolate.RenderInterface(&b, ctx)
