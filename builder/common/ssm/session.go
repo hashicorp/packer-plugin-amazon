@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
@@ -23,6 +24,7 @@ type Session struct {
 	Region                string
 	InstanceID            string
 	LocalPort, RemotePort int
+	Ec2Conn               *ec2.EC2
 }
 
 func (s Session) buildTunnelInput() *ssm.StartSessionInput {
@@ -84,21 +86,60 @@ func (s Session) getCommand(ctx context.Context) ([]string, string, error) {
 	return args, *session.SessionId, nil
 }
 
+// terminate an interactive Systems Manager session with a remote instance via the
+// AWS session-manager-plugin. Session cannot be resumed after termination.
+func (s Session) terminateSession(sessionID string, ui packersdk.Ui) {
+	log.Printf("ssm: Terminating PortForwarding session %q", sessionID)
+	_, err := s.SvcClient.TerminateSession(&ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error terminating SSM Session %q, this does not affect the built AMI. Please terminate the session manually: %s", sessionID, err))
+	}
+}
+
 // Start an interactive Systems Manager session with a remote instance via the
-// AWS session-manager-plugin. To terminate the session you must cancell the
+// AWS session-manager-plugin. To terminate the session you must cancel the
 // context. If you do not wish to terminate the session manually: calling
 // StopSession on a instance of this driver will terminate the active session
 // created from calling StartSession.
 // To stop the session you must cancel the context.
 func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan struct{}) error {
-	for ctx.Err() == nil {
+	exitSession := false
+	for ctx.Err() == nil && !exitSession {
 		log.Printf("ssm: Starting PortForwarding session to instance %s", s.InstanceID)
 		args, sessionID, err := s.getCommand(ctx)
+		sessionFinished := make(chan struct{})
+		defer close(sessionFinished)
 		if sessionID != "" {
-			defer func() {
-				_, err := s.SvcClient.TerminateSession(&ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
-				if err != nil {
-					ui.Error(fmt.Sprintf("Error terminating SSM Session %q. Please terminate the session manually: %s", sessionID, err))
+			// If the instance is terminated the session must be terminated as well
+			// Otherwise the start-session command will exit with status -1
+			go func() {
+				timer := time.NewTicker(2 * time.Second)
+				defer timer.Stop()
+				for {
+					select {
+					// in cases where the session is terminated naturally
+					// e.g. the RunAndStream command exits
+					// session will be terminated but exitSession is not set to true
+					// because the instance is still running and we might want to do a reconnect
+					case <-sessionFinished:
+						s.terminateSession(sessionID, ui)
+						return
+					case <-timer.C: // wait for the session to be created
+						instanceState, err := s.Ec2Conn.DescribeInstanceStatus(&ec2.DescribeInstanceStatusInput{
+							InstanceIds: []*string{aws.String(s.InstanceID)},
+						})
+						if err != nil {
+							log.Printf("ssm: Error describing instance status: %s", err)
+						} else if instanceState != nil && len(instanceState.InstanceStatuses) == 0 {
+							// if no instance status is returned, the instance is terminated
+							exitSession = true
+							s.terminateSession(sessionID, ui)
+							return
+						}
+					case <-ctx.Done():
+						s.terminateSession(sessionID, ui)
+						return
+					}
 				}
 			}()
 		}
@@ -111,6 +152,7 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 
 		ui.Message(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
 		err = localexec.RunAndStream(cmd, ui, nil)
+		sessionFinished <- struct{}{}
 		if err != nil {
 			ui.Error(err.Error())
 		}
