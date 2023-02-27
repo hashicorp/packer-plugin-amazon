@@ -106,6 +106,6 @@ By default Systems Manager doesn't have permission to perform actions on created
 
 To close the SSM tunnels created, this plugin relies on being able to call
 [DescribeInstanceStatus](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstanceStatus.html).
-In case this is not possible you will might get `Bad exit status: -1` message in the logs.
+In case this is not possible you might see a `Bad exit status` message in the logs.
 
 The absence of this permission won't prevent you from building the AMI, and the error only means that packer is not able to close the tunnel gracefully.
