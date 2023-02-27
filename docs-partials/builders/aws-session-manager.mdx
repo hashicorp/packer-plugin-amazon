@@ -57,6 +57,7 @@ build {
 ```
 
 JSON example:
+
 ```json
 {
   "builders": [
@@ -100,3 +101,11 @@ In order for Packer to start and end sessions that connect you to your managed i
 #### IAM instance profile for Systems Manager
 
 By default Systems Manager doesn't have permission to perform actions on created instances so SSM access must be granted by creating an instance profile with the `AmazonSSMManagedInstanceCore` policy. The instance profile can then be attached to any instance you wish to manage via the session-manager-plugin. See [Adding System Manager instance profile](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-instance-profile.html#instance-profile-add-permissions) for details on creating the required instance profile.
+
+#### Permissions for Closing the Tunnel
+
+To close the SSM tunnels created, this plugin relies on being able to call
+[DescribeInstanceStatus](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstanceStatus.html).
+In case this is not possible you will might get `Bad exit status: -1` message in the logs.
+
+The absence of this permission won't prevent you from building the AMI, and the error only means that packer is not able to close the tunnel gracefully.
