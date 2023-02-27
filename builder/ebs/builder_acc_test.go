@@ -549,6 +549,10 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 				return fmt.Errorf("SSH key was uploaded, but shouldn't have been")
 			}
 
+			if strings.Contains(string(logs), "Bad exit status: -1") {
+				return fmt.Errorf("SSM session did not terminate gracefully and exited with -1")
+			}
+
 			return nil
 		},
 	}
