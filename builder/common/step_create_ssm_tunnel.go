@@ -71,6 +71,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 
 	ssmCtx, ssmCancel := context.WithCancel(ctx)
 	s.stopSSMCommand = ssmCancel
+	ec2Conn := state.Get("ec2").(*ec2.EC2)
 
 	ssmconn := ssm.New(s.AWSSession)
 	session := pssm.Session{
@@ -79,6 +80,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 		RemotePort: s.RemotePortNumber,
 		LocalPort:  s.LocalPortNumber,
 		Region:     s.Region,
+		Ec2Conn:    ec2Conn,
 	}
 	go s.CreatePersistentSSMSession(ssmCtx, ui, &session, instance)
 
