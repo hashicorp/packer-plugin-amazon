@@ -25,6 +25,7 @@ type StepRegisterAMI struct {
 	AMISkipBuildRegion       bool
 	BootMode                 string
 	UefiData                 string
+	TpmSupport               string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -77,6 +78,9 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 	if s.UefiData != "" {
 		registerOpts.UefiData = aws.String(s.UefiData)
+	}
+	if s.TpmSupport != "" {
+		registerOpts.TpmSupport = aws.String(s.TpmSupport)
 	}
 
 	registerResp, err := ec2conn.RegisterImage(registerOpts)

@@ -209,6 +209,7 @@ type FlatConfig struct {
 	Architecture                              *string                                `mapstructure:"ami_architecture" required:"false" cty:"ami_architecture" hcl:"ami_architecture"`
 	BootMode                                  *string                                `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
 	UefiData                                  *string                                `mapstructure:"uefi_data" required:"false" cty:"uefi_data" hcl:"uefi_data"`
+	TpmSupport                                *string                                `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -375,6 +376,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ami_architecture":             &hcldec.AttrSpec{Name: "ami_architecture", Type: cty.String, Required: false},
 		"boot_mode":                    &hcldec.AttrSpec{Name: "boot_mode", Type: cty.String, Required: false},
 		"uefi_data":                    &hcldec.AttrSpec{Name: "uefi_data", Type: cty.String, Required: false},
+		"tpm_support":                  &hcldec.AttrSpec{Name: "tpm_support", Type: cty.String, Required: false},
 	}
 	return s
 }

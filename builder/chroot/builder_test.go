@@ -359,3 +359,53 @@ func TestBuilderPrepare_IMDSSupportValue(t *testing.T) {
 		})
 	}
 }
+
+func TestBuilderPrepare_TpmSupportValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		optValue    string
+		expectError bool
+	}{
+		{
+			name:        "OK - no value set",
+			optValue:    "",
+			expectError: false,
+		},
+		{
+			name:        "OK - v2.0",
+			optValue:    "v2.0",
+			expectError: false,
+		},
+		{
+			name:        "Error - bad value set",
+			optValue:    "v3.0",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := testConfig()
+			config["ami_name"] = "name"
+			config["root_device_name"] = "/dev/sda"
+			config["ami_block_device_mappings"] = []interface{}{map[string]string{}}
+			config["root_volume_size"] = 15
+
+			config["tpm_support"] = tt.optValue
+
+			b := &Builder{}
+
+			_, _, err := b.Prepare(config)
+			if err != nil && !tt.expectError {
+				t.Fatalf("got unexpected error: %s", err)
+			}
+			if err == nil && tt.expectError {
+				t.Fatalf("expected an error, got a success instead")
+			}
+
+			if err != nil {
+				t.Logf("OK: b.Prepare produced expected error: %s", err)
+			}
+		})
+	}
+}

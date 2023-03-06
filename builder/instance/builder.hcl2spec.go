@@ -167,6 +167,7 @@ type FlatConfig struct {
 	X509CertPath                              *string                                `mapstructure:"x509_cert_path" required:"true" cty:"x509_cert_path" hcl:"x509_cert_path"`
 	X509KeyPath                               *string                                `mapstructure:"x509_key_path" required:"true" cty:"x509_key_path" hcl:"x509_key_path"`
 	X509UploadPath                            *string                                `mapstructure:"x509_upload_path" required:"false" cty:"x509_upload_path" hcl:"x509_upload_path"`
+	TpmSupport                                *string                                `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -336,6 +337,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"x509_cert_path":               &hcldec.AttrSpec{Name: "x509_cert_path", Type: cty.String, Required: false},
 		"x509_key_path":                &hcldec.AttrSpec{Name: "x509_key_path", Type: cty.String, Required: false},
 		"x509_upload_path":             &hcldec.AttrSpec{Name: "x509_upload_path", Type: cty.String, Required: false},
+		"tpm_support":                  &hcldec.AttrSpec{Name: "tpm_support", Type: cty.String, Required: false},
 	}
 	return s
 }

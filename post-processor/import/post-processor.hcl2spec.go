@@ -111,6 +111,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"format":                        &hcldec.AttrSpec{Name: "format", Type: cty.String, Required: false},
 		"architecture":                  &hcldec.AttrSpec{Name: "architecture", Type: cty.String, Required: false},
 		"boot_mode":                     &hcldec.AttrSpec{Name: "boot_mode", Type: cty.String, Required: false},
+		"tpm_support":                   &hcldec.AttrSpec{Name: "tpm_support", Type: cty.String, Required: false},
 	}
 	return s
 }
