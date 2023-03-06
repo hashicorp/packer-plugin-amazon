@@ -207,6 +207,10 @@ type Config struct {
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 	// for more information. Defaults to legacy.
 	IMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
+	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+	// more information. Only enabled if a valid option is provided, otherwise ignored.
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -382,6 +386,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
 	}
 
+	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support values are %q or the empty string`, ec2.TpmSupportValuesV20))
+	}
+
 	if b.config.BootMode != "" {
 		valid := false
 		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
@@ -525,6 +533,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BootMode:                 b.config.BootMode,
 			UefiData:                 b.config.UefiData,
 			IMDSSupport:              b.config.IMDSSupport,
+			TpmSupport:				  b.config.TpmSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,

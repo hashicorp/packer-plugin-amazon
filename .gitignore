@@ -4,3 +4,4 @@ packer-plugin-amazon
 .docs
 .DS_Store
 *.sw*
+.idea/

@@ -50,6 +50,7 @@ type Config struct {
 	Format          string            `mapstructure:"format"`
 	Architecture    string            `mapstructure:"architecture"`
 	BootMode        string            `mapstructure:"boot_mode"`
+	TpmSupport      string            `mapstructure:"tpm_support"`
 
 	ctx interpolate.Context
 }
@@ -136,6 +137,11 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid boot mode '%s'. Only 'uefi' and 'legacy-bios' are allowed", p.config.BootMode))
+	}
+
+	if p.config.TpmSupport != "v2.0" {
+		errs = packersdk.MultiErrorAppend(
+			errs, fmt.Errorf("invalid tpm support value '%s'. Only 'v2.0' is allowed", p.config.TpmSupport))
 	}
 
 	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {

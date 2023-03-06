@@ -93,6 +93,10 @@ type Config struct {
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 	// for more information. Defaults to legacy.
 	IMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
+	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+	// more information. Only enabled if a valid option is provided, otherwise ignored.
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -240,6 +244,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 
 	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	}
+
+	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support values are %q or the empty string`, ec2.TpmSupportValuesV20))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {
@@ -441,6 +449,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
 			IMDSSupport:              b.config.IMDSSupport,
+			TpmSupport:               b.config.TpmSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,

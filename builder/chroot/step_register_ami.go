@@ -23,6 +23,7 @@ type StepRegisterAMI struct {
 	BootMode                 string
 	UefiData                 string
 	IMDSSupport              string
+	TpmSupport               string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -78,6 +79,9 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 	if s.IMDSSupport != "" {
 		registerOpts.ImdsSupport = aws.String(s.IMDSSupport)
+	}
+	if s.TpmSupport != "" {
+		registerOpts.TpmSupport = aws.String(s.TpmSupport)
 	}
 
 	registerResp, err := ec2conn.RegisterImage(registerOpts)
