@@ -85,7 +85,7 @@ type FlatConfig struct {
 	BootMode                *string                           `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
 	UefiData                *string                           `mapstructure:"uefi_data" required:"false" cty:"uefi_data" hcl:"uefi_data"`
 	IMDSSupport             *string                           `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
-	TPMSupport             *string                           `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
+	TPMSupport              *string                           `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.

@@ -16,7 +16,8 @@ import (
 // that is used throughout the AMI creation process.
 //
 // Produces:
-//   source_image *ec2.Image - the source AMI info
+//
+//	source_image *ec2.Image - the source AMI info
 type StepSourceAMIInfo struct {
 	SourceAmi                string
 	EnableAMISriovNetSupport bool

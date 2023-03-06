@@ -16,9 +16,10 @@ import (
 // VPC's and Subnets that is used throughout the AMI creation process.
 //
 // Produces (adding them to the state bag):
-//   vpc_id string - the VPC ID
-//   subnet_id string - the Subnet ID
-//   availability_zone string - the AZ name
+//
+//	vpc_id string - the VPC ID
+//	subnet_id string - the Subnet ID
+//	availability_zone string - the AZ name
 type StepNetworkInfo struct {
 	VpcId               string
 	VpcFilter           VpcFilterOptions

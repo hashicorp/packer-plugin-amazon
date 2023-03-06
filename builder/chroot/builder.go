@@ -533,7 +533,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BootMode:                 b.config.BootMode,
 			UefiData:                 b.config.UefiData,
 			IMDSSupport:              b.config.IMDSSupport,
-			TpmSupport:				  b.config.TpmSupport,
+			TpmSupport:               b.config.TpmSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,
