@@ -4,7 +4,7 @@ import "fmt"
 
 // IsValidBootMode checks that the bootmode is a value supported by AWS
 func IsValidBootMode(bootmode string) error {
-	validModes := []string{"legacy-bios", "uefi"}
+	validModes := []string{"legacy-bios", "uefi", "uefi-preferred"}
 
 	for _, mode := range validModes {
 		if bootmode == mode {
@@ -12,5 +12,5 @@ func IsValidBootMode(bootmode string) error {
 		}
 	}
 
-	return fmt.Errorf("invalid boot mode %q, valid values are either 'uefi' or 'legacy-bios'", bootmode)
+	return fmt.Errorf("invalid boot mode %q, valid values are either 'uefi', 'legacy-bios' or 'uefi-preferred'", bootmode)
 }

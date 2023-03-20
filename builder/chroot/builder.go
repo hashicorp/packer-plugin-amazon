@@ -375,7 +375,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 
 	if b.config.BootMode != "" {
 		err := awscommon.IsValidBootMode(b.config.BootMode)
-		if !valid {
+		if err != nil {
 			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
