@@ -181,15 +181,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.BootMode != "" {
-		valid := false
-		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
-			if validBootMode == b.config.BootMode {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid boot_mode values are "legacy-bios" and "uefi"`))
+		err := awscommon.IsValidBootMode(b.config.BootMode)
+		if err != nil {
+			errs = packersdk.MultiErrorAppend(errs, err))
 		}
 	}
 
