@@ -89,6 +89,8 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		p.config.Architecture = "x86_64"
 	}
 
+	errs := new(packersdk.MultiError)
+
 	if p.config.BootMode == "" {
 		// Graviton instance types run uefi by default
 		if p.config.Architecture == "arm64" {
@@ -96,9 +98,12 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		} else {
 			p.config.BootMode = "legacy-bios"
 		}
+	} else {
+		err := awscommon.IsValidBootMode(p.config.BootMode)
+		if err != nil {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
 	}
-
-	errs := new(packersdk.MultiError)
 
 	// Check and render s3_key_name
 	if err = interpolate.Validate(p.config.S3Key, &p.config.ctx); err != nil {
