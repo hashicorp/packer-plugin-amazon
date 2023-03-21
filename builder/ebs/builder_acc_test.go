@@ -931,6 +931,45 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 	return ec2.New(session), nil
 }
 
+func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-imds-acc-test-%d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs-with-imdsv2",
+		Template: fmt.Sprintf(testIMDSv2Support, ami.Name),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+
+			amis, err := ami.GetAmi()
+			if err != nil {
+				return fmt.Errorf("failed to get AMI: %s", err)
+			}
+			if len(amis) != 1 {
+				return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
+			}
+
+			ami := amis[0]
+
+			imds := ami.ImdsSupport
+			if imds == nil {
+				return fmt.Errorf("expected AMI's IMDSSupport to be set, but is null")
+			}
+
+			if *imds != "v2.0" {
+				return fmt.Errorf("expected AMI's IMDSSupport to be v2.0, got %q", *imds)
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 const testBuilderAccBasic = `
 {
 	"builders": [{
@@ -1171,6 +1210,24 @@ build {
 	provisioner "shell" {
 		inline = ["echo 'reboot done!'"]
 	}
+}
+`
+
+const testIMDSv2Support = `
+source "amazon-ebs" "test" {
+	ami_name             = "%s"
+	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ssh_username         = "ubuntu"
+	ssh_interface        = "session_manager"
+	iam_instance_profile = "SSMInstanceProfile"
+	communicator         = "ssh"
+	imds_support         = "v2.0"
+}
+
+build {
+	sources = ["amazon-ebs.test"]
 }
 `
 
