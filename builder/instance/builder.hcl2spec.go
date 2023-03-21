@@ -56,6 +56,7 @@ type FlatConfig struct {
 	AMIKmsKeyId                               *string                                `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	AMIRegionKMSKeyIDs                        map[string]string                      `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion                        *bool                                  `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
+	AMIIMDSSupport                            *string                                `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 	SnapshotTags                              map[string]string                      `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
 	SnapshotTag                               []config.FlatKeyValue                  `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
 	SnapshotUsers                             []string                               `mapstructure:"snapshot_users" required:"false" cty:"snapshot_users" hcl:"snapshot_users"`
@@ -166,7 +167,6 @@ type FlatConfig struct {
 	X509CertPath                              *string                                `mapstructure:"x509_cert_path" required:"true" cty:"x509_cert_path" hcl:"x509_cert_path"`
 	X509KeyPath                               *string                                `mapstructure:"x509_key_path" required:"true" cty:"x509_key_path" hcl:"x509_key_path"`
 	X509UploadPath                            *string                                `mapstructure:"x509_upload_path" required:"false" cty:"x509_upload_path" hcl:"x509_upload_path"`
-	IMDSSupport                               *string                                `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -225,6 +225,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"kms_key_id":                      &hcldec.AttrSpec{Name: "kms_key_id", Type: cty.String, Required: false},
 		"region_kms_key_ids":              &hcldec.AttrSpec{Name: "region_kms_key_ids", Type: cty.Map(cty.String), Required: false},
 		"skip_save_build_region":          &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
+		"imds_support":                    &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
 		"snapshot_tags":                   &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
 		"snapshot_tag":                    &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":                  &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},
@@ -335,7 +336,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"x509_cert_path":               &hcldec.AttrSpec{Name: "x509_cert_path", Type: cty.String, Required: false},
 		"x509_key_path":                &hcldec.AttrSpec{Name: "x509_key_path", Type: cty.String, Required: false},
 		"x509_upload_path":             &hcldec.AttrSpec{Name: "x509_upload_path", Type: cty.String, Required: false},
-		"imds_support":                 &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
 	}
 	return s
 }

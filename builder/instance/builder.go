@@ -88,11 +88,6 @@ type Config struct {
 	// okay to create this directory as part of the provisioning process.
 	// Defaults to /tmp.
 	X509UploadPath string `mapstructure:"x509_upload_path" required:"false"`
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -236,10 +231,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		warns = append(warns, "enable_t2_unlimited is deprecated please use "+
 			"enable_unlimited_credits. In future versions of "+
 			"Packer, inclusion of enable_t2_unlimited will error your builds.")
-	}
-
-	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {
@@ -440,7 +431,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMIENASupport:      b.config.AMIENASupport,
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
-			IMDSSupport:              b.config.IMDSSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,
@@ -460,6 +450,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,
+			IMDSSupport:    b.config.AMIIMDSSupport,
 			Ctx:            b.config.ctx,
 			GeneratedData:  generatedData,
 		},

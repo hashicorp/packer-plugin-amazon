@@ -197,3 +197,48 @@ func TestBuilderPrepare_ReturnGeneratedData(t *testing.T) {
 		t.Fatalf("Generated data should contain SourceAMIOwnerName")
 	}
 }
+
+func TestBuilerPrepare_IMDSSupport(t *testing.T) {
+	testcases := []struct {
+		name             string
+		imdsSupportValue string
+		isErr            bool
+	}{
+		{
+			name:             "define valid IMDSv2 support",
+			imdsSupportValue: "v2.0",
+			isErr:            false,
+		},
+		{
+			name:             "don't define IMDSv2 support",
+			imdsSupportValue: "",
+			isErr:            false,
+		},
+		{
+			name:             "invalid IMDS support",
+			imdsSupportValue: "v1.0",
+			isErr:            true,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			var b Builder
+			config := testConfig()
+
+			config["imds_support"] = tt.imdsSupportValue
+			_, warnings, err := b.Prepare(config)
+
+			if len(warnings) > 0 {
+				t.Fatalf("bad: %#v", warnings)
+			}
+			if (err != nil) != tt.isErr {
+				t.Errorf("error mismatch, expected %t, got %t", tt.isErr, err != nil)
+			}
+
+			if err != nil {
+				t.Logf("error: %s", err)
+			}
+		})
+	}
+}

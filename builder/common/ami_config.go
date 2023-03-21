@@ -7,6 +7,7 @@ import (
 	"log"
 	"regexp"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
@@ -146,6 +147,11 @@ type AMIConfig struct {
 	// the intermediary AMI into any regions provided in `ami_regions`, then
 	// delete the intermediary AMI. Default `false`.
 	AMISkipBuildRegion bool `mapstructure:"skip_save_build_region"`
+	// Enforce version of the Instance Metadata Service on the built AMI.
+	// Valid options are unset (legacy) and `v2.0`. See the documentation on
+	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+	// for more information. Defaults to legacy.
+	AMIIMDSSupport string `mapstructure:"imds_support" required:"false"`
 
 	SnapshotConfig `mapstructure:",squash"`
 }
@@ -242,6 +248,13 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 			"( ), periods (.), slashes (/), dashes (-), single quotes ('), at-signs "+
 			"(@), or underscores(_). You can use the `clean_resource_name` template "+
 			"filter to automatically clean your ami name."))
+	}
+
+	if c.AMIIMDSSupport != "" && c.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+		errs = append(errs,
+			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
+				ec2.ImdsSupportValuesV20),
+		)
 	}
 
 	if len(errs) > 0 {

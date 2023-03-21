@@ -22,7 +22,6 @@ type StepRegisterAMI struct {
 	AMISkipBuildRegion       bool
 	BootMode                 string
 	UefiData                 string
-	IMDSSupport              string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -75,9 +74,6 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 	if s.UefiData != "" {
 		registerOpts.UefiData = aws.String(s.UefiData)
-	}
-	if s.IMDSSupport != "" {
-		registerOpts.ImdsSupport = aws.String(s.IMDSSupport)
 	}
 
 	registerResp, err := ec2conn.RegisterImage(registerOpts)
