@@ -413,6 +413,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:       b.config.AMIProductCodes,
 			SnapshotUsers:      b.config.SnapshotUsers,
 			SnapshotGroups:     b.config.SnapshotGroups,
+			IMDSSupport:        b.config.AMIIMDSSupport,
 			Ctx:                b.config.ctx,
 			GeneratedData:      generatedData,
 		},

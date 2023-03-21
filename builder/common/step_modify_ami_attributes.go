@@ -23,6 +23,7 @@ type StepModifyAMIAttributes struct {
 	SnapshotUsers  []string
 	SnapshotGroups []string
 	ProductCodes   []string
+	IMDSSupport    string
 	Description    string
 	Ctx            interpolate.Context
 
@@ -52,6 +53,7 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	valid = valid || (s.ProductCodes != nil && len(s.ProductCodes) > 0)
 	valid = valid || (s.SnapshotUsers != nil && len(s.SnapshotUsers) > 0)
 	valid = valid || (s.SnapshotGroups != nil && len(s.SnapshotGroups) > 0)
+	valid = valid || s.IMDSSupport != ""
 
 	if !valid {
 		return multistep.ActionContinue
@@ -185,6 +187,14 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 		}
 		options["product codes"] = &ec2.ModifyImageAttributeInput{
 			ProductCodes: codes,
+		}
+	}
+
+	if s.IMDSSupport != "" {
+		options["imds_support"] = &ec2.ModifyImageAttributeInput{
+			ImdsSupport: &ec2.AttributeValue{
+				Value: &s.IMDSSupport,
+			},
 		}
 	}
 

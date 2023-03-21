@@ -78,11 +78,6 @@ type Config struct {
 	// Base64 representation of the non-volatile UEFI variable store. For more information
 	// see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 	UefiData string `mapstructure:"uefi_data" required:"false"`
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -183,10 +178,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 	if !valid {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
-	}
-
-	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
@@ -447,7 +438,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:            b.config.PollingConfig,
 			BootMode:                 b.config.BootMode,
 			UefiData:                 b.config.UefiData,
-			IMDSSupport:              b.config.IMDSSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
@@ -468,6 +458,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,
+			IMDSSupport:    b.config.AMIIMDSSupport,
 			Ctx:            b.config.ctx,
 			GeneratedData:  generatedData,
 		},

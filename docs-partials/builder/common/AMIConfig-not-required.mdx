@@ -128,4 +128,9 @@
   the intermediary AMI into any regions provided in `ami_regions`, then
   delete the intermediary AMI. Default `false`.
 
+- `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
+  Valid options are unset (legacy) and `v2.0`. See the documentation on
+  [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+  for more information. Defaults to legacy.
+
 <!-- End of code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; -->
