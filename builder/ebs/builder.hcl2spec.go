@@ -163,6 +163,7 @@ type FlatConfig struct {
 	VolumeRunTag                              []config.FlatNameValue                 `mapstructure:"run_volume_tag" required:"false" cty:"run_volume_tag" hcl:"run_volume_tag"`
 	NoEphemeral                               *bool                                  `mapstructure:"no_ephemeral" required:"false" cty:"no_ephemeral" hcl:"no_ephemeral"`
 	DeprecationTime                           *string                                `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
+	FastLaunch                                *FlatFastLaunchConfig                  `mapstructure:"fast_launch" required:"false" cty:"fast_launch" hcl:"fast_launch"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -328,6 +329,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"run_volume_tag":               &hcldec.BlockListSpec{TypeName: "run_volume_tag", Nested: hcldec.ObjectSpec((*config.FlatNameValue)(nil).HCL2Spec())},
 		"no_ephemeral":                 &hcldec.AttrSpec{Name: "no_ephemeral", Type: cty.Bool, Required: false},
 		"deprecate_at":                 &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
+		"fast_launch":                  &hcldec.BlockSpec{TypeName: "fast_launch", Nested: hcldec.ObjectSpec((*FlatFastLaunchConfig)(nil).HCL2Spec())},
 	}
 	return s
 }

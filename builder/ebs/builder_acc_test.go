@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
@@ -1058,6 +1059,96 @@ func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
 	}
 }
 
+func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
+	fastlaunchami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-windows-fastlaunch-%d", time.Now().Unix()),
+	}
+
+	fastlaunchamiwithTemplate := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-windows-fastlaunch-with-template-%d", time.Now().Unix()),
+	}
+
+	tests := []struct {
+		name     string
+		ami      amazon_acc.AMIHelper
+		template string
+	}{
+		{
+			"basic fast-launch enable test",
+			fastlaunchami,
+			fmt.Sprintf(testWindowsFastBoot, fastlaunchami.Name),
+		},
+		{
+			"basic fast-launch enable test with template",
+			fastlaunchamiwithTemplate,
+			fmt.Sprintf(testWindowsFastBootWithTemplateID, fastlaunchamiwithTemplate.Name),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testcase := &acctest.PluginTestCase{
+				Name:     "amazon-ebs-windows-fastlaunch",
+				Template: tt.template,
+				Teardown: func() error {
+					return tt.ami.CleanUpAmi()
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					amis, err := tt.ami.GetAmi()
+					if err != nil {
+						return fmt.Errorf("failed to get AMI: %s", err)
+					}
+					if len(amis) != 1 {
+						return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
+					}
+
+					accessConfig := &awscommon.AccessConfig{}
+					session, err := accessConfig.Session()
+					if err != nil {
+						return fmt.Errorf("Unable to create aws session %s", err.Error())
+					}
+
+					regionconn := ec2.New(session.Copy(&aws.Config{
+						Region: aws.String(tt.ami.Region),
+					}))
+
+					ami := amis[0]
+
+					fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+						ImageIds: []*string{ami.ImageId},
+					})
+
+					if err != nil {
+						return fmt.Errorf("failed to get fast-launch images: %s", err)
+					}
+
+					if len(fastLaunchImages.FastLaunchImages) != 1 {
+						return fmt.Errorf("go too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
+					}
+
+					img := fastLaunchImages.FastLaunchImages[0]
+					if img.State == nil {
+						return fmt.Errorf("unexpected null fast-launch state")
+					}
+
+					if *img.State != "enabled" {
+						return fmt.Errorf("expected fast-launch state to be enabled, but is %q", *img.State)
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
 func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
@@ -1455,6 +1546,61 @@ source "amazon-ebs" "test" {
 
 build {
 	sources = ["amazon-ebs.test"]
+}
+`
+
+const testWindowsFastBoot = `
+source "amazon-ebs" "windows-fastboot" {
+	ami_name             = "%s"
+	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	communicator         = "winrm"
+	winrm_username       = "Administrator"
+	winrm_password       = "e4sypa55!"
+	user_data_file       = "test-fixtures/ps_enable.ps"
+	fast_launch {
+		target_resource_count = 1
+	}
+}
+
+build {
+	sources = ["amazon-ebs.windows-fastboot"]
+
+	provisioner "powershell" {
+		inline = [
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+		]
+	}
+}
+`
+
+const testWindowsFastBootWithTemplateID = `
+source "amazon-ebs" "windows-fastboot" {
+	ami_name             = "%s"
+	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	communicator         = "winrm"
+	winrm_username       = "Administrator"
+	winrm_password       = "e4sypa55!"
+	user_data_file       = "test-fixtures/ps_enable.ps"
+	fast_launch {
+		target_resource_count   = 1
+		template_id = "lt-0c82d8943c032fc0b"
+	}
+}
+
+build {
+	sources = ["amazon-ebs.windows-fastboot"]
+
+	provisioner "powershell" {
+		inline = [
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+		]
+	}
 }
 `
 
