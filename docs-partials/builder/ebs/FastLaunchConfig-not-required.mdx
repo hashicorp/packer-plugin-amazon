@@ -1,0 +1,28 @@
+<!-- Code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
+
+- `enable_fast_launch` (bool) - Configure AMI with fast-launch on Windows AMIs
+
+- `template_id` (string) - The ID of the launch template to use for the fast launch
+  
+  This cannot be specified in conjunction with the template name.
+
+- `template_name` (string) - The name of the launch template to use for fast launch
+  
+  This cannot be specified in conjunction with the template ID.
+
+- `template_version` (int) - The version of the launch template to use
+  
+  If unspecified, and a template is referenced, this will default to
+  the latest version available for the template.
+
+- `max_parallel_launches` (int) - Maximum number of instances to launch for creating pre-provisioned snapshots
+  
+  If specified, must be a minimum of `6`
+
+- `target_resource_count` (int) - The number of snapshots to pre-provision for later launching windows instances
+  from the resulting fast-launch AMI.
+  
+  If unspecified, this will create the default number of snapshots (as of
+  march 2023, this defaults to 5 on AWS)
+
+<!-- End of code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; -->

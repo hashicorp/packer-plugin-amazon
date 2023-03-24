@@ -79,6 +79,11 @@ type Config struct {
 	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
 	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
 	DeprecationTime string `mapstructure:"deprecate_at"`
+	// The configuration for fast launch support.
+	//
+	// Fast launch is only relevant for Windows AMIs, and should not be used
+	// for other OSes.
+	FastLaunch FastLaunchConfig `mapstructure:"fast_launch" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -134,6 +139,8 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	errs = packersdk.MultiErrorAppend(errs, b.config.AMIMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.LaunchMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.RunConfig.Prepare(&b.config.ctx)...)
+
+	errs = packersdk.MultiErrorAppend(errs, b.config.FastLaunch.Prepare()...)
 
 	if b.config.IsSpotInstance() && (b.config.AMIENASupport.True() || b.config.AMISriovNetSupport) {
 		errs = packersdk.MultiErrorAppend(errs,
@@ -386,6 +393,20 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			Tags:               b.config.RunTags,
 			Ctx:                b.config.ctx,
+		},
+		&stepPrepareFastLaunchTemplate{
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			TemplateID:         b.config.FastLaunch.LaunchTemplateID,
+			TemplateName:       b.config.FastLaunch.LaunchTemplateName,
+			TemplateVersion:    b.config.FastLaunch.LaunchTemplateVersion,
+		},
+		&stepEnableFastLaunch{
+			PollingConfig:      b.config.PollingConfig,
+			ResourceCount:      b.config.FastLaunch.TargetResourceCount,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			MaxInstances:       b.config.FastLaunch.MaxParallelLaunches,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,

@@ -242,3 +242,113 @@ func TestBuilerPrepare_IMDSSupport(t *testing.T) {
 		})
 	}
 }
+
+func TestBuilderPrepare_FastLaunch(t *testing.T) {
+	tests := []struct {
+		name             string
+		fastLaunchConfig map[string]interface{}
+		expectError      bool
+	}{
+		{
+			"OK - empty config",
+			map[string]interface{}{},
+			false,
+		},
+		{
+			"OK - all specified, with template id",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"enable_fast_launch":    true,
+					"template_id":           "id",
+					"template_version":      2,
+					"max_parallel_launches": 10,
+					"target_resource_count": 20,
+				},
+			},
+			false,
+		},
+		{
+			"OK - all specified, with template name",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"enable_fast_launch":    true,
+					"template_name":         "name",
+					"template_version":      2,
+					"max_parallel_launches": 10,
+					"target_resource_count": 20,
+				},
+			},
+			false,
+		},
+		{
+			"Error - max parallel launches < 6",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"max_parallel_launches": 3,
+				},
+			},
+			true,
+		},
+		{
+			"Error - target resource count < 0",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"target_resource_count": -1,
+				},
+			},
+			true,
+		},
+		{
+			"Error - launch template ID & name specified",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"template_id":   "id",
+					"template_name": "name",
+				},
+			},
+			true,
+		},
+		{
+			"Error - launch template version without name/id",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"template_version": 2,
+				},
+			},
+			true,
+		},
+		{
+			"Error - launch template version < 0",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"template_version": -1,
+				},
+			},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b Builder
+			config := testConfig()
+
+			for k, v := range tt.fastLaunchConfig {
+				config[k] = v
+			}
+
+			_, warnings, err := b.Prepare(config)
+
+			if len(warnings) > 0 {
+				t.Errorf("got unexpected warnings: %#v", warnings)
+			}
+			if (err != nil) != tt.expectError {
+				t.Errorf("error mismatch, expected %t, got %t", tt.expectError, err != nil)
+			}
+
+			if err != nil {
+				t.Logf("got error: %s", err)
+			}
+		})
+	}
+}
