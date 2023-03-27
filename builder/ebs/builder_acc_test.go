@@ -1098,6 +1098,37 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 	return errs
 }
 
+func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-ssh-password-auth-test-%d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs-with-ssh-pass-auth",
+		Template: fmt.Sprintf(testBuildWithSSHPassword, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+			if strings.Contains(string(logs), "Creating temporary keypair") {
+				return fmt.Errorf("ssh password specified, should not create temp keypair.")
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 const testBuilderAccBasic = `
 {
 	"builders": [{
@@ -1406,6 +1437,24 @@ build {
 	sources = [
 		"source.amazon-ebs.test"
 	]
+}
+`
+
+const testBuildWithSSHPassword = `
+source "amazon-ebs" "test" {
+	region               = "us-east-1"
+	source_ami           = "ami-089158c0576f477a7" # Ubuntu Server 22.04 LTS custom with ssh user/password auth setup
+	instance_type        = "t3.micro"
+	ami_name             = "%s"
+	communicator         = "ssh"
+	ssh_interface        = "session_manager"
+	iam_instance_profile = "SSMInstanceProfile"
+	ssh_username         = "user"
+	ssh_password         = "password"
+}
+
+build {
+	sources = ["amazon-ebs.test"]
 }
 `
 
