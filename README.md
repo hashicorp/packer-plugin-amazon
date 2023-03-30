@@ -19,7 +19,7 @@ Then, run [`packer init`](https://www.packer.io/docs/commands/init).
 packer {
   required_plugins {
     amazon = {
-      version = ">= 1.2.1"
+      version = ">= 1.2.2"
       source  = "github.com/hashicorp/amazon"
     }
   }
