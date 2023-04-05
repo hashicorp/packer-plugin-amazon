@@ -22,7 +22,7 @@ jobs:
     name: init and build example
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
 
       - name: Init
         uses: hashicorp/packer-github-actions@master
