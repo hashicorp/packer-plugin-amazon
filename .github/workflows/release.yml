@@ -10,6 +10,8 @@
 # in `goreleaser` to indicate this is being used in a non-interactive mode.
 #
 name: release
+permissions:
+  contents: write
 on:
   push:
     tags:
@@ -31,7 +33,6 @@ jobs:
         run: echo "::set-output name=api_version::$(go run . describe | jq -r '.api_version')"
       - name: Install signore
         uses: hashicorp/setup-signore-package@v1
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f82d6c1c344bcacabba2c841718984797f664a6b # v4.2.0
         with:
