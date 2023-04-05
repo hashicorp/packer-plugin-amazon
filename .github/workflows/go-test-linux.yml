@@ -4,16 +4,13 @@
 #
 
 name: "Go Test Linux"
-
 on:
   push:
     branches:
       - 'main'
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   get-go-version:
     runs-on: ubuntu-latest

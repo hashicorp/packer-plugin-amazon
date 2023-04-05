@@ -1,8 +1,10 @@
 name: hashicorp/packer-plugin-amazon/build_plugin_binaries
+permissions:
+  contents: read
 on:
   push:
     branches:
-    - main
+      - main
 jobs:
   build_darwin:
     defaults:
@@ -12,14 +14,14 @@ jobs:
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: darwin
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: darwin
-        GOARCH: arm64
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: darwin
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: darwin
+          GOARCH: arm64
   build_freebsd:
     defaults:
       run:
@@ -28,19 +30,19 @@ jobs:
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: freebsd
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: freebsd
   build_linux:
     runs-on: ubuntu-latest
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: linux
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: linux
   build_openbsd:
     defaults:
       run:
@@ -49,10 +51,10 @@ jobs:
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: openbsd
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: openbsd
   build_solaris:
     defaults:
       run:
@@ -61,10 +63,10 @@ jobs:
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: solaris
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: solaris
   build_windows:
     defaults:
       run:
@@ -73,25 +75,25 @@ jobs:
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     steps:
-    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-    - uses: "./.github/actions/build-and-persist-plugin-binary"
-      with:
-        GOOS: windows
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: "./.github/actions/build-and-persist-plugin-binary"
+        with:
+          GOOS: windows
   store_artifacts:
     runs-on: ubuntu-latest
     container:
       image: docker.mirror.hashicorp.services/cimg/go:1.18
     needs:
-    - build_darwin
-    - build_freebsd
-    - build_linux
-    - build_openbsd
-    - build_solaris
-    - build_windows
+      - build_darwin
+      - build_freebsd
+      - build_linux
+      - build_openbsd
+      - build_solaris
+      - build_windows
     steps:
-    - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-      with:
-        path: "."
-    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
-      with:
-        path: "./pkg/"
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          path: "."
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          path: "./pkg/"
