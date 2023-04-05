@@ -1,0 +1,97 @@
+name: hashicorp/packer-plugin-amazon/build_plugin_binaries
+on:
+  push:
+    branches:
+    - main
+jobs:
+  build_darwin:
+    defaults:
+      run:
+        working-directory: "~/go/src/github.com/hashicorp/packer-plugin-amazon"
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: darwin
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: darwin
+        GOARCH: arm64
+  build_freebsd:
+    defaults:
+      run:
+        working-directory: "~/go/src/github.com/hashicorp/packer-plugin-amazon"
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: freebsd
+  build_linux:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: linux
+  build_openbsd:
+    defaults:
+      run:
+        working-directory: "~/go/src/github.com/hashicorp/packer-plugin-amazon"
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: openbsd
+  build_solaris:
+    defaults:
+      run:
+        working-directory: "~/go/src/github.com/hashicorp/packer-plugin-amazon"
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: solaris
+  build_windows:
+    defaults:
+      run:
+        working-directory: "~/go/src/github.com/hashicorp/packer-plugin-amazon"
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    steps:
+    - uses: actions/checkout@v3.5.0
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: windows
+  store_artifacts:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.18
+    needs:
+    - build_darwin
+    - build_freebsd
+    - build_linux
+    - build_openbsd
+    - build_solaris
+    - build_windows
+    steps:
+    - uses: actions/download-artifact@v3.0.1
+      with:
+        path: "."
+    - uses: actions/upload-artifact@v3.1.1
+      with:
+        path: "./pkg/"
