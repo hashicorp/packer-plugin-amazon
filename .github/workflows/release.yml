@@ -30,7 +30,7 @@ jobs:
           go-version: 1.17
       - name: Describe plugin
         id: plugin_describe
-        run: echo "::set-output name=api_version::$(go run . describe | jq -r '.api_version')"
+        run: echo "api_version=$(go run . describe | jq -r '.api_version')" >> "$GITHUB_OUTPUT"
       - name: Install signore
         uses: hashicorp/setup-signore-package@v1
       - name: Run GoReleaser
