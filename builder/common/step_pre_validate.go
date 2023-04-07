@@ -17,7 +17,6 @@ import (
 
 // StepPreValidate provides an opportunity to pre-validate any configuration for
 // the build before actually doing any time consuming work
-//
 type StepPreValidate struct {
 	DestAmiName        string
 	ForceDeregister    bool
@@ -99,6 +98,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say(fmt.Sprintf("Prevalidating AMI Name: %s", s.DestAmiName))
 	req, resp := ec2conn.DescribeImagesRequest(&ec2.DescribeImagesInput{
+		Owners: []*string{aws.String("self")},
 		Filters: []*ec2.Filter{{
 			Name:   aws.String("name"),
 			Values: []*string{aws.String(s.DestAmiName)},
