@@ -1,15 +1,14 @@
 name: build-and-persist-plugin-binary
 inputs:
   GOOS:
-    required: false
+    required: true
   GOARCH:
-    required: false
-    default: amd64
+    required: true
 runs:
   using: composite
   steps:
   - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
-  - run: GOOS=${{ inputs.GOOS }} GOARCH=${{ inputs.GOARCH }} go build -o ./pkg/packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }} .
+  - run: "GOOS=${{ inputs.GOOS }} GOARCH=${{ inputs.GOARCH }} go build -o ./pkg/packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }} ."
     shell: bash
   - run: zip ./pkg/packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip ./pkg/packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }}
     shell: bash
@@ -19,3 +18,4 @@ runs:
     with:
       name: "packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip"
       path: "pkg/packer_plugin_amazon_${{ inputs.GOOS }}_${{ inputs.GOARCH }}.zip"
+      retention-days: 30
