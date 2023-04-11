@@ -4,13 +4,16 @@
 #
 
 name: "Go Test Windows"
+
 on:
   push:
     branches:
       - 'main'
   pull_request:
+
 permissions:
   contents: read
+
 jobs:
   get-go-version:
     runs-on: ubuntu-latest
@@ -36,3 +39,4 @@ jobs:
       - run: |
           echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
           go test -race -count 1 ./... -timeout=3m
+
