@@ -3,13 +3,16 @@
 #
 
 name: "Go Validate"
+
 on:
   push:
     branches:
       - 'main'
   pull_request:
+
 permissions:
   contents: read
+
 jobs:
   get-go-version:
     runs-on: ubuntu-latest
