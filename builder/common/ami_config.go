@@ -322,7 +322,7 @@ func ValidateKmsKey(kmsKey string) (valid bool) {
 	}
 
 	// Check if kmsKey is the full ARN
-	kmsArnStartPattern := `^arn:aws(-us-gov)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
+	kmsArnStartPattern := `^arn:aws(-[a-z]{2}(-gov)?)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
 	if regexp.MustCompile(fmt.Sprintf("%skey/%s", kmsArnStartPattern, kmsKeyIdPattern)).MatchString(kmsKey) {
 		return true
 	}

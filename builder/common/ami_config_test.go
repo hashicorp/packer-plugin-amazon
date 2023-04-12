@@ -214,6 +214,7 @@ func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {
 		"arn:aws:kms:us-east-1:012345678910:key/mrk-12345678-1234-abcd-0000-123456789012",
 		"arn:aws:kms:us-east-1:012345678910:key/mrk-f4224f9362ac4ed2b32a6bc77cf43510",
 		"arn:aws-us-gov:kms:us-gov-east-1:123456789012:key/12345678-1234-abcd-0000-123456789012",
+		"arn:aws-cn:kms:cn-north-1:012345678910:alias/my-alias",
 	}
 	for _, validCase := range validCases {
 		c.AMIKmsKeyId = validCase
@@ -233,6 +234,7 @@ func TestAMIConfigPrepare_ValidateKmsKey(t *testing.T) {
 		"arn:aws:kms:us-east-1:012345678910:key/zab-12345678-1234-abcd-0000-123456789012",
 		"arn:aws:kms:us-east-1:012345678910:key/mkr-12345678-1234-abcd-0000-123456789012",
 		"arn:foo:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+		"arn:aws-gov:kms:cn-north-1:012345678910:alias/my-alias",
 	}
 	for _, invalidCase := range invalidCases {
 		c.AMIKmsKeyId = invalidCase
