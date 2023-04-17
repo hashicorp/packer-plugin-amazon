@@ -1212,6 +1212,85 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_SpotInstanceWithPublicIPAddressExplicitelySet(t *testing.T) {
+	nonSpotInstance := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-explicit-public-ip-%d", time.Now().Unix()),
+	}
+
+	spotInstance := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-spot-explicit-public-ip-%d", time.Now().Unix()),
+	}
+	tests := []struct {
+		name      string
+		IPVal     bool
+		amiSetup  amazon_acc.AMIHelper
+		template  string
+		expectErr bool
+	}{
+		{
+			"Spot instance, with public IP explicitely set",
+			true,
+			spotInstance,
+			testSetupPublicIPWithoutVPCOrSubnetOnSpotInstance,
+			false,
+		},
+		{
+			"Spot instance, with public IP explicitely unset",
+			false,
+			spotInstance,
+			testSetupPublicIPWithoutVPCOrSubnetOnSpotInstance,
+			true, // We expect an error without a public IP since no outbound connections work in this case, so SSM doesn't work with the current config
+		},
+		{
+			"Non-Spot instance, with public IP explicitely set",
+			true,
+			nonSpotInstance,
+			testSetupPublicIPWithoutVPCOrSubnet,
+			false,
+		},
+		{
+			"Non-Spot instance, with public IP explicitely unset",
+			false,
+			nonSpotInstance,
+			testSetupPublicIPWithoutVPCOrSubnet,
+			true, // We expect an error without a public IP since no outbound connections work in this case, so SSM doesn't work with the current config
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testcase := &acctest.PluginTestCase{
+				Name:     tt.name,
+				Template: fmt.Sprintf(tt.template, tt.amiSetup.Name, tt.IPVal),
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if (buildCommand.ProcessState.ExitCode() != 0) != tt.expectErr {
+						return fmt.Errorf("Bad exit code, expected %t error, got %d. Logfile: %s",
+							tt.expectErr,
+							buildCommand.ProcessState.ExitCode(),
+							logfile)
+					}
+
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+					}
+
+					expectMsg := fmt.Sprintf("changing public IP address config to %t for instance on subnet", tt.IPVal)
+
+					if !strings.Contains(string(logs), expectMsg) {
+						return fmt.Errorf("did not change the public IP setting for the instance")
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
 const testBuilderAccBasic = `
 {
 	"builders": [{
@@ -1538,6 +1617,54 @@ source "amazon-ebs" "test" {
 
 build {
 	sources = ["amazon-ebs.test"]
+}
+`
+
+const testSetupPublicIPWithoutVPCOrSubnet = `
+source "amazon-ebs" "test_build" {
+  region                      = "us-east-1"
+  ami_name                    = "%s"
+  source_ami                  = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
+  instance_type               = "t2.micro"
+  communicator                = "ssh"
+  ssh_username                = "ec2-user"
+  ssh_timeout                 = "45s"
+  associate_public_ip_address = %t
+  skip_create_ami             = true
+}
+
+build {
+  sources = ["amazon-ebs.test_build"]
+}
+`
+
+const testSetupPublicIPWithoutVPCOrSubnetOnSpotInstance = `
+source "amazon-ebs" "test" {
+  region                      = "us-east-1"
+  spot_price                  = "auto"
+  source_ami                  = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
+  instance_type               = "t2.micro"
+  ssh_username                = "ec2-user"
+  ssh_timeout                 = "45s"
+  ami_name                    = "%s"
+  skip_create_ami             = true
+  associate_public_ip_address = %t
+  temporary_iam_instance_profile_policy_document {
+    Version = "2012-10-17"
+    Statement {
+      Effect = "Allow"
+      Action = [
+        "ec2:GetDefaultCreditSpecification",
+        "ec2:DescribeInstanceTypeOfferings",
+        "ec2:DescribeInstanceCreditSpecifications"
+      ]
+      Resource = ["*"]
+    }
+  }
+}
+
+build {
+  sources = ["source.amazon-ebs.test"]
 }
 `
 
