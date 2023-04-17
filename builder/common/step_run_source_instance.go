@@ -214,6 +214,9 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	subnetId := state.Get("subnet_id").(string)
 
 	if subnetId != "" && s.AssociatePublicIpAddress != confighelper.TriUnset {
+		ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
+			*s.AssociatePublicIpAddress.ToBoolPointer(),
+			subnetId))
 		runOpts.NetworkInterfaces = []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				DeviceIndex:              aws.Int64(0),

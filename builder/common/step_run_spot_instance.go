@@ -114,6 +114,8 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 
 	}
 
+	ui := state.Get("ui").(packersdk.Ui)
+
 	iamInstanceProfile := aws.String(state.Get("iamInstanceProfile").(string))
 
 	// Create a launch template.
@@ -142,6 +144,9 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 			SubnetId:            aws.String(subnetId),
 		}
 		if s.AssociatePublicIpAddress != confighelper.TriUnset {
+			ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
+				*s.AssociatePublicIpAddress.ToBoolPointer(),
+				subnetId))
 			networkInterface.SetAssociatePublicIpAddress(*s.AssociatePublicIpAddress.ToBoolPointer())
 		}
 		templateData.SetNetworkInterfaces([]*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{&networkInterface})
