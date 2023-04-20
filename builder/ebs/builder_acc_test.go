@@ -1212,7 +1212,7 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-func TestAccBuilder_SpotInstanceWithPublicIPAddressExplicitelySet(t *testing.T) {
+func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 	nonSpotInstance := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-explicit-public-ip-%d", time.Now().Unix()),
@@ -1283,12 +1283,106 @@ func TestAccBuilder_SpotInstanceWithPublicIPAddressExplicitelySet(t *testing.T) 
 						return fmt.Errorf("did not change the public IP setting for the instance")
 					}
 
+					if !strings.Contains(string(logs), "No VPC ID provided, Packer will choose one from the provided or default VPC") {
+						return fmt.Errorf("did not pick the default VPC when setting subnet")
+					}
+
+					if !strings.Contains(string(logs), "AvailabilityZone found") {
+						return fmt.Errorf("did not get AZ from subnet")
+					}
+
 					return nil
 				},
 			}
 			acctest.TestPlugin(t, testcase)
 		})
 	}
+}
+
+func TestAccBuilder_AssociatePublicIPWithSubnetFilter(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-with-subnet-filter-%d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "ebs-subnet-filter-associate-ip-test",
+		Template: fmt.Sprintf(testSubnetFilterWithPublicIP, ami.Name, true),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code, got %d. Logfile: %s",
+					buildCommand.ProcessState.ExitCode(),
+					logfile)
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+
+			if ok := strings.Contains(string(logs), "changing public IP address config to true for instance on subnet"); !ok {
+				return fmt.Errorf("did not change the public IP setting for the instance")
+			}
+
+			if ok := strings.Contains(string(logs), "Using Subnet Filters"); !ok {
+				return fmt.Errorf("did not select subnet with filters")
+			}
+
+			if ok := strings.Contains(string(logs), "AvailabilityZone found"); !ok {
+				return fmt.Errorf("did not get AZ from subnet")
+			}
+
+			if ok := strings.Contains(string(logs), "VpcId found"); !ok {
+				return fmt.Errorf("did not get VPC ID from subnet")
+			}
+
+			if ok := strings.Contains(string(logs), "Inferring subnet from the selected"); ok {
+				return fmt.Errorf("should not have selected a subnet for public IP address config")
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-basic-subnet-filter-%d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "ebs-subnet-filter-test",
+		Template: fmt.Sprintf(testBasicSubnetFilter, ami.Name),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code, got %d. Logfile: %s",
+					buildCommand.ProcessState.ExitCode(),
+					logfile)
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+
+			if ok := strings.Contains(string(logs), "Using Subnet Filters"); !ok {
+				return fmt.Errorf("did not select subnet with filters")
+			}
+
+			if ok := strings.Contains(string(logs), "AvailabilityZone found"); !ok {
+				return fmt.Errorf("did not get AZ from subnet")
+			}
+
+			if ok := strings.Contains(string(logs), "VpcId found"); !ok {
+				return fmt.Errorf("did not get VPC ID from subnet")
+			}
+
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
 }
 
 const testBuilderAccBasic = `
@@ -1720,6 +1814,49 @@ build {
 			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
 		]
 	}
+}
+`
+
+const testSubnetFilterWithPublicIP = `
+source "amazon-ebs" "test-subnet-filter" {
+  subnet_filter {
+	filters = {
+	availability-zone = "us-east-1a"
+}
+  }
+  region                      = "us-east-1"
+  ami_name                    = "%s"
+  source_ami                  = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
+  instance_type               = "t2.micro"
+  communicator                = "ssh"
+  ssh_username                = "ec2-user"
+  associate_public_ip_address = %t
+  skip_create_ami             = true
+}
+
+build {
+	sources = ["amazon-ebs.test-subnet-filter"]
+}
+`
+
+const testBasicSubnetFilter = `
+source "amazon-ebs" "test-subnet-filter" {
+  subnet_filter {
+	filters = {
+	availability-zone = "us-east-1a"
+}
+  }
+  region                      = "us-east-1"
+  ami_name                    = "%s"
+  source_ami                  = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
+  instance_type               = "t2.micro"
+  communicator                = "ssh"
+  ssh_username                = "ec2-user"
+  skip_create_ami             = true
+}
+
+build {
+	sources = ["amazon-ebs.test-subnet-filter"]
 }
 `
 

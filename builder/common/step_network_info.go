@@ -18,9 +18,10 @@ import (
 // VPC's and Subnets that is used throughout the AMI creation process.
 //
 // Produces (adding them to the state bag):
-//   vpc_id string - the VPC ID
-//   subnet_id string - the Subnet ID
-//   availability_zone string - the AZ name
+//
+//	vpc_id string - the VPC ID
+//	subnet_id string - the Subnet ID
+//	availability_zone string - the AZ name
 type StepNetworkInfo struct {
 	VpcId                    string
 	VpcFilter                VpcFilterOptions
@@ -51,7 +52,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 	ui := state.Get("ui").(packersdk.Ui)
 
-	// VPC
+	// Set VpcID if none was specified but filters are defined in the template.
 	if s.VpcId == "" && !s.VpcFilter.Empty() {
 		params := &ec2.DescribeVpcsInput{}
 		vpcFilters, err := buildEc2Filters(s.VpcFilter.Filters)
@@ -85,7 +86,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		ui.Message(fmt.Sprintf("Found VPC ID: %s", s.VpcId))
 	}
 
-	// Subnet
+	// Set SubnetID if none was specified but filters are defined in the template.
 	if s.SubnetId == "" && !s.SubnetFilter.Empty() {
 		params := &ec2.DescribeSubnetsInput{}
 		s.SubnetFilter.Filters["state"] = "available"
@@ -141,6 +142,69 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		ui.Message(fmt.Sprintf("Found Subnet ID: %s", s.SubnetId))
 	}
 
+	// Set VPC/Subnet if we explicitely enable or disable public IP assignment to the instance
+	// and we did not set or get a subnet ID before
+	if s.AssociatePublicIpAddress != confighelper.TriUnset && s.SubnetId == "" {
+		ui.Say(fmt.Sprintf("Setting public IP address to %t on instance without a subnet ID",
+			*s.AssociatePublicIpAddress.ToBoolPointer()))
+
+		if s.VpcId == "" {
+			ui.Say("No VPC ID provided, Packer will use the default VPC")
+			vpcs, err := ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
+				Filters: []*ec2.Filter{
+					{
+						Name:   aws.String("is-default"),
+						Values: []*string{aws.String("true")},
+					},
+				},
+			})
+			if err != nil {
+				err := fmt.Errorf("Failed to describe VPCs: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+
+			if len(vpcs.Vpcs) != 1 {
+				err := fmt.Errorf("No default VPC found")
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+			defaultVPC := vpcs.Vpcs[0]
+
+			s.VpcId = *defaultVPC.VpcId
+		}
+
+		var err error
+
+		ui.Say(fmt.Sprintf("Inferring subnet from the selected VPC %q", s.VpcId))
+		params := &ec2.DescribeSubnetsInput{}
+		filters := map[string]string{
+			"vpc-id": s.VpcId,
+			"state":  "available",
+		}
+		params.Filters, err = buildEc2Filters(filters)
+		if err != nil {
+			err := fmt.Errorf("Failed to prepare subnet filters: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		subnets, err := ec2conn.DescribeSubnets(params)
+		if err != nil {
+			err := fmt.Errorf("Failed to describe subnets: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		subnet := mostFreeSubnet(subnets.Subnets)
+		s.SubnetId = *subnet.SubnetId
+
+		ui.Say(fmt.Sprintf("Set subnet as %q", s.SubnetId))
+	}
+
 	// Try to find AZ and VPC Id from Subnet if they are not yet found/given
 	if s.SubnetId != "" && (s.AvailabilityZone == "" || s.VpcId == "") {
 		log.Printf("[INFO] Finding AZ and VpcId for the given subnet '%s'", s.SubnetId)
@@ -160,73 +224,6 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			log.Printf("[INFO] VpcId found: '%s'", s.VpcId)
 		}
 	}
-
-	// No need to handle subnet/VPC defaults if we don't change the behaviour
-	// of public IP for the VPC/subnet
-	if s.AssociatePublicIpAddress == confighelper.TriUnset {
-		state.Put("vpc_id", s.VpcId)
-		state.Put("availability_zone", s.AvailabilityZone)
-		state.Put("subnet_id", s.SubnetId)
-		return multistep.ActionContinue
-	}
-
-	ui.Say(fmt.Sprintf("Setting public IP address to %t on instance without a subnet ID",
-		*s.AssociatePublicIpAddress.ToBoolPointer()))
-	if s.VpcId == "" {
-		ui.Say("No VPC ID provided, Packer will choose one from the provided or default VPC")
-		vpcs, err := ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
-			Filters: []*ec2.Filter{
-				{
-					Name:   aws.String("is-default"),
-					Values: []*string{aws.String("true")},
-				},
-			},
-		})
-		if err != nil {
-			err := fmt.Errorf("Failed to describe VPCs: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-
-		if len(vpcs.Vpcs) != 1 {
-			err := fmt.Errorf("No default VPC found, please set one up for associating a public IP address to the instance")
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-		defaultVPC := vpcs.Vpcs[0]
-
-		s.VpcId = *defaultVPC.VpcId
-	}
-
-	var err error
-
-	ui.Say(fmt.Sprintf("Inferring subnet from the selected VPC %q", s.VpcId))
-	params := &ec2.DescribeSubnetsInput{}
-	filters := map[string]string{
-		"vpc-id": s.VpcId,
-		"state":  "available",
-	}
-	params.Filters, err = buildEc2Filters(filters)
-	if err != nil {
-		err := fmt.Errorf("Failed to prepare subnet filters: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	subnets, err := ec2conn.DescribeSubnets(params)
-	if err != nil {
-		err := fmt.Errorf("Failed to describe subnets: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-
-	subnet := mostFreeSubnet(subnets.Subnets)
-	s.SubnetId = *subnet.SubnetId
-
-	ui.Say(fmt.Sprintf("Set subnet as %q", s.SubnetId))
 
 	state.Put("vpc_id", s.VpcId)
 	state.Put("availability_zone", s.AvailabilityZone)
