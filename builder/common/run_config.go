@@ -96,6 +96,15 @@ type RunConfig struct {
 	// If using a non-default VPC,
 	// public IP addresses are not provided by default. If this is true, your
 	// new instance will get a Public IP. default: unset
+	//
+	// Note: when specifying this attribute without a `subnet_[id|filter]` or
+	// `vpc_[id|filter]`, we will attempt to infer this information from the
+	// default VPC/Subnet.
+	// This operation may require some extra permissions to the IAM role that
+	// runs the build:
+	//
+	// * ec2:DescribeVpcs
+	// * ec2:DescribeSubnets
 	AssociatePublicIpAddress confighelper.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
