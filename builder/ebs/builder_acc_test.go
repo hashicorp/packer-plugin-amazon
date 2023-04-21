@@ -1283,7 +1283,7 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 						return fmt.Errorf("did not change the public IP setting for the instance")
 					}
 
-					if !strings.Contains(string(logs), "No VPC ID provided, Packer will choose one from the provided or default VPC") {
+					if !strings.Contains(string(logs), "No VPC ID provided, Packer will use the default VPC") {
 						return fmt.Errorf("did not pick the default VPC when setting subnet")
 					}
 
