@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -31,6 +32,10 @@ type StepNetworkInfo struct {
 	AvailabilityZone         string
 	SecurityGroupIds         []string
 	SecurityGroupFilter      SecurityGroupFilterOptions
+	// RequestedMachineType is the machine type of the instance we want to create.
+	// This is used for selecting a subnet/AZ which supports the type of instance
+	// selected, and not just the most available / random one.
+	RequestedMachineType string
 }
 
 type subnetsSort []*ec2.Subnet
@@ -49,7 +54,7 @@ func mostFreeSubnet(subnets []*ec2.Subnet) *ec2.Subnet {
 }
 
 func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(ec2iface.EC2API)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Set VpcID if none was specified but filters are defined in the template.
@@ -191,7 +196,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
-		subnets, err := ec2conn.DescribeSubnets(params)
+		subnetOut, err := ec2conn.DescribeSubnets(params)
 		if err != nil {
 			err := fmt.Errorf("Failed to describe subnets: %s", err)
 			state.Put("error", err)
@@ -199,7 +204,22 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			return multistep.ActionHalt
 		}
 
-		subnet := mostFreeSubnet(subnets.Subnets)
+		subnets := subnetOut.Subnets
+
+		// Filter by AZ with support for machine type
+		azs := getAZFromSubnets(subnets)
+		azs, err = filterAZByMachineType(azs, s.RequestedMachineType, ec2conn)
+		if err != nil {
+			err := fmt.Errorf("Failed to filter subnets by AZ for machine type %q: %s",
+				s.RequestedMachineType,
+				err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		subnets = filterSubnetsByAZ(subnets, azs)
+
+		subnet := mostFreeSubnet(subnets)
 		s.SubnetId = *subnet.SubnetId
 
 		ui.Say(fmt.Sprintf("Set subnet as %q", s.SubnetId))
@@ -229,6 +249,69 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	state.Put("availability_zone", s.AvailabilityZone)
 	state.Put("subnet_id", s.SubnetId)
 	return multistep.ActionContinue
+}
+
+func getAZFromSubnets(subnets []*ec2.Subnet) []string {
+	azs := map[string]struct{}{}
+	for _, sub := range subnets {
+		azs[*sub.AvailabilityZone] = struct{}{}
+	}
+
+	retAZ := make([]string, 0, len(azs))
+	for az := range azs {
+		retAZ = append(retAZ, az)
+	}
+
+	return retAZ
+}
+
+func filterAZByMachineType(azs []string, machineType string, ec2conn ec2iface.EC2API) ([]string, error) {
+	var retAZ []string
+
+	for _, az := range azs {
+		resp, err := ec2conn.DescribeInstanceTypeOfferings(&ec2.DescribeInstanceTypeOfferingsInput{
+			LocationType: aws.String("availability-zone"),
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("location"),
+					Values: []*string{&az},
+				},
+			},
+		})
+		if err != nil {
+			err = fmt.Errorf("failed to get offerings for AZ %q: %s", az, err)
+			return nil, err
+		}
+
+		for _, off := range resp.InstanceTypeOfferings {
+			if *off.InstanceType == machineType {
+				retAZ = append(retAZ, az)
+				break
+			}
+		}
+	}
+
+	if retAZ == nil {
+		return nil, fmt.Errorf("no AZ match the requested machine type %q", machineType)
+	}
+
+	return retAZ, nil
+}
+
+func filterSubnetsByAZ(subnets []*ec2.Subnet, azs []string) []*ec2.Subnet {
+	var retSubs []*ec2.Subnet
+
+outLoop:
+	for _, sub := range subnets {
+		for _, az := range azs {
+			if *sub.AvailabilityZone == az {
+				retSubs = append(retSubs, sub)
+				continue outLoop
+			}
+		}
+	}
+
+	return retSubs
 }
 
 func (s *StepNetworkInfo) Cleanup(multistep.StateBag) {}

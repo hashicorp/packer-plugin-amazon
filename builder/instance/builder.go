@@ -350,6 +350,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			SubnetFilter:             b.config.SubnetFilter,
 			AvailabilityZone:         b.config.AvailabilityZone,
 			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
+			RequestedMachineType:     b.config.InstanceType,
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
