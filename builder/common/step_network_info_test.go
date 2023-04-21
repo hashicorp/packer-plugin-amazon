@@ -353,3 +353,57 @@ func TestStepNetworkWithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 	}
 	t.Logf("set AZ is %q", az)
 }
+
+func TestGetDefaultVPCFailDueToPermissions(t *testing.T) {
+	mockConn := &mockEC2ClientStepNetworkTests{
+		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+			return nil, fmt.Errorf("Insufficient permissions: missing ec2:DescribeVpcs")
+		},
+	}
+
+	stepConfig := &StepNetworkInfo{
+		AssociatePublicIpAddress: confighelper.TriTrue,
+		RequestedMachineType:     "t3.large",
+	}
+
+	ui := &packersdk.MockUi{}
+
+	state := &multistep.BasicStateBag{}
+	state.Put("ec2", mockConn)
+	state.Put("ui", ui)
+
+	actRet := stepConfig.Run(context.Background(), state)
+	if actRet == multistep.ActionHalt {
+		t.Fatalf("running the step failed: %s", state.Get("error").(error))
+	}
+
+	vpcid, ok := state.GetOk("vpc_id")
+	if !ok || vpcid != "" {
+		t.Errorf("error: vpc should be empty, but is %q", vpcid)
+	}
+	t.Logf("set vpc is %q", vpcid)
+
+	subnetid, ok := state.GetOk("subnet_id")
+	if !ok || subnetid != "" {
+		t.Errorf("error: subnet should be empty, but is %q", subnetid)
+	}
+	t.Logf("set subnet is %q", subnetid)
+
+	az, ok := state.GetOk("availability_zone")
+	if !ok || az != "" {
+		t.Errorf("error: availability_zone should be empty, but is %q", az)
+	}
+	t.Logf("set AZ is %q", az)
+
+	ok = false
+	for _, msg := range ui.SayMessages {
+		if msg.Message == "associate_public_ip_address is set without a subnet_id." {
+			t.Log("found warning on associate_public_ip_address")
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Errorf("failed to find a message that states that associate_public_ip_address will be ignored.")
+	}
+}
