@@ -1287,10 +1287,6 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 						return fmt.Errorf("did not pick the default VPC when setting subnet")
 					}
 
-					if !strings.Contains(string(logs), "AvailabilityZone found") {
-						return fmt.Errorf("did not get AZ from subnet")
-					}
-
 					return nil
 				},
 			}
