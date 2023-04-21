@@ -276,6 +276,10 @@ func filterAZByMachineType(azs []string, machineType string, ec2conn ec2iface.EC
 					Name:   aws.String("location"),
 					Values: []*string{&az},
 				},
+				{
+					Name:   aws.String("instance-type"),
+					Values: []*string{&machineType},
+				},
 			},
 		})
 		if err != nil {
