@@ -231,20 +231,24 @@ func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ui packersdk.Ui, ec2conn ec2ifa
 	// Filter by AZ with support for machine type
 	azs := getAZFromSubnets(subnets)
 	azs, err = filterAZByMachineType(azs, s.RequestedMachineType, ec2conn)
-	if err != nil {
-		return fmt.Errorf("Failed to filter subnets by AZ for machine type %q: %s",
-			s.RequestedMachineType,
-			err)
-	}
-	subnets = filterSubnetsByAZ(subnets, azs)
-	if subnets == nil {
-		return fmt.Errorf("Failed to get subnets for the filtered AZs")
+	if err == nil {
+		subnets = filterSubnetsByAZ(subnets, azs)
+		if subnets == nil {
+			return fmt.Errorf("Failed to get subnets for the filtered AZs")
+		}
+	} else {
+		ui.Say(fmt.Sprintf(
+			"Failed to filter subnets/AZ for the requested machine type %q: %s",
+			s.RequestedMachineType, err))
+		ui.Say("This may result in Packer picking a subnet/AZ that can't host the requested machine type")
+		ui.Say("Please check that you have the permissions required to run DescribeInstanceTypeOfferings and try again.")
 	}
 
 	subnet := mostFreeSubnet(subnets)
 
 	s.SubnetId = *subnet.SubnetId
 	s.VpcId = vpc
+	s.AvailabilityZone = *subnet.AvailabilityZone
 
 	ui.Say(fmt.Sprintf("Set subnet as %q", s.SubnetId))
 
