@@ -105,6 +105,12 @@ type RunConfig struct {
 	//
 	// * ec2:DescribeVpcs
 	// * ec2:DescribeSubnets
+	//
+	// Additionally, since we filter subnets/AZs by their capability to host
+	// an instance of the selected type, you may also want to define the
+	// `ec2:DescribeInstanceTypeOfferings` action to the role running the build.
+	// Otherwise, Packer will pick the most available subnet in the VPC selected,
+	// which may not be able to host the instance type you provided.
 	AssociatePublicIpAddress confighelper.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
