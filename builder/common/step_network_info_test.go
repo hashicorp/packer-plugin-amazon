@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -46,7 +47,7 @@ func (m *mockEC2ClientStepNetworkTests) DescribeSubnets(in *ec2.DescribeSubnetsI
 	return nil, fmt.Errorf("unimplemented: describeSubnets")
 }
 
-func TestGetFilterAZByMachineType(t *testing.T) {
+func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 	testcases := []struct {
 		name         string
 		describeImpl func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
@@ -56,18 +57,18 @@ func TestGetFilterAZByMachineType(t *testing.T) {
 		expectError  bool
 	}{
 		{
-			"Fail: describe returns an error",
-			func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			name: "Fail: describe returns an error",
+			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return nil, fmt.Errorf("STOP")
 			},
-			"t2.micro",
-			[]string{"us-east-1a", "us-east-1b"},
-			nil,
-			true,
+			machineType: "t2.micro",
+			inputAZs:    []string{"us-east-1a", "us-east-1b"},
+			expectedAZs: nil,
+			expectError: true,
 		},
 		{
-			"Fail, no AZ match machine type",
-			func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			name: "Fail, no AZ match machine type",
+			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return &ec2.DescribeInstanceTypeOfferingsOutput{
 					InstanceTypeOfferings: []*ec2.InstanceTypeOffering{
 						{
@@ -79,14 +80,14 @@ func TestGetFilterAZByMachineType(t *testing.T) {
 					},
 				}, nil
 			},
-			"t2.micro",
-			[]string{"us-east-1b", "us-east-1c"},
-			nil,
-			true,
+			machineType: "t2.micro",
+			inputAZs:    []string{"us-east-1b", "us-east-1c"},
+			expectedAZs: nil,
+			expectError: true,
 		},
 		{
-			"OK, found at least one AZ matching machine type",
-			func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			name: "OK, found at least one AZ matching machine type",
+			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return &ec2.DescribeInstanceTypeOfferingsOutput{
 					InstanceTypeOfferings: []*ec2.InstanceTypeOffering{
 						{
@@ -95,10 +96,10 @@ func TestGetFilterAZByMachineType(t *testing.T) {
 					},
 				}, nil
 			},
-			"t2.micro",
-			[]string{"us-east-1a", "us-east-1b"},
-			[]string{"us-east-1a", "us-east-1b"},
-			false,
+			machineType: "t2.micro",
+			inputAZs:    []string{"us-east-1a", "us-east-1b"},
+			expectedAZs: []string{"us-east-1a", "us-east-1b"},
+			expectError: false,
 		},
 	}
 
@@ -125,7 +126,7 @@ func TestGetFilterAZByMachineType(t *testing.T) {
 	}
 }
 
-func TestFilterSubnetsByAZ(t *testing.T) {
+func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 	testcases := []struct {
 		name       string
 		inSubnets  []*ec2.Subnet
@@ -133,18 +134,18 @@ func TestFilterSubnetsByAZ(t *testing.T) {
 		outSubnets []*ec2.Subnet
 	}{
 		{
-			"No subnet matching",
-			[]*ec2.Subnet{
+			name: "No subnet matching",
+			inSubnets: []*ec2.Subnet{
 				{
 					AvailabilityZone: aws.String("us-east-1-c"),
 				},
 			},
-			[]string{"us-east-1a"},
-			nil,
+			azs:        []string{"us-east-1a"},
+			outSubnets: nil,
 		},
 		{
-			"Found subnet matching",
-			[]*ec2.Subnet{
+			name: "Found subnet matching",
+			inSubnets: []*ec2.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -154,8 +155,8 @@ func TestFilterSubnetsByAZ(t *testing.T) {
 					AvailabilityZone: aws.String("us-east-1b"),
 				},
 			},
-			[]string{"us-east-1c"},
-			[]*ec2.Subnet{
+			azs: []string{"us-east-1c"},
+			outSubnets: []*ec2.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -163,8 +164,8 @@ func TestFilterSubnetsByAZ(t *testing.T) {
 			},
 		},
 		{
-			"Found multiple subnets matching",
-			[]*ec2.Subnet{
+			name: "Found multiple subnets matching",
+			inSubnets: []*ec2.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -174,8 +175,8 @@ func TestFilterSubnetsByAZ(t *testing.T) {
 					AvailabilityZone: aws.String("us-east-1c"),
 				},
 			},
-			[]string{"us-east-1c"},
-			[]*ec2.Subnet{
+			azs: []string{"us-east-1c"},
+			outSubnets: []*ec2.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -199,7 +200,7 @@ func TestFilterSubnetsByAZ(t *testing.T) {
 	}
 }
 
-func TestStepNetworkWithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
+func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 	mockConn := &mockEC2ClientStepNetworkTests{
 		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
 			ok := false
@@ -354,7 +355,7 @@ func TestStepNetworkWithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 	t.Logf("set AZ is %q", az)
 }
 
-func TestGetDefaultVPCFailDueToPermissions(t *testing.T) {
+func TestStepNetwork_GetDefaultVPCFailDueToPermissions(t *testing.T) {
 	mockConn := &mockEC2ClientStepNetworkTests{
 		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
 			return nil, fmt.Errorf("Insufficient permissions: missing ec2:DescribeVpcs")
@@ -381,29 +382,189 @@ func TestGetDefaultVPCFailDueToPermissions(t *testing.T) {
 	if !ok || vpcid != "" {
 		t.Errorf("error: vpc should be empty, but is %q", vpcid)
 	}
-	t.Logf("set vpc is %q", vpcid)
 
 	subnetid, ok := state.GetOk("subnet_id")
 	if !ok || subnetid != "" {
 		t.Errorf("error: subnet should be empty, but is %q", subnetid)
 	}
-	t.Logf("set subnet is %q", subnetid)
 
 	az, ok := state.GetOk("availability_zone")
 	if !ok || az != "" {
 		t.Errorf("error: availability_zone should be empty, but is %q", az)
 	}
-	t.Logf("set AZ is %q", az)
 
-	ok = false
+	var foundMsg bool
+
 	for _, msg := range ui.SayMessages {
 		if msg.Message == "associate_public_ip_address is set without a subnet_id." {
 			t.Log("found warning on associate_public_ip_address")
-			ok = true
+			foundMsg = true
 		}
 	}
 
-	if !ok {
+	if !foundMsg {
 		t.Errorf("failed to find a message that states that associate_public_ip_address will be ignored.")
 	}
+}
+
+func TestStepNetwork_SetVPCAndSubnetWithoutAssociatePublicIP(t *testing.T) {
+	mockConn := &mockEC2ClientStepNetworkTests{}
+
+	stepConfig := &StepNetworkInfo{
+		AssociatePublicIpAddress: confighelper.TriUnset,
+		RequestedMachineType:     "t3.large",
+		VpcId:                    "default-vpc",
+		SubnetId:                 "subnet1",
+		AvailabilityZone:         "us-east-1a",
+	}
+
+	ui := &packersdk.MockUi{}
+
+	state := &multistep.BasicStateBag{}
+	state.Put("ec2", mockConn)
+	state.Put("ui", ui)
+
+	actRet := stepConfig.Run(context.Background(), state)
+	if actRet == multistep.ActionHalt {
+		t.Fatalf("running the step failed: %s", state.Get("error").(error))
+	}
+
+	vpcid, ok := state.GetOk("vpc_id")
+	if !ok || vpcid != "default-vpc" {
+		t.Errorf("error: vpc should be 'default-vpc', but is %q", vpcid)
+	}
+
+	subnetid, ok := state.GetOk("subnet_id")
+	if !ok || subnetid != "subnet1" {
+		t.Errorf("error: subnet should be 'subnet_id', but is %q", subnetid)
+	}
+
+	az, ok := state.GetOk("availability_zone")
+	if !ok || az != "us-east-1a" {
+		t.Errorf("error: availability_zone should be 'us-east-1a', but is %q", az)
+	}
+
+	var foundDefaultVPCMsg bool
+	for _, msg := range ui.SayMessages {
+		if strings.Contains(msg.Message, "Setting public IP address to") {
+			foundDefaultVPCMsg = true
+		}
+	}
+
+	if foundDefaultVPCMsg {
+		t.Errorf("Should not have found a message that stated that we need to process public IP address setting")
+	}
+}
+
+func TestStepNetwork_SetPublicIPAddressWithoutSubnetAndMissingDescribeInstanceTypeOfferings(t *testing.T) {
+	mockConn := &mockEC2ClientStepNetworkTests{
+		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+			ok := false
+			for _, filter := range dvi.Filters {
+				if *filter.Name == "is-default" {
+					ok = true
+					break
+				}
+			}
+
+			if !ok {
+				return nil, fmt.Errorf("expected to filter on default VPC = true, did not find that filter")
+			}
+
+			return &ec2.DescribeVpcsOutput{
+				Vpcs: []*ec2.Vpc{
+					{
+						VpcId: aws.String("default-vpc"),
+					},
+				},
+			}, nil
+		},
+		describeSubnets: func(dsi *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+			if dsi.SubnetIds != nil {
+				sub := dsi.SubnetIds[0]
+				if *sub != "subnet1" {
+					return nil, fmt.Errorf("expected selected subnet to be us-east-1a, but was %q", *sub)
+				}
+
+				return &ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{
+						{
+							SubnetId:         aws.String("subnet1"),
+							AvailabilityZone: aws.String("us-east-1a"),
+							VpcId:            aws.String("default-vpc"),
+						},
+					},
+				}, nil
+			}
+
+			vpcFilterFound := false
+			for _, filter := range dsi.Filters {
+				if *filter.Name != "vpc-id" {
+					continue
+				}
+				filterVal := *filter.Values[0]
+				if filterVal != "default-vpc" {
+					return nil, fmt.Errorf("expected vpc-id filter to be %q, got %q", "default-vpc", filterVal)
+				}
+
+				vpcFilterFound = true
+			}
+
+			if !vpcFilterFound {
+				return nil, fmt.Errorf("expected to find vpc-id filter, but did not find it")
+			}
+
+			return &ec2.DescribeSubnetsOutput{
+				Subnets: []*ec2.Subnet{
+					{
+						AvailabilityZone:        aws.String("us-east-1a"),
+						SubnetId:                aws.String("subnet1"),
+						AvailableIpAddressCount: aws.Int64(256),
+					},
+					{
+						AvailabilityZone:        aws.String("us-east-1b"),
+						SubnetId:                aws.String("subnet2"),
+						AvailableIpAddressCount: aws.Int64(512),
+					},
+				},
+			}, nil
+		},
+		describeInstanceTypeOfferings: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			return nil, fmt.Errorf("Missing permission: ec2:DescribeInstanceTypeOfferings")
+		},
+	}
+
+	stepConfig := &StepNetworkInfo{
+		AssociatePublicIpAddress: confighelper.TriTrue,
+		RequestedMachineType:     "t3.large",
+	}
+
+	ui := &packersdk.MockUi{}
+
+	state := &multistep.BasicStateBag{}
+	state.Put("ec2", mockConn)
+	state.Put("ui", ui)
+
+	actRet := stepConfig.Run(context.Background(), state)
+	if actRet == multistep.ActionHalt {
+		t.Fatalf("running the step failed: %s", state.Get("error").(error))
+	}
+
+	vpcid, ok := state.GetOk("vpc_id")
+	if !ok || vpcid != "default-vpc" {
+		t.Errorf("error: vpc should be 'default-vpc', but is %q", vpcid)
+	}
+	t.Logf("set vpc is %q", vpcid)
+
+	subnetid, ok := state.GetOk("subnet_id")
+	if !ok || subnetid != "subnet2" {
+		t.Errorf("error: subnet should be 'subnet2', but is %q", subnetid)
+	}
+	t.Logf("set subnet is %q", subnetid)
+
+	az, ok := state.GetOk("availability_zone")
+	if !ok || az != "us-east-1b" {
+		t.Errorf("error: availability_zone should be 'us-east-1a', but is %q", az)
+	}
+	t.Logf("set AZ is %q", az)
 }
