@@ -1,0 +1,22 @@
+name: Ensure Docs are Compiled
+on:
+  push:
+jobs:
+  ensure-docs-compiled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v4
+      - shell: bash
+        run: make build-docs
+      - shell: bash
+        run: |
+          if [[ -z "$(git status -s)" ]]; then
+            echo "OK"
+          else
+            echo "Docs have been updated, but the compiled docs have not been committed."
+            echo "Run 'make build-docs', and commit the result to resolve this error."
+            exit 1
+          fi
+

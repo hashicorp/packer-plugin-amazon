@@ -45,7 +45,7 @@ references for [AMI](#ami-configuration),
 configuration references, which are
 necessary for this build to succeed and can be found further down the page.
 
-#### Optional:
+### Optional:
 
 @include 'builder/ebs/Config-not-required.mdx'
 
@@ -101,8 +101,7 @@ necessary for this build to succeed and can be found further down the page.
 
 Usage Example
 
-<Tabs>
-<Tab heading="HCL2">
+##### HCL2
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -119,8 +118,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+##### JSON
 
 ```json
 {
@@ -148,8 +146,6 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 @include 'builders/aws-session-manager.mdx'
 
@@ -187,8 +183,7 @@ Here is a basic example. You will need to provide access keys, and may need to
 change the AMI IDs according to what images exist at the time the template is
 run:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 // To make Packer read these variables from the environment into the var object,
@@ -227,8 +222,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -251,8 +245,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 -> **Note:** Packer can also read the access key and secret access key directly
 from environmental variables instead of being set as user variables. See the
@@ -280,8 +272,7 @@ configuration of `launch_block_device_mappings` will expand the root volume
 `ami_block_device_mappings` AWS will attach additional volumes `/dev/sdb` and
 `/dev/sdc` when we boot a new instance of our AMI.
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -315,8 +306,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -351,8 +341,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 The above build template is functional assuming you have set the environment
 variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
@@ -401,8 +389,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 # When accessing one of these variables from inside the builder, you need to
@@ -429,8 +416,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+## JSON
 
 ```json
 "post-processors": [
@@ -445,8 +431,6 @@ build {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 ## Tag Example
 
@@ -455,8 +439,7 @@ Here is an example using the optional AMI tags. This will add the tags
 provide your access keys, and may need to change the source AMI ID based on
 what images exist when this template is run:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -480,8 +463,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -504,8 +486,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Connecting to Windows instances using WinRM
 
@@ -573,8 +553,7 @@ You'll notice that this config does not define a user or password; instead,
 Packer will ask AWS to provide a random password that it generates
 automatically. The following config will work with the above template:
 
-<Tabs>
-<Tab heading="HCL2">
+## HCL2
 
 ```hcl
 # This example uses a amazon-ami data source rather than a specific AMI.
@@ -615,8 +594,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+## JSON
 
 ```json
 {
@@ -646,16 +624,13 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Windows 2016 Sysprep Commands - For Amazon Windows AMIs Only
 
 For Amazon Windows 2016 AMIs it is necessary to run Sysprep commands which can
 be easily added to the provisioner section.
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 provisioner "powershell" {
@@ -666,8 +641,7 @@ provisioner "powershell" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -679,7 +653,5 @@ provisioner "powershell" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 @include 'builders/aws-ssh-differentiation-table.mdx'

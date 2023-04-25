@@ -1,13 +1,3 @@
----
-description: |
-  The Amazon Parameter Store data source provides information about a parameter in SSM.
-
-page_title: Parameter Store - Data Source
-nav_title: Parameter Store
----
-
-# Amazon Parameter Store Data Source
-
 The Parameter Store data source provides information about a parameter in SSM.
 
 -> **Note:** Data sources is a feature exclusively available to HCL2 templates.
@@ -32,20 +22,40 @@ locals {
 
 ### Required
 
-@include 'datasource/parameterstore/Config-required.mdx'
+<!-- Code generated from the comments of the Config struct in datasource/parameterstore/data.go; DO NOT EDIT MANUALLY -->
+
+- `name` (string) - The name of the parameter you want to query.
+
+<!-- End of code generated from the comments of the Config struct in datasource/parameterstore/data.go; -->
+
 
 ### Optional
 
-@include 'datasource/parameterstore/Config-not-required.mdx'
+<!-- Code generated from the comments of the Config struct in datasource/parameterstore/data.go; DO NOT EDIT MANUALLY -->
+
+- `with_decryption` (bool) - Return decrypted values for secure string parameters.
+  This flag is ignored for String and StringList parameter types.
+
+<!-- End of code generated from the comments of the Config struct in datasource/parameterstore/data.go; -->
+
 
 ## Output Data
 
-@include 'datasource/parameterstore/DatasourceOutput.mdx'
+<!-- Code generated from the comments of the DatasourceOutput struct in datasource/parameterstore/data.go; DO NOT EDIT MANUALLY -->
+
+- `value` (string) - The parameter value.
+
+- `version` (string) - The parameter version.
+
+- `arn` (string) - The Amazon Resource Name (ARN) of the parameter.
+
+<!-- End of code generated from the comments of the DatasourceOutput struct in datasource/parameterstore/data.go; -->
+
 
 ## Authentication
 
 The Amazon Data Sources authentication works just like for the [Amazon Builders](/packer/plugins/builders). Both
-have the same authentication options, and you can refer to the [Amazon Builders authentication](/packer/plugins/builders/index.mdx#authentication)
+have the same authentication options, and you can refer to the [Amazon Builders authentication](/packer/integrations/BrandonRomano/index.mdx#authentication)
 to learn the options to authenticate for data sources.
 
 -> **Note:** A data source will start and execute in your own authentication session. The authentication in the data source

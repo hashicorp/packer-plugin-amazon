@@ -35,7 +35,7 @@ builder](/packer/plugins/builders/amazon/ebs), which is much easier to use.
 The builder does _not_ manage AMIs. Once it creates an AMI and stores it in
 your account, it is up to you to use, delete, etc., the AMI.
 
-### How Does it Work?
+## How Does it Work?
 
 This builder works by creating a new EBS volume from an existing source AMI and
 attaching it into an already-running EC2 instance. Once attached, a
@@ -62,11 +62,11 @@ references for [AMI](#ami-configuration),
 [Access](#access-config-configuration) configuration references, which are
 necessary for this build to succeed and can be found further down the page.
 
-#### Required:
+### Required:
 
 @include 'builder/chroot/Config-required.mdx'
 
-#### Optional:
+### Optional:
 
 @include 'builder/chroot/Config-not-required.mdx'
 
@@ -124,8 +124,7 @@ Block devices can be nested in the
 
 Here is a basic example. It is completely valid except for the access keys:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 // To make Packer read these variables from the environment into the var object,
@@ -161,8 +160,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -174,8 +172,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Chroot Mounts
 
@@ -194,8 +190,7 @@ defaults. However, if you want to change or add the mount points, you may using
 the `chroot_mounts` configuration. Here is an example configuration which only
 mounts `/proc` and `/dev`:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 source "amazon-chroot" "basic-example" {
@@ -207,8 +202,7 @@ source "amazon-chroot" "basic-example" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 ...
@@ -222,8 +216,6 @@ source "amazon-chroot" "basic-example" {
 }]
 ```
 
-</Tab>
-</Tabs>
 
 `chroot_mounts` is a list of a 3-tuples of strings. The three components of the
 3-tuple, in order, are:
@@ -258,8 +250,7 @@ For debian based distributions you can setup a
 file which will prevent packages installed by your provisioners from starting
 services:
 
-<Tabs>
-<Tab heading="HCL2">
+#### HCL2
 
 ```hcl
 // ...
@@ -284,8 +275,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+#### JSON
 
 ```json
 "provisioners": [
@@ -304,8 +294,6 @@ build {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 ### Ansible provisioner
 
@@ -322,8 +310,7 @@ involving the `nvme_device_path` option above. Read that for more information.
 
 A working example for mounting an NVMe device is below:
 
-<Tabs>
-<Tab heading="HCL2">
+#### HCL2
 
 ```hcl
 // export PKR_VAR_aws_access_key=$YOURKEY
@@ -373,8 +360,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+#### JSON
 
 ```json
 {
@@ -410,8 +396,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 Note that in the `nvme_device_path` you must end with the `p`; if you try to
 define the partition in this path (e.g. `nvme_device_path`: `/dev/nvme1n1p1`)
@@ -426,8 +410,7 @@ The device setup commands partition the device with one partition for use as an
 HVM image and format it ext4. This builder block should be followed by
 provisioning commands to install the os and bootloader.
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 // This example assumes that AWS_SECRET_ACCESS_KEY and AWS_ACCESS_KEY_ID are
@@ -470,8 +453,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -495,8 +477,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 ## Build template data
 
@@ -536,8 +516,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -567,8 +546,7 @@ post-processor "manifest" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 "post-processors": [
@@ -585,5 +563,3 @@ post-processor "manifest" {
 ]
 ```
 
-</Tab>
-</Tabs>

@@ -141,8 +141,7 @@ Block devices can be nested in the
 
 Here is a basic example. It is completely valid except for the access keys:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 source "amazon-instance" "basic-example" {
@@ -165,8 +164,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 {
@@ -188,8 +186,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 -> **Note:** Packer can also read the access key and secret access key from
 environmental variables. See the configuration reference in the section above
@@ -238,8 +234,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+### HCL2
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -267,8 +262,7 @@ post-processor "manifest" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+### JSON
 
 ```json
 "post-processors": [
@@ -283,8 +277,6 @@ post-processor "manifest" {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 ## Custom Bundle Commands
 
