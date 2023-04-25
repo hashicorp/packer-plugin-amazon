@@ -33,3 +33,8 @@ testacc: dev
 generate: install-packer-sdc
 	@go generate ./...
 
+build-docs: install-packer-sdc
+	@if [ -d ".docs" ]; then rm -r ".docs"; fi
+	@packer-sdc renderdocs -src "docs" -partials docs-partials/ -dst ".docs/"
+	@./.web-docs/scripts/compile-to-webdocs.sh "." ".docs" ".web-docs" "hashicorp"
+	@rm -r ".docs"

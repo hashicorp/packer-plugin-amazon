@@ -1,13 +1,3 @@
----
-description: |
-  The Packer Amazon Import post-processor takes an OVA artifact from various
-  builders and imports it to an AMI available to Amazon Web Services EC2.
-page_title: Amazon Import - Post-Processors
-nav_title: Amazon Import
----
-
-# Amazon Import Post-Processor
-
 Type: `amazon-import`
 Artifact BuilderId: `packer.post-processor.amazon-import`
 
@@ -47,7 +37,7 @@ each category, the available configuration keys are alphabetized.
 Required:
 
 - `access_key` (string) - The access key used to communicate with AWS. [Learn
-  how to set this.](/packer/plugins/builders/amazon#specifying-amazon-credentials)
+  how to set this.](/packer/integrations/hashicorp/amazon#specifying-amazon-credentials)
 
 - `region` (string) - The name of the region, such as `us-east-1` in which to
   upload the OVA file to S3 and create the AMI. A list of valid regions can
@@ -58,7 +48,7 @@ Required:
   post-processor is run.
 
 - `secret_key` (string) - The secret key used to communicate with AWS. [Learn
-  how to set this.](/packer/plugins/builders/amazon#specifying-amazon-credentials)
+  how to set this.](/packer/integrations/hashicorp/amazon#specifying-amazon-credentials)
 
 Optional:
 
