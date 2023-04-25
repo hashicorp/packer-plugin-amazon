@@ -4,6 +4,7 @@ integration {
   name = "Amazon"
   description = "The Amazon multi-component plugin can be used with HashiCorp Packer to create custom images."
   identifier = "packer/BrandonRomano/amazon"
+  flags = ["hcp-ready"]
   component {
     type = "data-source"
     name = "Parameter Store"
