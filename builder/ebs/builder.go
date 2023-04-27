@@ -83,6 +83,8 @@ type Config struct {
 	//
 	// Fast launch is only relevant for Windows AMIs, and should not be used
 	// for other OSes.
+	// See the [Fast Launch Configuration](#fast-launch-config) section for
+	// information on the attributes supported for this block.
 	FastLaunch FastLaunchConfig `mapstructure:"fast_launch" required:"false"`
 
 	ctx interpolate.Context
