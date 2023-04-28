@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "amazon-ami" "test" {
   filters = {
     name                = "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*"

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 /*
 OpenSSH migrated the ssh-rsa key type, which historically used the ssh-rsa
 signature algorithm based on SHA-1, to the new rsa-sha2-256 and rsa-sha2-512 signature algorithms.
