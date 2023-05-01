@@ -298,6 +298,13 @@ If you are using the `vpc_filter` option, you must also add:
 This permission may also be needed by the `associate_public_ip_address` option, if specified without a subnet.
 In this case the plugin will invoke `DescribeVpcs` to find information about the default VPC.
 
+When using `associate_public_ip_address` without a subnet, you will also benefit from having:
+
+    ec2:DescribeInstanceTypeOfferings
+
+This will ensure that the plugin will pick a subnet/AZ that can host the type of instance
+you're requesting in your template.
+
 ## Troubleshooting
 
 ### Attaching IAM Policies to Roles
