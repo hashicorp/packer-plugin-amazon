@@ -295,6 +295,9 @@ If you are using the `vpc_filter` option, you must also add:
 
     ec2:DescribeVpcs
 
+This permission may also be needed by the `associate_public_ip_address` option, if specified without a subnet.
+In this case the plugin will invoke `DescribeVpcs` to find information about the default VPC.
+
 ## Troubleshooting
 
 ### Attaching IAM Policies to Roles
