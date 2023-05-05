@@ -2,7 +2,7 @@
 # https://github.com/hashicorp/integration-template#metadata-configuration
 integration {
   name = "Amazon"
-  description = "The Amazon multi-component plugin can be used with HashiCorp Packer to create custom images."
+  description = "The Amazon plugin can be used with HashiCorp Packer to create custom images on AWS."
   identifier = "packer/BrandonRomano/amazon"
   flags = ["hcp-ready"]
   component {
