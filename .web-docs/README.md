@@ -54,7 +54,7 @@ packer {
 }
 ```
 
-#### Authentication
+### Authentication
 
 The AWS provider offers a flexible means of providing credentials for
 authentication. The following methods are supported, in this order, and
@@ -65,7 +65,7 @@ explained below:
 - Shared credentials file
 - EC2 Role
 
-##### Static Credentials
+#### Static Credentials
 
 Static credentials can be provided in the form of an access key id and secret.
 These look like:
@@ -142,7 +142,7 @@ JSON config example:
 
 - `transitive_tag_keys` ([]string) - Set of assume role session tag keys to pass to any subsequent sessions.
 
-##### Environment variables
+#### Environment variables
 
 You can provide your credentials via the `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY`, environment variables, representing your AWS Access
@@ -158,7 +158,7 @@ Usage:
     $ export AWS_DEFAULT_REGION="us-west-2"
     $ packer build template.pkr.hcl
 
-##### Shared Credentials file
+#### Shared Credentials file
 
 You can use an AWS credentials file to specify your credentials. The default
 location is `$HOME/.aws/credentials` on Linux and OS X, or
@@ -191,7 +191,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-##### IAM Task or Instance Role
+#### IAM Task or Instance Role
 
 Finally, the plugin will use credentials provided by the task's or instance's IAM
 role, if it has one.
@@ -264,9 +264,9 @@ If you are using the `vpc_filter` option, you must also add:
 
     ec2:DescribeVpcs
 
-#### Troubleshooting
+### Troubleshooting
 
-##### Attaching IAM Policies to Roles
+#### Attaching IAM Policies to Roles
 
 IAM policies can be associated with users or roles. If you use the plugin with IAM
 roles, you may encounter an error like this one:
@@ -342,7 +342,7 @@ using to run the Packer build, your key will also need
 ("kms:CreateGrant", "kms:DescribeKey")
 ```
 
-##### Checking that system time is current
+#### Check System Time
 
 Amazon uses the current time as part of the [request signing process](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html). If
 your system clock is too skewed from the current time, your requests might
@@ -354,7 +354,7 @@ If you suspect your system's date is wrong, you can compare it against
 `http://www.time.gov/`. On Linux/OS X, you can run the `date` command to get the current time. If you're
 on Linux, you can try setting the time with ntp by running `sudo ntpd -q`.
 
-##### ResourceNotReady Error
+#### ResourceNotReady Error
 
 This error generally appears as either `ResourceNotReady: exceeded wait attempts` or `ResourceNotReady: failed waiting for successful resource state`.
 
