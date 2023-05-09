@@ -38,22 +38,6 @@ Further information about the import process can be found in AWS's [EC2
 Import/Export Instance
 documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instances_of_your_vm.html).
 
-### How to use this plugin
-
-From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
-Then, run [`packer init`](/packer/docs/commands/init).
-
-```hcl
-packer {
-  required_plugins {
-    amazon = {
-      version = ">= 1.2.4"
-      source = "github.com/hashicorp/amazon"
-    }
-  }
-}
-```
-
 ## Configuration
 
 There are some configuration options available for the post-processor. They are

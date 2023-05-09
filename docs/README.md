@@ -1,7 +1,7 @@
 The Amazon plugin can be used with HashiCorp Packer to create custom images on AWS. To achieve this, the plugin comes with
 multiple builders, data sources, and a post-processor to build the AMI depending on the strategy you want to use.
 
-### Example Usage
+### Installation
 Packer v1.7.0 and later
 
 ```hcl
@@ -13,28 +13,14 @@ packer {
     }
   }
 }
-
-source "amazon-ebs" "basic-example" {
-  region        =  "us-east-1"
-  source_ami    =  "ami-fce3c696"
-  instance_type =  "t2.micro"
-  ssh_username  =  "ubuntu"
-  ami_name      =  "packer_AWS_example_{{timestamp}}"
-  metadata_options {
-    http_endpoint = "enabled"
-    http_tokens = "required"
-    http_put_response_hop_limit = 1
-  }
-}
 ```
 
 ### Components
 
--> **Don't know which builder to use?** If in doubt, use the [amazon-ebs builder](/packer/plugins/builders/amazon/ebs). 
+**Don't know which builder to use?** If in doubt, use the [amazon-ebs builder](/packer/plugins/builders/amazon/ebs). 
 It is much easier to use and Amazon generally recommends EBS-backed images nowadays.
 
-
-**Builders**
+#### Builders
 - [amazon-ebs](/packer/integrations/hashicorp/amazon/latest/components/builders/ebs) - Create EBS-backed AMIs by
   launching a source AMI and re-packaging it into a new AMI after
   provisioning. If in doubt, use this builder, which is the easiest to get
@@ -53,13 +39,13 @@ It is much easier to use and Amazon generally recommends EBS-backed images nowad
   not require running in AWS. This is an **advanced builder and should not be
   used by newcomers**.
 
-**Data sources**
+#### Data sources
 - [amazon-ami](/packer/integrations/hashicorp/amazon/latest/components/datasources/ami) - Filter and fetch an Amazon AMI to output all the AMI information.
 - [amazon-secretsmanager](/packer/integrations/hashicorp/amazon/latest/components/datasources/secretsmanager) - Retrieve information
   about a Secrets Manager secret version, including its secret value.
 - [amazon-parameterstore](/packer/integrations/hashicorp/amazon/latest/components/datasources/parameterstore) - Retrieve information about a parameter in SSM.
 
-**Post-Processors**
+#### Post-Processors
 - [amazon-import](/packer/integrations/hashicorp/amazon/latest/components/post-processors/import) -  The Amazon Import post-processor takes an OVA artifact 
   from various builders and imports it to an AMI available to Amazon Web Services EC2.
 
@@ -74,7 +60,7 @@ explained below:
 - Shared credentials file
 - EC2 Role
 
-**Static Credentials**
+#### Static Credentials
 
 Static credentials can be provided in the form of an access key id and secret.
 These look like:
@@ -151,7 +137,7 @@ JSON config example:
 
 - `transitive_tag_keys` ([]string) - Set of assume role session tag keys to pass to any subsequent sessions.
 
-**Environment variables**
+#### Environment variables
 
 You can provide your credentials via the `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY`, environment variables, representing your AWS Access
@@ -167,7 +153,7 @@ Usage:
     $ export AWS_DEFAULT_REGION="us-west-2"
     $ packer build template.pkr.hcl
 
-**Shared Credentials file**
+#### Shared Credentials file
 
 You can use an AWS credentials file to specify your credentials. The default
 location is `$HOME/.aws/credentials` on Linux and OS X, or
@@ -200,7 +186,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-**IAM Task or Instance Role**
+#### IAM Task or Instance Role
 
 Finally, the plugin will use credentials provided by the task's or instance's IAM
 role, if it has one.
@@ -275,7 +261,7 @@ If you are using the `vpc_filter` option, you must also add:
 
 ### Troubleshooting
 
-**Attaching IAM Policies to Roles**
+#### Attaching IAM Policies to Roles
 
 IAM policies can be associated with users or roles. If you use the plugin with IAM
 roles, you may encounter an error like this one:
@@ -351,7 +337,7 @@ using to run the Packer build, your key will also need
 ("kms:CreateGrant", "kms:DescribeKey")
 ```
 
-**Check System Time**
+#### Check System Time
 
 Amazon uses the current time as part of the [request signing process](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html). If
 your system clock is too skewed from the current time, your requests might
@@ -363,7 +349,7 @@ If you suspect your system's date is wrong, you can compare it against
 `http://www.time.gov/`. On Linux/OS X, you can run the `date` command to get the current time. If you're
 on Linux, you can try setting the time with ntp by running `sudo ntpd -q`.
 
-**ResourceNotReady Error**
+#### ResourceNotReady Error
 
 This error generally appears as either `ResourceNotReady: exceeded wait attempts` or `ResourceNotReady: failed waiting for successful resource state`.
 
