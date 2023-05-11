@@ -1,0 +1,75 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+name: "AWS Acceptance Tests"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "A branch or SHA"
+        default: 'main'
+        required: false
+      run_pattern:
+        description: "The pattern to run tests on"
+        default: "TestAcc"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  get-go-version:
+    runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.get-go-version.outputs.go-version }}
+    steps:
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - name: 'Determine Go version'
+        id: get-go-version
+        run: |
+          echo "Found Go $(cat .go-version)"
+          echo "go-version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
+
+  ebs-acc-tests:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    name: AWS EBS Acceptance tests
+    steps:
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - name: "Compile/install the plugin on the current branch"
+        run: |
+          make dev
+      - name: "Install AWS cli and SSM plugin"
+        run: |
+          cd /tmp
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+          dpkg -i session-manager-plugin.deb
+          rm -f session-manager-plugin.deb awscliv2.zip
+      - uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2
+        with:
+          aws-access-key-id: "${{ env.AWS_ACC_TEST_KEY_ID }}"
+          aws-secret-access-key: "${{ env.AWS_ACC_TEST_KEY_SECRET }}"
+          aws-region: "${{ env.AWS_ACC_TEST_REGION }}"
+          role-to-assume: "${{ env.AWS_ACC_TEST_ROLE }}"
+          role-session-name: "packer-aws-acceptance-tests"
+          role-duration-seconds: 14400 # 4h
+      - run: |
+          echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
+          PACKER_ACC=1 go test \
+            -timeout 3h \
+            -count 1 \
+            -run "${{ github.event.inputs.run_pattern }}" \
+            ./builder/ebs
