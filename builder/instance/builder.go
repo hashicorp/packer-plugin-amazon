@@ -91,18 +91,10 @@ type Config struct {
 	// okay to create this directory as part of the provisioning process.
 	// Defaults to /tmp.
 	X509UploadPath string `mapstructure:"x509_upload_path" required:"false"`
-<<<<<<< HEAD
-=======
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
 	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
 	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
 	// more information. Only enabled if a valid option is provided, otherwise ignored.
 	TpmSupport string `mapstructure:"tpm_support" required:"false"`
->>>>>>> 5bc11e8a (Added TPM as configuration option)
 
 	ctx interpolate.Context
 }
@@ -249,7 +241,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support values are %q or the empty string`, ec2.TpmSupportValuesV20))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {

@@ -19,9 +19,8 @@ import (
 // available device location.
 //
 // Produces:
-//
-//	device string - The location where the volume was attached.
-//	attach_cleanup CleanupFunc
+//   device string - The location where the volume was attached.
+//   attach_cleanup CleanupFunc
 type StepAttachVolume struct {
 	PollingConfig *awscommon.AWSPollingConfig
 	attached      bool

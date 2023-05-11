@@ -17,8 +17,7 @@ import (
 // StepFlock provisions the instance within a chroot.
 //
 // Produces:
-//
-//	flock_cleanup Cleanup - To perform early cleanup
+//   flock_cleanup Cleanup - To perform early cleanup
 type StepFlock struct {
 	fh *os.File
 }

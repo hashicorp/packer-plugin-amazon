@@ -22,8 +22,7 @@ import (
 // device of the AMI.
 //
 // Produces:
-//
-//	volume_id string - The ID of the created volume
+//   volume_id string - The ID of the created volume
 type StepCreateVolume struct {
 	PollingConfig         *awscommon.AWSPollingConfig
 	volumeId              string

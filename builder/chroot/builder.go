@@ -381,7 +381,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support values are %q or the empty string`, ec2.TpmSupportValuesV20))
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
