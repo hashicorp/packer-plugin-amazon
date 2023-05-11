@@ -17,8 +17,7 @@ import (
 // StepSnapshot creates a snapshot of the created volume.
 //
 // Produces:
-//
-//	snapshot_id string - ID of the created snapshot
+//   snapshot_id string - ID of the created snapshot
 type StepSnapshot struct {
 	PollingConfig *awscommon.AWSPollingConfig
 	snapshotId    string

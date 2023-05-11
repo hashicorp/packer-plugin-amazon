@@ -27,9 +27,8 @@ type mountPathData struct {
 // StepMountDevice mounts the attached device.
 //
 // Produces:
-//
-//	mount_path string - The location where the volume was mounted.
-//	mount_device_cleanup CleanupFunc - To perform early cleanup
+//   mount_path string - The location where the volume was mounted.
+//   mount_device_cleanup CleanupFunc - To perform early cleanup
 type StepMountDevice struct {
 	MountOptions   []string
 	MountPartition string

@@ -38,4 +38,8 @@
 - `uefi_data` (string) - Base64 representation of the non-volatile UEFI variable store. For more information
   see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 
+- `tpm_support` (string) - NitroTPM Support. Valid options are `v2.0`. See the documentation on
+  [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+  more information. Only enabled if a valid option is provided, otherwise ignored.
+
 <!-- End of code generated from the comments of the Config struct in builder/ebssurrogate/builder.go; -->

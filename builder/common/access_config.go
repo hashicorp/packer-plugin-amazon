@@ -35,30 +35,26 @@ import (
 // HCL config example:
 //
 // ```HCL
-//
-//	source "amazon-ebs" "example" {
-//		assume_role {
-//			role_arn     = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
-//			session_name = "SESSION_NAME"
-//			external_id  = "EXTERNAL_ID"
-//		}
-//	}
-//
+// source "amazon-ebs" "example" {
+// 	assume_role {
+// 		role_arn     = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
+// 		session_name = "SESSION_NAME"
+// 		external_id  = "EXTERNAL_ID"
+// 	}
+// }
 // ```
 //
 // JSON config example:
 //
 // ```json
-//
-//	builder{
-//		"type": "amazon-ebs",
-//		"assume_role": {
-//			"role_arn"    :  "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME",
-//			"session_name":  "SESSION_NAME",
-//			"external_id" :  "EXTERNAL_ID"
-//		}
-//	}
-//
+// builder{
+// 	"type": "amazon-ebs",
+// 	"assume_role": {
+// 		"role_arn"    :  "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME",
+// 		"session_name":  "SESSION_NAME",
+// 		"external_id" :  "EXTERNAL_ID"
+// 	}
+// }
 // ```
 type AssumeRoleConfig struct {
 	// Amazon Resource Name (ARN) of the IAM Role to assume.
