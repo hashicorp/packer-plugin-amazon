@@ -49,15 +49,6 @@ jobs:
       - name: "Compile/install the plugin on the current branch"
         run: |
           make dev
-      - name: "Install AWS cli and SSM plugin"
-        run: |
-          cd /tmp
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          ./aws/install --update
-          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
-          dpkg -i session-manager-plugin.deb
-          rm -f session-manager-plugin.deb awscliv2.zip
       - uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2
         with:
           aws-access-key-id: "${{ env.AWS_ACC_TEST_KEY_ID }}"
