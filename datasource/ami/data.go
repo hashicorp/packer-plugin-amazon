@@ -27,6 +27,8 @@ type Config struct {
 	common.PackerConfig        `mapstructure:",squash"`
 	awscommon.AccessConfig     `mapstructure:",squash"`
 	awscommon.AmiFilterOptions `mapstructure:",squash"`
+	// If ami not found, return nil.
+	IgnoreFailures bool `mapstructure:"ignore_failure"`
 }
 
 func (d *Datasource) ConfigSpec() hcldec.ObjectSpec {
@@ -82,6 +84,9 @@ func (d *Datasource) Execute() (cty.Value, error) {
 
 	image, err := d.config.AmiFilterOptions.GetFilteredImage(&ec2.DescribeImagesInput{}, ec2.New(session))
 	if err != nil {
+		if d.config.IgnoreFailures {
+			return cty.NullVal(cty.EmptyObject), nil
+		}
 		return cty.NullVal(cty.EmptyObject), err
 	}
 
