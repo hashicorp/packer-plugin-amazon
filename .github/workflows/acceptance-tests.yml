@@ -4,6 +4,8 @@
 name: "AWS Acceptance Tests"
 
 on:
+  schedule:
+    - cron: '0 4 * * SUN'
   workflow_dispatch:
     inputs:
       branch:
