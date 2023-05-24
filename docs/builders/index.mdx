@@ -313,6 +313,12 @@ If you are using SSM to connect to the instance, and are specifying a private ke
 
     ec2-instance-connect:SendSSHPublicKey
 
+If you are building a Windows AMI, and want to enable fast-launch, you will also need:
+
+    ec2:EnableFastLaunch
+    ec2:DescribeLaunchTemplates
+    ec2:DescribeFastLaunchImages
+
 ## Troubleshooting
 
 ### Attaching IAM Policies to Roles
