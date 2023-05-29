@@ -58,11 +58,11 @@ jobs:
           aws-region: "${{ secrets.AWS_ACC_TEST_REGION }}"
           role-to-assume: "${{ secrets.AWS_ACC_TEST_ROLE }}"
           role-session-name: "packer-aws-acceptance-tests"
-          role-duration-seconds: 14400 # 4h
+          role-duration-seconds: 21600 # 6h
       - run: |
           echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
           PACKER_ACC=1 go test \
-            -timeout 3h \
+            -timeout 5h \
             -count 1 \
             -run "${{ github.event.inputs.run_pattern }}" \
             ./builder/ebs
