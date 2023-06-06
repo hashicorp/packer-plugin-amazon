@@ -1082,7 +1082,7 @@ See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configu
 
 Usage Example
 
-##### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -1099,7 +1099,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-##### JSON
+**JSON**
 
 ```json
 {
@@ -1543,7 +1543,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 ## Basic Example
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebssurrogate" "basic-example" {
@@ -1579,7 +1579,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1668,7 +1668,7 @@ build {
 
   Usage example:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -1696,7 +1696,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 "post-processors": [

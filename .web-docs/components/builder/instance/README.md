@@ -1453,7 +1453,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 Here is a basic example. It is completely valid except for the access keys:
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-instance" "basic-example" {
@@ -1476,7 +1476,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1546,7 +1546,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -1574,7 +1574,7 @@ post-processor "manifest" {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 "post-processors": [

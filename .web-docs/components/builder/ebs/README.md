@@ -1086,7 +1086,7 @@ See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configu
 
 Usage Example
 
-##### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -1103,7 +1103,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-##### JSON
+**JSON**
 
 ```json
 {
@@ -1539,7 +1539,7 @@ Here is a basic example. You will need to provide access keys, and may need to
 change the AMI IDs according to what images exist at the time the template is
 run:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // To make Packer read these variables from the environment into the var object,
@@ -1578,7 +1578,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1628,7 +1628,7 @@ configuration of `launch_block_device_mappings` will expand the root volume
 `ami_block_device_mappings` AWS will attach additional volumes `/dev/sdb` and
 `/dev/sdc` when we boot a new instance of our AMI.
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -1662,7 +1662,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1745,7 +1745,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-### HCL2
+**HCL2**
 
 ```hcl
 # When accessing one of these variables from inside the builder, you need to
@@ -1772,7 +1772,7 @@ build {
 }
 ```
 
-## JSON
+**JSON**
 
 ```json
 "post-processors": [
@@ -1795,7 +1795,7 @@ Here is an example using the optional AMI tags. This will add the tags
 provide your access keys, and may need to change the source AMI ID based on
 what images exist when this template is run:
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -1819,7 +1819,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1909,7 +1909,7 @@ You'll notice that this config does not define a user or password; instead,
 Packer will ask AWS to provide a random password that it generates
 automatically. The following config will work with the above template:
 
-## HCL2
+**HCL2**
 
 ```hcl
 # This example uses a amazon-ami data source rather than a specific AMI.
@@ -1950,7 +1950,7 @@ build {
 }
 ```
 
-## JSON
+**JSON**
 
 ```json
 {
@@ -1986,7 +1986,7 @@ build {
 For Amazon Windows 2016 AMIs it is necessary to run Sysprep commands which can
 be easily added to the provisioner section.
 
-### HCL2
+**HCL2**
 
 ```hcl
 provisioner "powershell" {
@@ -1997,7 +1997,7 @@ provisioner "powershell" {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {

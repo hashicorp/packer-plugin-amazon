@@ -740,7 +740,7 @@ JSON example:
 
 Here is a basic example. It is completely valid except for the access keys:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // To make Packer read these variables from the environment into the var object,
@@ -776,7 +776,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -806,7 +806,7 @@ defaults. However, if you want to change or add the mount points, you may using
 the `chroot_mounts` configuration. Here is an example configuration which only
 mounts `/proc` and `/dev`:
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-chroot" "basic-example" {
@@ -818,7 +818,7 @@ source "amazon-chroot" "basic-example" {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 ...
@@ -866,7 +866,7 @@ For debian based distributions you can setup a
 file which will prevent packages installed by your provisioners from starting
 services:
 
-#### HCL2
+**HCL2**
 
 ```hcl
 // ...
@@ -891,7 +891,7 @@ build {
 }
 ```
 
-#### JSON
+**JSON**
 
 ```json
 "provisioners": [
@@ -926,7 +926,7 @@ involving the `nvme_device_path` option above. Read that for more information.
 
 A working example for mounting an NVMe device is below:
 
-#### HCL2
+**HCL2**
 
 ```hcl
 // export PKR_VAR_aws_access_key=$YOURKEY
@@ -976,7 +976,7 @@ build {
 }
 ```
 
-#### JSON
+**JSON**
 
 ```json
 {
@@ -1026,7 +1026,7 @@ The device setup commands partition the device with one partition for use as an
 HVM image and format it ext4. This builder block should be followed by
 provisioning commands to install the os and bootloader.
 
-### HCL2
+**HCL2**
 
 ```hcl
 // This example assumes that AWS_SECRET_ACCESS_KEY and AWS_ACCESS_KEY_ID are
@@ -1069,7 +1069,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1132,7 +1132,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -1162,7 +1162,7 @@ post-processor "manifest" {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 "post-processors": [

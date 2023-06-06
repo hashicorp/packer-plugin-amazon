@@ -1041,7 +1041,7 @@ See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configu
 
 Usage Example
 
-##### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -1058,7 +1058,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-##### JSON
+**JSON**
 
 ```json
 {
@@ -1389,7 +1389,7 @@ The absence of this permission won't prevent you from building the AMI, and the 
 
 ## Basic Example
 
-### HCL2
+**HCL2**
 
 ```hcl
 source "amazon-ebsvolume" "basic-example" {
@@ -1437,7 +1437,7 @@ build {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 {
@@ -1555,7 +1555,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-### HCL2
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -1583,7 +1583,7 @@ post-processor "manifest" {
 }
 ```
 
-### JSON
+**JSON**
 
 ```json
 "post-processors": [
