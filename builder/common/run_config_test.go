@@ -392,3 +392,72 @@ func TestRunConfigPrepare_EnableNitroEnclaveGood(t *testing.T) {
 		t.Fatalf("Should not error with valid Nitro Enclave config")
 	}
 }
+
+func TestRunConfigPrepare_FailIfBothHostIDAndGroupSpecified(t *testing.T) {
+	c := testConfig()
+	c.Placement.HostId = "host"
+	c.Placement.HostResourceGroupArn = "group"
+	err := c.Prepare(nil)
+	if len(err) != 1 {
+		t.Fatalf("Should error if both host_id and host_resource_group_arn are set")
+	}
+}
+
+func TestRunConfigPrepare_InvalidTenantForHost(t *testing.T) {
+	tests := []struct {
+		name         string
+		setHost      string
+		setGroup     string
+		setTenant    string
+		expectErrors int
+	}{
+		{
+			"no host_id, no host_resource_group_arn, with valid tenant",
+			"",
+			"",
+			"",
+			0,
+		},
+		{
+			"host_id set, tenant host",
+			"host",
+			"",
+			"host",
+			0,
+		},
+		{
+			"no host_id, host_resource_group_arn set, with tenant host",
+			"",
+			"group",
+			"host",
+			0,
+		},
+		{
+			"host_id set, invalid tenant",
+			"host",
+			"",
+			"dedicated",
+			1,
+		},
+		{
+			"no host_id, host_resource_group_arn set, invalid tenant",
+			"",
+			"group",
+			"dedicated",
+			1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testConfig()
+			c.Placement.HostId = tt.setHost
+			c.Placement.HostResourceGroupArn = tt.setGroup
+			c.Placement.Tenancy = tt.setTenant
+			errs := c.Prepare(nil)
+			if len(errs) != tt.expectErrors {
+				t.Errorf("expected %d errors, got %d", tt.expectErrors, len(errs))
+			}
+		})
+	}
+}
