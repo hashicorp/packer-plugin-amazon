@@ -116,6 +116,7 @@ func (*FlatMetadataOptions) HCL2Spec() map[string]hcldec.Spec {
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatPlacement struct {
 	HostResourceGroupArn *string `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
+	HostId               *string `mapstructure:"host_id" required:"false" cty:"host_id" hcl:"host_id"`
 	Tenancy              *string `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 }
 
@@ -132,6 +133,7 @@ func (*Placement) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spe
 func (*FlatPlacement) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"host_resource_group_arn": &hcldec.AttrSpec{Name: "host_resource_group_arn", Type: cty.String, Required: false},
+		"host_id":                 &hcldec.AttrSpec{Name: "host_id", Type: cty.String, Required: false},
 		"tenancy":                 &hcldec.AttrSpec{Name: "tenancy", Type: cty.String, Required: false},
 	}
 	return s

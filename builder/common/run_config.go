@@ -67,12 +67,32 @@ type LicenseSpecification struct {
 type Placement struct {
 	// The ARN of the host resource group in which to launch the instances.
 	HostResourceGroupArn string `mapstructure:"host_resource_group_arn" required:"false"`
+	// The ID of the host used when Packer launches an EC2 instance.
+	HostId string `mapstructure:"host_id" required:"false"`
 	// [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
 	// when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
 	//
 	// The default is "default", meaning shared tenancy. Allowed values are "default",
 	// "dedicated" and "host".
 	Tenancy string `mapstructure:"tenancy" required:"false"`
+}
+
+func (p Placement) Prepare() []error {
+	var errs []error
+
+	if p.HostId != "" && p.HostResourceGroupArn != "" {
+		errs = append(errs, fmt.Errorf("The `host_id` and `host_resource_group_arn` settings cannot be specified at the same time."))
+	}
+
+	if p.HostId != "" || p.HostResourceGroupArn != "" {
+		switch p.Tenancy {
+		case "", "host":
+		default:
+			errs = append(errs, fmt.Errorf("The tenancy should be `host` if either the `host_id` or `host_resource_group_arn` attributes are specified."))
+		}
+	}
+
+	return errs
 }
 
 // Configures the metadata options.
@@ -894,6 +914,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		tenancy != "host" {
 		errs = append(errs, fmt.Errorf("Error: Unknown tenancy type %s", tenancy))
 	}
+
+	errs = append(errs, c.Placement.Prepare()...)
 
 	if c.EnableNitroEnclave {
 		if c.SpotPrice != "" {
