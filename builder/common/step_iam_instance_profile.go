@@ -18,6 +18,7 @@ import (
 )
 
 type StepIamInstanceProfile struct {
+	PollingConfig                             *AWSPollingConfig
 	IamInstanceProfile                        string
 	SkipProfileValidation                     bool
 	TemporaryIamInstanceProfilePolicyDocument *PolicyDocument
@@ -116,9 +117,13 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		s.createdRoleName = aws.StringValue(roleResp.Role.RoleName)
 
 		log.Printf("[DEBUG] Waiting for temporary role: %s", s.createdInstanceProfileName)
-		err = iamsvc.WaitUntilRoleExists(&iam.GetRoleInput{
-			RoleName: aws.String(s.createdRoleName),
-		})
+		err = iamsvc.WaitUntilRoleExistsWithContext(
+			aws.BackgroundContext(),
+			&iam.GetRoleInput{
+				RoleName: aws.String(s.createdRoleName),
+			},
+			s.PollingConfig.getWaiterOptions()...,
+		)
 		if err == nil {
 			log.Printf("[DEBUG] Found temporary role %s", s.createdRoleName)
 		} else {
