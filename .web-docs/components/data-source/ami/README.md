@@ -38,6 +38,10 @@ This selects the most recent Ubuntu 16.04 HVM EBS AMI from Canonical. Note that 
 - `most_recent` (bool) - Selects the newest created image when true.
   This is most useful for selecting a daily distro build.
 
+- `include_deprecated` (bool) - Include deprecated AMIs in the filtered response. Defaults to false.
+  If you are the AMI owner, deprecated AMIs appear in the response
+  regardless of what is specified for `include_deprecated`.
+
 <!-- End of code generated from the comments of the AmiFilterOptions struct in builder/common/ami_filter.go; -->
 
 
