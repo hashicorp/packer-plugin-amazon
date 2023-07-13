@@ -27,6 +27,7 @@ type StepSourceAMIInfo struct {
 	EnableAMIENASupport      confighelper.Trilean
 	AMIVirtType              string
 	AmiFilters               AmiFilterOptions
+	IncludeDeprecated        bool
 }
 
 type imageSort []*ec2.Image
@@ -50,7 +51,9 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 	ui := state.Get("ui").(packersdk.Ui)
 
-	params := &ec2.DescribeImagesInput{}
+	params := &ec2.DescribeImagesInput{
+		IncludeDeprecated: &s.IncludeDeprecated,
+	}
 
 	if s.SourceAmi != "" {
 		params.ImageIds = []*string{&s.SourceAmi}
