@@ -8,8 +8,8 @@ Packer v1.7.0 and later
 packer {
   required_plugins {
     amazon = {
-      version = ">= 1.2.4"
-      source = "github.com/hashicorp/amazon"
+      source  = "github.com/hashicorp/amazon"
+      version = "~> 1"
     }
   }
 }
