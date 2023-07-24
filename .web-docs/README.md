@@ -2,7 +2,9 @@ The Amazon plugin can be used with HashiCorp Packer to create custom images on A
 multiple builders, data sources, and a post-processor to build the AMI depending on the strategy you want to use.
 
 ### Installation
-Packer v1.7.0 and later
+
+To install this plugin, copy and paste this code into your Packer configuration .
+Then, run [`packer init`](https://www.packer.io/docs/commands/init).
 
 ```hcl
 packer {
@@ -13,6 +15,12 @@ packer {
     }
   }
 }
+```
+
+Alternatively, you can use `packer plugins install` to manage installation of this plugin.
+
+```sh
+$ packer plugins install github.com/hashicorp/amazon
 ```
 
 ### Components
