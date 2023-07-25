@@ -46,6 +46,9 @@ It is much easier to use and Amazon generally recommends EBS-backed images nowad
   -backed AMIs from scratch. Works similarly to the `chroot` builder but does
   not require running in AWS. This is an **advanced builder and should not be
   used by newcomers**.
+- [amazon-ebs-volume](/packer/integrations/hashicorp/amazon/latest/components/builders/ebsvolume) - Create prepopulated
+  EBS volumes by launching an instance and provisioning attached volumes.
+  This is an **advanced builder and should not be used by newcomers**.
 
 #### Data sources
 - [amazon-ami](/packer/integrations/hashicorp/amazon/latest/components/datasources/ami) - Filter and fetch an Amazon AMI to output all the AMI information.
