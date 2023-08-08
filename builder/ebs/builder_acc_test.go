@@ -1798,21 +1798,21 @@ source "amazon-ebs" "windows-fastboot" {
 	winrm_password       = "e4sypa55!"
 	user_data_file       = "test-fixtures/ps_enable.ps"
 
-	source_ami_filter {
-		filters = {
+  source_ami_filter {
+    filters = {
       virtualization-type = "hvm"
-      name								= "*Windows_Server-2019-English-Full-Base*"
+      name                = "*Windows_Server-2019-English-Full-Base*"
       root-device-type    = "ebs"
     }
     most_recent = true
-    owners			= ["amazon"]
-	}
+    owners      = ["amazon"]
+  }
 
-	fast_launch {
-		enable_fast_launch		= true
-		target_resource_count = 1
-		template_id 					= "lt-0c82d8943c032fc0b"
-	}
+  fast_launch {
+    enable_fast_launch    = true
+    target_resource_count = 1
+    template_id           = "lt-0c82d8943c032fc0b"
+  }
 }
 
 build {

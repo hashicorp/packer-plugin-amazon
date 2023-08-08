@@ -1,0 +1,195 @@
+2023/08/08 15:37:45 [INFO] Packer version: 1.8.5 [go1.19.4 darwin arm64]
+2023/08/08 15:37:45 Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 [TRACE] discovering plugins in /opt/homebrew/Cellar/packer/1.8.5/libexec/bin
+2023/08/08 15:37:45 Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 [TRACE] discovering plugins in /Users/mattburgess/.packer.d/plugins
+2023/08/08 15:37:45 [DEBUG] Discovered plugin: amazon = /Users/mattburgess/.packer.d/plugins/packer-plugin-amazon
+2023/08/08 15:37:45 [INFO] found external [chroot ebs ebssurrogate ebsvolume instance] builders from amazon plugin
+2023/08/08 15:37:45 [INFO] found external [import] post-processors from amazon plugin
+2023/08/08 15:37:45 found external [ami parameterstore secretsmanager] datasource from amazon plugin
+2023/08/08 15:37:45 [TRACE] discovering plugins in .
+2023/08/08 15:37:45 [TRACE] discovering plugins in 
+2023/08/08 15:37:45 [TRACE] discovering plugins in /opt/homebrew/bin
+2023/08/08 15:37:45 [INFO] PACKER_CONFIG env var not set; checking the default config file path
+2023/08/08 15:37:45 [INFO] PACKER_CONFIG env var set; attempting to open config file: /Users/mattburgess/.packerconfig
+2023/08/08 15:37:45 [WARN] Config file doesn't exist: /Users/mattburgess/.packerconfig
+2023/08/08 15:37:45 Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 [INFO] Setting cache directory: /Users/mattburgess/.cache/packer
+2023/08/08 15:37:45 Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 [TRACE] Starting external plugin /Users/mattburgess/.packer.d/plugins/packer-plugin-amazon start builder ebs
+2023/08/08 15:37:45 Starting plugin: /Users/mattburgess/.packer.d/plugins/packer-plugin-amazon []string{"/Users/mattburgess/.packer.d/plugins/packer-plugin-amazon", "start", "builder", "ebs"}
+2023/08/08 15:37:45 Waiting for RPC address for: /Users/mattburgess/.packer.d/plugins/packer-plugin-amazon
+2023/08/08 15:37:45 Received unix RPC address for /Users/mattburgess/.packer.d/plugins/packer-plugin-amazon: addr is /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/packer-plugin1526860474
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 Plugin address: unix /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/packer-plugin1526860474
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 Waiting for connection...
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 Serving a plugin connection...
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 [TRACE] starting builder ebs
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 [INFO] (aws): No AWS timeout and polling overrides have been set. Packer will default to waiter-specific delays and timeouts. If you would like to customize the length of time between retries and max number of retries you may do so by setting the environment variables AWS_POLL_DELAY_SECONDS and AWS_MAX_ATTEMPTS or the configuration options aws_polling_delay_seconds and aws_polling_max_attempts to your desired values.
+2023/08/08 15:37:45 [TRACE] Starting internal plugin packer-provisioner-powershell
+2023/08/08 15:37:45 Starting plugin: /opt/homebrew/Cellar/packer/1.8.5/libexec/bin/packer []string{"/opt/homebrew/Cellar/packer/1.8.5/libexec/bin/packer", "plugin", "packer-provisioner-powershell"}
+2023/08/08 15:37:45 Waiting for RPC address for: /opt/homebrew/Cellar/packer/1.8.5/libexec/bin/packer
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: [INFO] Packer version: 1.8.5 [go1.19.4 darwin arm64]
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: [INFO] PACKER_CONFIG env var not set; checking the default config file path
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: [INFO] PACKER_CONFIG env var set; attempting to open config file: /Users/mattburgess/.packerconfig
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: [WARN] Config file doesn't exist: /Users/mattburgess/.packerconfig
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: [INFO] Setting cache directory: /Users/mattburgess/.cache/packer
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: args: []string{"packer-provisioner-powershell"}
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Old default config directory found: /Users/mattburgess/.packer.d
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Plugin address: unix /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/packer-plugin1897681195
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Waiting for connection...
+2023/08/08 15:37:45 Received unix RPC address for /opt/homebrew/Cellar/packer/1.8.5/libexec/bin/packer: addr is /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/packer-plugin1897681195
+2023/08/08 15:37:45 packer-provisioner-powershell plugin: Serving a plugin connection...
+2023/08/08 15:37:45 ui: [1;32mamazon-ebs.windows-fastboot: output will be in this color.[0m
+2023/08/08 15:37:45 ui: 
+2023/08/08 15:37:45 Build debug mode: false
+2023/08/08 15:37:45 Force build: false
+2023/08/08 15:37:45 On error: 
+2023/08/08 15:37:45 Waiting on builds to complete...
+2023/08/08 15:37:45 Starting build run: amazon-ebs.windows-fastboot
+2023/08/08 15:37:45 Running builder: 
+2023/08/08 15:37:45 [INFO] (telemetry) Starting builder amazon-ebs.windows-fastboot
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 [INFO] AWS Auth provider used: "SharedCredentialsProvider"
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 Found region eu-west-1
+2023/08/08 15:37:45 packer-plugin-amazon plugin: 2023/08/08 15:37:45 [INFO] AWS Auth provider used: "SharedCredentialsProvider"
+2023/08/08 15:37:46 ui: [1;32m==> amazon-ebs.windows-fastboot: Prevalidating any provided VPC information[0m
+2023/08/08 15:37:46 ui: [1;32m==> amazon-ebs.windows-fastboot: Prevalidating AMI Name: packer-ebs-windows-fastlaunch-with-template-1691505462[0m
+2023/08/08 15:37:46 packer-plugin-amazon plugin: 2023/08/08 15:37:46 Using AMI Filters {
+2023/08/08 15:37:46 packer-plugin-amazon plugin:   Filters: [{
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Name: "virtualization-type",
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Values: ["hvm"]
+2023/08/08 15:37:46 packer-plugin-amazon plugin:     },{
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Name: "name",
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Values: ["*Windows_Server-2019-English-Full-Base*"]
+2023/08/08 15:37:46 packer-plugin-amazon plugin:     },{
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Name: "root-device-type",
+2023/08/08 15:37:46 packer-plugin-amazon plugin:       Values: ["ebs"]
+2023/08/08 15:37:46 packer-plugin-amazon plugin:     }],
+2023/08/08 15:37:46 packer-plugin-amazon plugin:   Owners: ["amazon"]
+2023/08/08 15:37:46 packer-plugin-amazon plugin: }
+2023/08/08 15:37:46 ui: [0;32m    amazon-ebs.windows-fastboot: Found Image ID: ami-0f39e8d918b90e30e[0m
+2023/08/08 15:37:46 packer-plugin-amazon plugin: 2023/08/08 15:37:46 [INFO] Finding AZ and VpcId for the given subnet 'subnet-09478dab76e66fdc6'
+2023/08/08 15:37:46 packer-plugin-amazon plugin: 2023/08/08 15:37:46 [INFO] AvailabilityZone found: 'eu-west-1c'
+2023/08/08 15:37:46 packer-plugin-amazon plugin: 2023/08/08 15:37:46 [INFO] VpcId found: 'vpc-09f9f7b42133aff5a'
+2023/08/08 15:37:46 ui: [1;32m==> amazon-ebs.windows-fastboot: Creating temporary keypair: packer_64d25339-2c3c-d8da-e57b-cd955ac9a582[0m
+2023/08/08 15:37:47 ui: [1;32m==> amazon-ebs.windows-fastboot: Creating temporary security group for this instance: packer_64d2533b-f05e-6317-8109-c4e0376f5b64[0m
+2023/08/08 15:37:47 packer-plugin-amazon plugin: 2023/08/08 15:37:47 [DEBUG] Waiting for temporary security group: sg-0ba2ac19c9738b8c4
+2023/08/08 15:37:47 packer-plugin-amazon plugin: 2023/08/08 15:37:47 [DEBUG] Found security group sg-0ba2ac19c9738b8c4
+2023/08/08 15:37:47 ui: [1;32m==> amazon-ebs.windows-fastboot: Authorizing access to port 5985 from [0.0.0.0/0] in the temporary security groups...[0m
+2023/08/08 15:37:47 ui: [1;32m==> amazon-ebs.windows-fastboot: Launching a source AWS instance...[0m
+2023/08/08 15:37:47 packer-plugin-amazon plugin: 2023/08/08 15:37:47 [DEBUG] base64 encoding user data...
+2023/08/08 15:37:48 ui: [0;32m    amazon-ebs.windows-fastboot: Instance ID: i-092f75998a3ce6ddf[0m
+2023/08/08 15:37:48 ui: [1;32m==> amazon-ebs.windows-fastboot: Waiting for instance (i-092f75998a3ce6ddf) to become ready...[0m
+2023/08/08 15:38:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Skipping waiting for password since WinRM password set...[0m
+2023/08/08 15:38:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Using WinRM communicator to connect: 3.249.232.43[0m
+2023/08/08 15:38:04 packer-plugin-amazon plugin: 2023/08/08 15:38:04 Waiting for WinRM, up to timeout: 30m0s
+2023/08/08 15:38:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Waiting for WinRM to become available...[0m
+2023/08/08 15:38:04 packer-plugin-amazon plugin: 2023/08/08 15:38:04 Using host value: 3.249.232.43
+2023/08/08 15:38:04 packer-plugin-amazon plugin: 2023/08/08 15:38:04 [INFO] Attempting WinRM connection...
+2023/08/08 15:38:04 packer-plugin-amazon plugin: 2023/08/08 15:38:04 [DEBUG] connecting to remote shell using WinRM
+2023/08/08 15:38:34 packer-plugin-amazon plugin: 2023/08/08 15:38:34 [ERROR] connection error: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:38:34 packer-plugin-amazon plugin: 2023/08/08 15:38:34 [ERROR] WinRM connection err: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:38:39 packer-plugin-amazon plugin: 2023/08/08 15:38:39 Using host value: 3.249.232.43
+2023/08/08 15:38:39 packer-plugin-amazon plugin: 2023/08/08 15:38:39 [INFO] Attempting WinRM connection...
+2023/08/08 15:38:39 packer-plugin-amazon plugin: 2023/08/08 15:38:39 [DEBUG] connecting to remote shell using WinRM
+2023/08/08 15:39:09 packer-plugin-amazon plugin: 2023/08/08 15:39:09 [ERROR] connection error: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:39:09 packer-plugin-amazon plugin: 2023/08/08 15:39:09 [ERROR] WinRM connection err: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:39:14 packer-plugin-amazon plugin: 2023/08/08 15:39:14 Using host value: 3.249.232.43
+2023/08/08 15:39:14 packer-plugin-amazon plugin: 2023/08/08 15:39:14 [INFO] Attempting WinRM connection...
+2023/08/08 15:39:14 packer-plugin-amazon plugin: 2023/08/08 15:39:14 [DEBUG] connecting to remote shell using WinRM
+2023/08/08 15:39:44 packer-plugin-amazon plugin: 2023/08/08 15:39:44 [ERROR] connection error: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:39:44 packer-plugin-amazon plugin: 2023/08/08 15:39:44 [ERROR] WinRM connection err: unknown error Post "http://3.249.232.43:5985/wsman": dial tcp 3.249.232.43:5985: i/o timeout
+2023/08/08 15:39:49 packer-plugin-amazon plugin: 2023/08/08 15:39:49 Using host value: 3.249.232.43
+2023/08/08 15:39:49 packer-plugin-amazon plugin: 2023/08/08 15:39:49 [INFO] Attempting WinRM connection...
+2023/08/08 15:39:49 packer-plugin-amazon plugin: 2023/08/08 15:39:49 [DEBUG] connecting to remote shell using WinRM
+2023/08/08 15:39:58 packer-plugin-amazon plugin: 2023/08/08 15:39:58 Checking that WinRM is connected with: 'powershell.exe -EncodedCommand JABQAHIAbwBnAHIAZQBzAHMAUAByAGUAZgBlAHIAZQBuAGMAZQAgAD0AIAAnAFMAaQBsAGUAbgB0AGwAeQBDAG8AbgB0AGkAbgB1AGUAJwA7AGkAZgAgACgAVABlAHMAdAAtAFAAYQB0AGgAIAB2AGEAcgBpAGEAYgBsAGUAOgBnAGwAbwBiAGEAbAA6AFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlACkAewAkAFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlAD0AJwBTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlACcAfQA7ACAAZQBjAGgAbwAgACIAVwBpAG4AUgBNACAAYwBvAG4AbgBlAGMAdABlAGQALgAiAA=='
+2023/08/08 15:39:59 packer-plugin-amazon plugin: 2023/08/08 15:39:59 [INFO] starting remote command: powershell.exe -EncodedCommand JABQAHIAbwBnAHIAZQBzAHMAUAByAGUAZgBlAHIAZQBuAGMAZQAgAD0AIAAnAFMAaQBsAGUAbgB0AGwAeQBDAG8AbgB0AGkAbgB1AGUAJwA7AGkAZgAgACgAVABlAHMAdAAtAFAAYQB0AGgAIAB2AGEAcgBpAGEAYgBsAGUAOgBnAGwAbwBiAGEAbAA6AFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlACkAewAkAFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlAD0AJwBTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlACcAfQA7ACAAZQBjAGgAbwAgACIAVwBpAG4AUgBNACAAYwBvAG4AbgBlAGMAdABlAGQALgAiAA==
+2023/08/08 15:40:04 packer-plugin-amazon plugin: 2023/08/08 15:40:04 [INFO] command 'powershell.exe -EncodedCommand JABQAHIAbwBnAHIAZQBzAHMAUAByAGUAZgBlAHIAZQBuAGMAZQAgAD0AIAAnAFMAaQBsAGUAbgB0AGwAeQBDAG8AbgB0AGkAbgB1AGUAJwA7AGkAZgAgACgAVABlAHMAdAAtAFAAYQB0AGgAIAB2AGEAcgBpAGEAYgBsAGUAOgBnAGwAbwBiAGEAbAA6AFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlACkAewAkAFAAcgBvAGcAcgBlAHMAcwBQAHIAZQBmAGUAcgBlAG4AYwBlAD0AJwBTAGkAbABlAG4AdABsAHkAQwBvAG4AdABpAG4AdQBlACcAfQA7ACAAZQBjAGgAbwAgACIAVwBpAG4AUgBNACAAYwBvAG4AbgBlAGMAdABlAGQALgAiAA==' exited with code: 0
+2023/08/08 15:40:04 ui: [0;32m    amazon-ebs.windows-fastboot: WinRM connected.[0m
+2023/08/08 15:40:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Connected to WinRM![0m
+2023/08/08 15:40:04 packer-plugin-amazon plugin: 2023/08/08 15:40:04 Connected to machine
+2023/08/08 15:40:04 packer-plugin-amazon plugin: 2023/08/08 15:40:04 Running the provision hook
+2023/08/08 15:40:04 [INFO] (telemetry) Starting provisioner powershell
+2023/08/08 15:40:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Provisioning with Powershell...[0m
+2023/08/08 15:40:04 packer-provisioner-powershell plugin: Found command: C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule
+2023/08/08 15:40:04 packer-provisioner-powershell plugin: Found command: C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown
+2023/08/08 15:40:04 ui: [1;32m==> amazon-ebs.windows-fastboot: Provisioning with powershell script: /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/powershell-provisioner1600507926[0m
+2023/08/08 15:40:04 packer-provisioner-powershell plugin: Opening /var/folders/pg/zb6t3kw94hl3s73v0q5kh4fh0000gn/T/powershell-provisioner1600507926 for reading
+2023/08/08 15:40:04 packer-provisioner-powershell plugin: Uploading env vars to c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1
+2023/08/08 15:40:04 packer-provisioner-powershell plugin: [INFO] 82 bytes written for 'uploadData'
+2023/08/08 15:40:04 [INFO] 82 bytes written for 'uploadData'
+2023/08/08 15:40:04 packer-plugin-amazon plugin: 2023/08/08 15:40:04 Uploading file to 'c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1'
+2023/08/08 15:40:12 packer-provisioner-powershell plugin: [INFO] 163 bytes written for 'uploadData'
+2023/08/08 15:40:12 [INFO] 163 bytes written for 'uploadData'
+2023/08/08 15:40:12 packer-plugin-amazon plugin: 2023/08/08 15:40:12 Uploading file to 'c:/Windows/Temp/script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1'
+2023/08/08 15:40:24 packer-plugin-amazon plugin: 2023/08/08 15:40:24 [INFO] starting remote command: powershell -executionpolicy bypass "& { if (Test-Path variable:global:ProgressPreference){set-variable -name variable:global:ProgressPreference -value 'SilentlyContinue'};. c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1; &'c:/Windows/Temp/script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1'; exit $LastExitCode }"
+2023/08/08 15:40:30 packer-plugin-amazon plugin: 2023/08/08 15:40:30 [INFO] command 'powershell -executionpolicy bypass "& { if (Test-Path variable:global:ProgressPreference){set-variable -name variable:global:ProgressPreference -value 'SilentlyContinue'};. c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1; &'c:/Windows/Temp/script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1'; exit $LastExitCode }"' exited with code: 0
+2023/08/08 15:40:30 packer-plugin-amazon plugin: 2023/08/08 15:40:30 [INFO] RPC endpoint: Communicator ended with: 0
+2023/08/08 15:40:30 [INFO] 0 bytes written for 'stdout'
+2023/08/08 15:40:30 [INFO] 1517 bytes written for 'stderr'
+2023/08/08 15:40:30 [INFO] RPC client: Communicator ended with: 0
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 : The term[0m
+2023/08/08 15:40:30 [INFO] RPC endpoint: Communicator ended with: 0
+2023/08/08 15:40:30 packer-provisioner-powershell plugin: [INFO] 0 bytes written for 'stdout'
+2023/08/08 15:40:30 packer-provisioner-powershell plugin: [INFO] 1517 bytes written for 'stderr'
+2023/08/08 15:40:30 packer-provisioner-powershell plugin: [INFO] RPC client: Communicator ended with: 0
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: 'C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1' is not recognized as the name of a cmdlet,[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: path is correct and try again.[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: At C:\Windows\Temp\script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1:1 char:1[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: + C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.p ...[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:     + CategoryInfo          : ObjectNotFound: (C:/ProgramData/...izeInstance.ps1:String) [], CommandNotFoundException[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:     + FullyQualifiedErrorId : CommandNotFoundException[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 : The term[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: 'C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1' is not recognized as the name of a cmdlet,[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: path is correct and try again.[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: At C:\Windows\Temp\script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1:2 char:1[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: + C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1  ...[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot: + ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:     + CategoryInfo          : ObjectNotFound: (C:/ProgramData/...repInstance.ps1:String) [], CommandNotFoundException[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:     + FullyQualifiedErrorId : CommandNotFoundException[0m
+2023/08/08 15:40:30 ui error: [1;31m==> amazon-ebs.windows-fastboot:[0m
+2023/08/08 15:40:30 packer-provisioner-powershell plugin: c:/Windows/Temp/script-64d253c4-bb44-814d-9920-41b9c6812e9f.ps1 returned with exit code 0
+2023/08/08 15:40:30 packer-provisioner-powershell plugin: [INFO] 511 bytes written for 'uploadData'
+2023/08/08 15:40:30 [INFO] 511 bytes written for 'uploadData'
+2023/08/08 15:40:30 packer-plugin-amazon plugin: 2023/08/08 15:40:30 Uploading file to 'c:/Windows/Temp/packer-cleanup-64d253c4-10fb-0cd4-cf14-ff945cdf0ccb.ps1'
+2023/08/08 15:40:38 packer-plugin-amazon plugin: 2023/08/08 15:40:38 [INFO] starting remote command: powershell -executionpolicy bypass "& { if (Test-Path variable:global:ProgressPreference){set-variable -name variable:global:ProgressPreference -value 'SilentlyContinue'};. c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1; &'c:/Windows/Temp/packer-cleanup-64d253c4-10fb-0cd4-cf14-ff945cdf0ccb.ps1'; exit $LastExitCode }"
+2023/08/08 15:40:40 packer-plugin-amazon plugin: 2023/08/08 15:40:40 [INFO] command 'powershell -executionpolicy bypass "& { if (Test-Path variable:global:ProgressPreference){set-variable -name variable:global:ProgressPreference -value 'SilentlyContinue'};. c:/Windows/Temp/packer-ps-env-vars-64d253c4-781b-4e35-496a-6f105a91512e.ps1; &'c:/Windows/Temp/packer-cleanup-64d253c4-10fb-0cd4-cf14-ff945cdf0ccb.ps1'; exit $LastExitCode }"' exited with code: 0
+2023/08/08 15:40:40 packer-plugin-amazon plugin: 2023/08/08 15:40:40 [INFO] RPC endpoint: Communicator ended with: 0
+2023/08/08 15:40:40 [INFO] 0 bytes written for 'stdout'
+2023/08/08 15:40:40 [INFO] 0 bytes written for 'stderr'
+2023/08/08 15:40:40 [INFO] RPC client: Communicator ended with: 0
+2023/08/08 15:40:40 [INFO] RPC endpoint: Communicator ended with: 0
+2023/08/08 15:40:40 packer-provisioner-powershell plugin: [INFO] 0 bytes written for 'stdout'
+2023/08/08 15:40:40 packer-provisioner-powershell plugin: [INFO] 0 bytes written for 'stderr'
+2023/08/08 15:40:40 packer-provisioner-powershell plugin: [INFO] RPC client: Communicator ended with: 0
+2023/08/08 15:40:40 [INFO] (telemetry) ending powershell
+2023/08/08 15:40:40 ui: [1;32m==> amazon-ebs.windows-fastboot: Stopping the source instance...[0m
+2023/08/08 15:40:40 ui: [0;32m    amazon-ebs.windows-fastboot: Stopping instance[0m
+2023/08/08 15:40:41 ui: [1;32m==> amazon-ebs.windows-fastboot: Waiting for the instance to stop...[0m
+2023/08/08 15:41:57 ui: [1;32m==> amazon-ebs.windows-fastboot: Creating AMI packer-ebs-windows-fastlaunch-with-template-1691505462 from instance i-092f75998a3ce6ddf[0m
+2023/08/08 15:41:57 ui: [0;32m    amazon-ebs.windows-fastboot: AMI: ami-050926113456870bd[0m
+2023/08/08 15:41:57 ui: [1;32m==> amazon-ebs.windows-fastboot: Waiting for AMI to become ready...[0m
+2023/08/08 15:43:29 packer-plugin-amazon plugin: 2023/08/08 15:43:29 found template ID "lt-084c758cfbc984385", name is "ami_fast_launch"
+2023/08/08 15:43:29 packer-plugin-amazon plugin: 2023/08/08 15:43:29 template id found in prep: lt-084c758cfbc984385
+2023/08/08 15:43:29 packer-plugin-amazon plugin: 2023/08/08 15:43:29 latest launch template version is 2
+2023/08/08 15:43:29 ui: [1;32m==> amazon-ebs.windows-fastboot: Enabling fast boot for AMI ami-050926113456870bd[0m
+2023/08/08 15:43:29 ui: [1;32m==> amazon-ebs.windows-fastboot: {
+==> amazon-ebs.windows-fastboot:   ImageId: "ami-050926113456870bd",
+==> amazon-ebs.windows-fastboot:   LaunchTemplate: {
+==> amazon-ebs.windows-fastboot:     LaunchTemplateId: "lt-084c758cfbc984385",
+==> amazon-ebs.windows-fastboot:     Version: "2"
+==> amazon-ebs.windows-fastboot:   }
+==> amazon-ebs.windows-fastboot: }[0m
+2023/08/08 15:43:29 packer-plugin-amazon plugin: 2023/08/08 15:43:29 {
+2023/08/08 15:43:29 packer-plugin-amazon plugin:   ImageId: "ami-050926113456870bd",
+2023/08/08 15:43:29 packer-plugin-amazon plugin:   LaunchTemplate: {
+2023/08/08 15:43:29 packer-plugin-amazon plugin:     LaunchTemplateId: "lt-084c758cfbc984385",
+2023/08/08 15:43:29 packer-plugin-amazon plugin:     Version: "2"
+2023/08/08 15:43:29 packer-plugin-amazon plugin:   }
+2023/08/08 15:43:29 packer-plugin-amazon plugin: }
+2023/08/08 15:43:31 ui: [1;32m==> amazon-ebs.windows-fastboot: Waiting for fast launch to become ready...[0m
