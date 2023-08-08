@@ -1764,7 +1764,7 @@ build {
 const testWindowsFastBoot = `
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
@@ -1792,7 +1792,7 @@ build {
 const testWindowsFastBootWithTemplateID = `
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
