@@ -1800,18 +1800,18 @@ source "amazon-ebs" "windows-fastboot" {
 
 	source_ami_filter {
 		filters = {
-      virtualization-type = "hvm"
-      name								= "*Windows_Server-2019-English-Full-Base*"
-      root-device-type    = "ebs"
-    }
-    most_recent = true
-    owners			= ["amazon"]
+			virtualization-type = "hvm"
+			name                = "*Windows_Server-2019-English-Full-Base*"
+			root-device-type    = "ebs"
+		}
+		most_recent = true
+		owners      = ["amazon"]
 	}
 
 	fast_launch {
-		enable_fast_launch		= true
+		enable_fast_launch    = true
 		target_resource_count = 1
-		template_id 					= "lt-0c82d8943c032fc0b"
+		template_id           = "lt-0c82d8943c032fc0b"
 	}
 }
 
