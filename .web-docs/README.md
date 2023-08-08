@@ -219,7 +219,7 @@ for the Amazon plugin to work:
         "ec2:AuthorizeSecurityGroupIngress",
         "ec2:CopyImage",
         "ec2:CreateImage",
-        "ec2:CreateKeypair",
+        "ec2:CreateKeyPair",
         "ec2:CreateSecurityGroup",
         "ec2:CreateSnapshot",
         "ec2:CreateTags",
@@ -268,6 +268,30 @@ If you have the `spot_price` parameter set to `auto`, you must also add:
 If you are using the `vpc_filter` option, you must also add:
 
     ec2:DescribeVpcs
+
+This permission may also be needed by the `associate_public_ip_address` option, if specified without a subnet.
+In this case the plugin will invoke `DescribeVpcs` to find information about the default VPC.
+
+When using `associate_public_ip_address` without a subnet, you will also benefit from having:
+
+    ec2:DescribeInstanceTypeOfferings
+
+This will ensure that the plugin will pick a subnet/AZ that can host the type of instance
+you're requesting in your template.
+
+If you are using the `deprecate_at` attribute in your templates, you will also need:
+
+    ec2:EnableImageDeprecation
+
+If you are using SSM to connect to the instance, and are specifying a private key file, you must also add:
+
+    ec2-instance-connect:SendSSHPublicKey
+
+If you are building a Windows AMI, and want to enable fast-launch, you will also need:
+
+    ec2:EnableFastLaunch
+    ec2:DescribeLaunchTemplates
+    ec2:DescribeFastLaunchImages
 
 ### Troubleshooting
 
