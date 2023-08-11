@@ -24,6 +24,7 @@ type StepPreValidate struct {
 	DestAmiName        string
 	ForceDeregister    bool
 	AMISkipBuildRegion bool
+	AMISkipCreateImage bool
 	VpcId              string
 	SubnetId           string
 	HasSubnetFilter    bool
@@ -86,6 +87,11 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 
 	if s.AMISkipBuildRegion {
 		ui.Say("skip_build_region was set; not prevalidating AMI name")
+		return multistep.ActionContinue
+	}
+
+	if s.AMISkipCreateImage {
+		ui.Say("skip_create_ami was set; not prevalidating AMI name")
 		return multistep.ActionContinue
 	}
 
