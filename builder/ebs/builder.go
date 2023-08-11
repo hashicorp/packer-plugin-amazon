@@ -290,6 +290,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			DestAmiName:        b.config.AMIName,
 			ForceDeregister:    b.config.AMIForceDeregister,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			VpcId:              b.config.VpcId,
 			SubnetId:           b.config.SubnetId,
 			HasSubnetFilter:    !b.config.SubnetFilter.Empty(),
