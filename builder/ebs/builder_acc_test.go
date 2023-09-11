@@ -290,22 +290,20 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 		Name:   fmt.Sprintf("packer-sharing-acc-test %d", time.Now().Unix()),
 	}
 
+	missing_v := []string{}
+	env_vars := []string{"TESTACC_AWS_ACCOUNT_ID", "TESTACC_AWS_ORG_ARN", "TESTACC_AWS_OU_ARN"}
+	for _, var_name := range env_vars {
+		v := os.Getenv(var_name)
+		if v == "" {
+			missing_v = append(missing_v, var_name)
+		}
+	}
+	if len(missing_v) > 0 {
+		t.Skipf("%s must be set for AMI sharing test, skipping", strings.Join(missing_v, ","))
+	}
+
 	testCase := &acctest.PluginTestCase{
-		Name: "amazon-ebs_ami_sharing_test",
-		Setup: func() error {
-			missing_v := []string{}
-			env_vars := []string{"TESTACC_AWS_ACCOUNT_ID", "TESTACC_AWS_ORG_ARN", "TESTACC_AWS_OU_ARN"}
-			for _, var_name := range env_vars {
-				v := os.Getenv(var_name)
-				if v == "" {
-					missing_v = append(missing_v, var_name)
-				}
-			}
-			if len(missing_v) > 0 {
-				return fmt.Errorf("%s must be set for acceptance tests", strings.Join(missing_v, ","))
-			}
-			return nil
-		},
+		Name:     "amazon-ebs_ami_sharing_test",
 		Template: buildSharingConfig(os.Getenv("TESTACC_AWS_ACCOUNT_ID"), os.Getenv("TESTACC_AWS_ORG_ARN"), os.Getenv("TESTACC_AWS_OU_ARN"), ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
