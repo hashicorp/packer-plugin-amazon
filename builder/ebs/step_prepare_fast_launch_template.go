@@ -66,7 +66,7 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 	}
 
 	log.Printf("setting launch template version to %d", s.TemplateVersion)
-	state.Put("launch_template_version", int(s.TemplateVersion))
+	state.Put("launch_template_version", s.TemplateVersion)
 
 	return multistep.ActionContinue
 }
