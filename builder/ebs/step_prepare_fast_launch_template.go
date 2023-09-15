@@ -49,10 +49,10 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 
 	log.Printf("found template ID %q, name is %q", *tmpl.LaunchTemplateId, *tmpl.LaunchTemplateName)
 
-	state.Put("launch_template_id", tmpl.LaunchTemplateId)
+	state.Put("launch_template_id", *tmpl.LaunchTemplateId)
 	if s.TemplateVersion == 0 {
 		log.Printf("latest launch template version is %d", *tmpl.LatestVersionNumber)
-		state.Put("launch_template_version", tmpl.LatestVersionNumber)
+		state.Put("launch_template_version", int(*tmpl.LatestVersionNumber))
 		return multistep.ActionContinue
 	}
 

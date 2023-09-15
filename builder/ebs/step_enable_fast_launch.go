@@ -103,7 +103,7 @@ func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, state multis
 	if !ok {
 		return fastLaunchInput
 	}
-	version := fmt.Sprintf("%d", state.Get("launch_template_version").(int))
+	version := fmt.Sprintf("%d", state.Get("launch_template_version"))
 
 	fastLaunchInput.LaunchTemplate = &ec2.FastLaunchLaunchTemplateSpecificationRequest{
 		LaunchTemplateId: &templateID,

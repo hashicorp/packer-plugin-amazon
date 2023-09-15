@@ -1762,7 +1762,7 @@ build {
 const testWindowsFastBoot = `
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
@@ -1770,6 +1770,7 @@ source "amazon-ebs" "windows-fastboot" {
 	winrm_password       = "e4sypa55!"
 	user_data_file       = "test-fixtures/ps_enable.ps"
 	fast_launch {
+		enable_fast_launch = true
 		target_resource_count = 1
 	}
 }
@@ -1789,16 +1790,18 @@ build {
 const testWindowsFastBootWithTemplateID = `
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-00b2c40b15619f518" # Windows server 2016 base x86_64
+	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
 	winrm_username       = "Administrator"
 	winrm_password       = "e4sypa55!"
 	user_data_file       = "test-fixtures/ps_enable.ps"
+
 	fast_launch {
-		target_resource_count   = 1
-		template_id = "lt-0c82d8943c032fc0b"
+		enable_fast_launch    = true
+		target_resource_count = 1
+		template_id           = "lt-0c82d8943c032fc0b"
 	}
 }
 
