@@ -1,0 +1,41 @@
+{
+    "_comment": "Template used for testing issue 8157", 
+    "variables": {
+        "region": "us-east-1"
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "ami_name": "packer-example-{{ timestamp }}",
+            "region": "{{ user `region`}}",
+            "instance_type": "t2.micro",
+            "source_ami_filter": {
+                "filters": {
+                    "virtualization-type": "hvm",
+                    "name": "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*",
+                    "root-device-type": "ebs"
+                },
+                "owners": [
+                    "099720109477"
+                ],
+                "most_recent": true
+            },
+            "ssh_username": "ubuntu",
+            "communicator": "ssh",
+            "metadata_options":{ 
+                "http_endpoint" : "enabled", 
+                "http_tokens": "required", 
+                "http_put_response_hop_limit": 1
+            }, 
+            "imds_support":"v2.0"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [ "TOKEN=`curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"` && curl -H \"X-aws-ec2-metadata-token: $TOKEN\" -s http://169.254.169.254/latest/meta-data/"]
+        }
+    ]
+  }
+  
+  

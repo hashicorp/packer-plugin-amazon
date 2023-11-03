@@ -5,14 +5,14 @@ packer {
   required_plugins {
     amazon = {
       version = ">= 1.0.0"
-      source = "github.com/hashicorp/amazon"
+      source  = "github.com/hashicorp/amazon"
     }
   }
 }
 
-data "amazon-ami" "ubuntu-xenial-1604-amd64" {
+data "amazon-ami" "ubuntu-jammy-amd64" {
   filters = {
-    name                = "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*"
+    name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
@@ -26,7 +26,7 @@ source "amazon-ebs" "basic-example" {
   ami_name      = "packer-example-${local.timestamp}"
   communicator  = "ssh"
   instance_type = "t2.micro"
-  source_ami    = data.amazon-ami.ubuntu-xenial-1604-amd64.id
+  source_ami    = data.amazon-ami.ubuntu-jammy-amd64.id
   ssh_username  = "ubuntu"
 }
 
