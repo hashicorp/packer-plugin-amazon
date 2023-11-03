@@ -45,17 +45,17 @@ references for [AMI](#ami-configuration),
 configuration references, which are
 necessary for this build to succeed and can be found further down the page.
 
-### Optional:
+**Optional:**
 
 @include 'builder/ebs/Config-not-required.mdx'
 
 ### AMI Configuration
 
-#### Required:
+**Required:**
 
 @include 'builder/common/AMIConfig-required.mdx'
 
-#### Optional:
+**Optional:**
 
 @include 'builder/common/AMIConfig-not-required.mdx'
 
@@ -63,11 +63,11 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Access Configuration
 
-#### Required:
+**Required:**
 
 @include 'builder/common/AccessConfig-required.mdx'
 
-#### Optional:
+**Optional:**
 
 @include 'builder/common/AccessConfig-not-required.mdx'
 
@@ -85,11 +85,11 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Run Configuration
 
-#### Required:
+**Required:**
 
 @include 'builder/common/RunConfig-required.mdx'
 
-#### Optional:
+**Optional:**
 
 @include 'builder/common/RunConfig-not-required.mdx'
 
@@ -146,6 +146,29 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
+##### Enforce Instance Metadata Service v2
+
+The Amazon builder has support for enforcing metadata service v2 (imdsv2) on a running instance and on the resulting AMI generated from a Packer build. 
+To enable support for both there are two key attributes that must be defined. 
+
+**HCL2**
+
+```hcl
+source "amazon-ebs" "basic-example" {
+  region        =  "us-east-1"
+  source_ami    =  "ami-fce3c696"
+  instance_type =  "t2.micro"
+  ssh_username  =  "ubuntu"
+  ami_name      =  "packer_AWS_example_{{timestamp}}"
+  # enforces imdsv2 support on the running instance being provisioned by Packer
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens = "required"
+    http_put_response_hop_limit = 1
+  }
+  imds_support  = "v2.0" # enforces imdsv2 support on the resulting AMI
+}
+```
 
 @include 'builders/aws-session-manager.mdx'
 
@@ -157,13 +180,13 @@ Block devices can be nested in the
 
 @include 'builder/common/BlockDevice.mdx'
 
-#### Optional:
+**Optional:**
 
 @include 'builder/common/BlockDevice-not-required.mdx'
 
 ### Communicator Configuration
 
-#### Optional:
+**Optional:**
 
 @include 'packer-plugin-sdk/communicator/Config-not-required.mdx'
 
@@ -261,7 +284,7 @@ Windows](http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/finding-an-ami.ht
 
 @include 'builder/ebs/FastLaunchConfig.mdx'
 
-#### Optional
+**Optional:**
 
 @include 'builder/ebs/FastLaunchConfig-not-required.mdx'
 

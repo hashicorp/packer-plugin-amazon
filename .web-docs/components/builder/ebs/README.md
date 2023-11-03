@@ -33,7 +33,7 @@ references for [AMI](#ami-configuration),
 configuration references, which are
 necessary for this build to succeed and can be found further down the page.
 
-### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the Config struct in builder/ebs/builder.go; DO NOT EDIT MANUALLY -->
 
@@ -93,7 +93,7 @@ necessary for this build to succeed and can be found further down the page.
 
 ### AMI Configuration
 
-#### Required:
+**Required:**
 
 <!-- Code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; DO NOT EDIT MANUALLY -->
 
@@ -105,7 +105,7 @@ necessary for this build to succeed and can be found further down the page.
 <!-- End of code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; -->
 
 
-#### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; DO NOT EDIT MANUALLY -->
 
@@ -272,7 +272,7 @@ necessary for this build to succeed and can be found further down the page.
 
 ### Access Configuration
 
-#### Required:
+**Required:**
 
 <!-- Code generated from the comments of the AccessConfig struct in builder/common/access_config.go; DO NOT EDIT MANUALLY -->
 
@@ -291,7 +291,7 @@ necessary for this build to succeed and can be found further down the page.
 <!-- End of code generated from the comments of the AccessConfig struct in builder/common/access_config.go; -->
 
 
-#### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the AccessConfig struct in builder/common/access_config.go; DO NOT EDIT MANUALLY -->
 
@@ -501,7 +501,7 @@ JSON example:
 
 ### Run Configuration
 
-#### Required:
+**Required:**
 
 <!-- Code generated from the comments of the RunConfig struct in builder/common/run_config.go; DO NOT EDIT MANUALLY -->
 
@@ -515,7 +515,7 @@ JSON example:
 <!-- End of code generated from the comments of the RunConfig struct in builder/common/run_config.go; -->
 
 
-#### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the RunConfig struct in builder/common/run_config.go; DO NOT EDIT MANUALLY -->
 
@@ -1143,6 +1143,29 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
+##### Enforce Instance Metadata Service v2
+
+The Amazon builder has support for enforcing metadata service v2 (imdsv2) on a running instance and on the resulting AMI generated from a Packer build. 
+To enable support for both there are two key attributes that must be defined. 
+
+**HCL2**
+
+```hcl
+source "amazon-ebs" "basic-example" {
+  region        =  "us-east-1"
+  source_ami    =  "ami-fce3c696"
+  instance_type =  "t2.micro"
+  ssh_username  =  "ubuntu"
+  ami_name      =  "packer_AWS_example_{{timestamp}}"
+  # enforces imdsv2 support on the running instance being provisioned by Packer
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens = "required"
+    http_put_response_hop_limit = 1
+  }
+  imds_support  = "v2.0" # enforces imdsv2 support on the resulting AMI
+}
+```
 
 ### Session Manager Connections
 
@@ -1307,7 +1330,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 <!-- End of code generated from the comments of the BlockDevice struct in builder/common/block_device.go; -->
 
 
-#### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the BlockDevice struct in builder/common/block_device.go; DO NOT EDIT MANUALLY -->
 
@@ -1364,7 +1387,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 ### Communicator Configuration
 
-#### Optional:
+**Optional:**
 
 <!-- Code generated from the comments of the Config struct in communicator/config.go; DO NOT EDIT MANUALLY -->
 
@@ -1642,7 +1665,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
 <!-- End of code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; -->
 
 
-#### Optional
+**Optional:**
 
 <!-- Code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
 
