@@ -53,6 +53,7 @@ type Config struct {
 	Format          string            `mapstructure:"format"`
 	Architecture    string            `mapstructure:"architecture"`
 	BootMode        string            `mapstructure:"boot_mode"`
+	Platform        string            `mapstructure:"platform"`
 
 	ctx interpolate.Context
 }
@@ -144,6 +145,11 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid boot mode '%s'. Only 'uefi' and 'legacy-bios' are allowed", p.config.BootMode))
+	}
+
+	if p.config.Platform != "windows" && p.config.Platform != "linux" {
+		errs = packersdk.MultiErrorAppend(
+			errs, fmt.Errorf("invalid boot mode '%s'. Only 'windows' and 'linux' are allowed", p.config.Platform))
 	}
 
 	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {
@@ -259,6 +265,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		},
 		Architecture: &p.config.Architecture,
 		BootMode:     &p.config.BootMode,
+		Platform: 	  &p.config.Platform,
 	}
 
 	if p.config.Encrypt && p.config.KMSKey != "" {
