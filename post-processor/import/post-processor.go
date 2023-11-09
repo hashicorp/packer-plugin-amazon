@@ -265,7 +265,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		},
 		Architecture: &p.config.Architecture,
 		BootMode:     &p.config.BootMode,
-		Platform: 	  &p.config.Platform,
+		Platform:     &p.config.Platform,
 	}
 
 	if p.config.Encrypt && p.config.KMSKey != "" {
