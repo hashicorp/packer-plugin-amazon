@@ -90,11 +90,5 @@ archives:
 checksum:
   name_template: '{{ .ProjectName }}_v{{ .Version }}_SHA256SUMS'
   algorithm: sha256
-signs:
-  - cmd: signore
-    args: ["sign", "--dearmor", "--file", "${artifact}", "--out", "${signature}"]
-    artifacts: checksum
-    signature: ${artifact}.sig
-
 changelog:
   use: github-native
