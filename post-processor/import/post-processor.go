@@ -92,7 +92,9 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.Architecture == "" {
 		p.config.Architecture = "x86_64"
 	}
-
+	if p.config.Platform == "" {
+		p.config.Architecture = "windows"
+	}
 	errs := new(packersdk.MultiError)
 
 	if p.config.BootMode == "" {
@@ -149,7 +151,7 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 
 	if p.config.Platform != "windows" && p.config.Platform != "linux" {
 		errs = packersdk.MultiErrorAppend(
-			errs, fmt.Errorf("invalid boot mode '%s'. Only 'windows' and 'linux' are allowed", p.config.Platform))
+			errs, fmt.Errorf("invalid platform '%s'. Only 'windows' and 'linux' are allowed", p.config.Platform))
 	}
 
 	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {
