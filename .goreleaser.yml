@@ -43,7 +43,7 @@ builds:
     ignore:
       - goos: linux
         goarch: amd64
-    binary: '{{ .ProjectName }}_v{{ .Version }}_{{ .Env.API_VERSION }}_{{ .Os }}_{{ .Arch }}'
+    binary: 'packer_plugin_amazon_v{{ .Version }}_{{ .Env.API_VERSION }}_{{ .Os }}_{{ .Arch }}'
   -
     id: darwin-builds
     mod_timestamp: '{{ .CommitTimestamp }}'
