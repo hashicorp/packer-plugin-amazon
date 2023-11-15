@@ -54,6 +54,7 @@ type FlatConfig struct {
 	Format                *string                           `mapstructure:"format" cty:"format" hcl:"format"`
 	Architecture          *string                           `mapstructure:"architecture" cty:"architecture" hcl:"architecture"`
 	BootMode              *string                           `mapstructure:"boot_mode" cty:"boot_mode" hcl:"boot_mode"`
+	Platform              *string                           `mapstructure:"platform" cty:"platform" hcl:"platform"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -111,6 +112,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"format":                        &hcldec.AttrSpec{Name: "format", Type: cty.String, Required: false},
 		"architecture":                  &hcldec.AttrSpec{Name: "architecture", Type: cty.String, Required: false},
 		"boot_mode":                     &hcldec.AttrSpec{Name: "boot_mode", Type: cty.String, Required: false},
+		"platform":                      &hcldec.AttrSpec{Name: "platform", Type: cty.String, Required: false},
 	}
 	return s
 }
