@@ -93,6 +93,9 @@ Optional:
   `legacy-bios` or `uefi`. If `architecture` is set to `arm64` then this value
   must be set to  `uefi`.
 
+- `platform` (string) - The operating system of the virtual machine. One of:
+  `linux` or `windows`. This defaults to `linux`.
+
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
   like this `https://ec2.custom.endpoint.com`.
