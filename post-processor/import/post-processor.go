@@ -138,16 +138,16 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	}
 
 	switch p.config.Platform {
-	case "linux", "windows":
+	case "windows", "linux":
 	case "":
 		if p.config.BootMode == "uefi" {
-			errs = packersdk.MultiErrorAppend(errs, "'platform' must be set for 'uefi' image imports")
+			errs = packersdk.MultiErrorAppend(
+				errs, fmt.Errorf("invalid platform '%s', 'platform' must be set for 'uefi' image imports", p.config.Platform))
 		}
 	default:
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(
-			"invalid platform '%s'. Only 'linux' and 'windows' are allowed",
-			p.config.Platform))
-
+			"invalid platform '%s'. Only 'linux' and 'windows' are allowed", p.config.Platform))
+	}
 	if p.config.S3Encryption != "" && p.config.S3Encryption != "AES256" && p.config.S3Encryption != "aws:kms" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid s3 encryption format '%s'. Only 'AES256' and 'aws:kms' are allowed", p.config.S3Encryption))
