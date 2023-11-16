@@ -94,7 +94,9 @@ Optional:
   must be set to  `uefi`.
 
 - `platform` (string) - The operating system of the virtual machine. One of:
-  `linux` or `windows`. This defaults to `linux`.
+  `linux` or `windows`. If `boot_mode` is set to `uefi` then this value must be 
+  set to either `windows` or `linux` depending on the operating system of the 
+  virtual machine.
 
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint
