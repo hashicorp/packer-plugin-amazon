@@ -93,10 +93,6 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		p.config.Architecture = "x86_64"
 	}
 
-	if p.config.Platform == "" {
-		p.config.Platform = "linux"
-	}
-
 	errs := new(packersdk.MultiError)
 
 	if p.config.BootMode == "" {
@@ -141,6 +137,17 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 			errs, fmt.Errorf("invalid format '%s'. Only 'ova', 'raw', 'vhd', 'vhdx', or 'vmdk' are allowed", p.config.Format))
 	}
 
+	switch p.config.Platform {
+	case "linux", "windows":
+	case "":
+		if p.config.BootMode == "uefi" {
+			errs = packersdk.MultiErrorAppend(errs, "'platform' must be set for 'uefi' image imports")
+		}
+	default:
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(
+			"invalid platform '%s'. Only 'linux' and 'windows' are allowed",
+			p.config.Platform))
+
 	if p.config.S3Encryption != "" && p.config.S3Encryption != "AES256" && p.config.S3Encryption != "aws:kms" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid s3 encryption format '%s'. Only 'AES256' and 'aws:kms' are allowed", p.config.S3Encryption))
@@ -149,11 +156,6 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid boot mode '%s'. Only 'uefi' and 'legacy-bios' are allowed", p.config.BootMode))
-	}
-
-	if p.config.Platform != "linux" && p.config.Platform != "windows" {
-		errs = packersdk.MultiErrorAppend(
-			errs, fmt.Errorf("invalid platform '%s'. Only 'linux' and 'windows' are allowed", p.config.Platform))
 	}
 
 	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {
