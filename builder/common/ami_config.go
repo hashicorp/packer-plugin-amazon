@@ -110,8 +110,8 @@ type AMIConfig struct {
 	AMIEncryptBootVolume config.Trilean `mapstructure:"encrypt_boot" required:"false"`
 	// ID, alias or ARN of the KMS key to use for AMI encryption. This
 	// only applies to the main `region` -- any regions the AMI gets copied to
-	// copied will be encrypted by the default EBS KMS key for that region,
-	// unless you set region-specific keys in AMIRegionKMSKeyIDs.
+	// will be encrypted by the default EBS KMS key for that region,
+	// unless you set region-specific keys in `region_kms_key_ids`.
 	//
 	// Set this value if you select `encrypt_boot`, but don't want to use the
 	// region's default KMS key.
@@ -179,7 +179,7 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 	}
 
 	// Make sure that if we have region_kms_key_ids defined,
-	//  the regions in region_kms_key_ids are also in ami_regions
+	// the regions in region_kms_key_ids are also in ami_regions
 	if len(c.AMIRegionKMSKeyIDs) > 0 {
 		for kmsKeyRegion := range c.AMIRegionKMSKeyIDs {
 			if !stringInSlice(c.AMIRegions, kmsKeyRegion) {

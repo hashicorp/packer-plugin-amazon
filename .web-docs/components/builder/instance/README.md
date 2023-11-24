@@ -216,8 +216,8 @@ necessary for this build to succeed and can be found further down the page.
 
 - `kms_key_id` (string) - ID, alias or ARN of the KMS key to use for AMI encryption. This
   only applies to the main `region` -- any regions the AMI gets copied to
-  copied will be encrypted by the default EBS KMS key for that region,
-  unless you set region-specific keys in AMIRegionKMSKeyIDs.
+  will be encrypted by the default EBS KMS key for that region,
+  unless you set region-specific keys in `region_kms_key_ids`.
   
   Set this value if you select `encrypt_boot`, but don't want to use the
   region's default KMS key.
