@@ -1760,9 +1760,17 @@ build {
 `
 
 const testWindowsFastBoot = `
+data "amazon-ami" "windows-ami" {
+	filters = {
+		name = "Windows_Server-2016-English-Core-Base-*"
+	}
+	owners = ["801119661308"]
+	most_recent = true
+}
+
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
+	source_ami           = data.amazon-ami.windows-ami.id
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
@@ -1788,9 +1796,17 @@ build {
 `
 
 const testWindowsFastBootWithTemplateID = `
+data "amazon-ami" "windows-ami" {
+	filters = {
+		name = "Windows_Server-2016-English-Core-Base-*"
+	}
+	owners = ["801119661308"]
+	most_recent = true
+}
+
 source "amazon-ebs" "windows-fastboot" {
 	ami_name             = "%s"
-	source_ami           = "ami-0a967b5d9c7fa4630" # Windows server 2016 base x86_64
+	source_ami           = data.amazon-ami.windows-ami.id
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	communicator         = "winrm"
