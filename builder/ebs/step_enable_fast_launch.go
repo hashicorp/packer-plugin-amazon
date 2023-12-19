@@ -77,6 +77,27 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
+
+		flStatus, err := ec2conn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+			ImageIds: []*string{
+				&ami,
+			},
+		})
+		if err != nil {
+			err := fmt.Errorf("Failed to get fast-launch status for AMI %q: %s", ami, err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+
+		for _, img := range flStatus.FastLaunchImages {
+			if *img.State != "enabled" {
+				err := fmt.Errorf("Failed to enable fast-launch for AMI %q: %s", ami, *img.StateTransitionReason)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+		}
 	}
 
 	return multistep.ActionContinue
