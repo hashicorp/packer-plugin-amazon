@@ -1083,7 +1083,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testcase := &acctest.PluginTestCase{
-				Name:     "amazon-ebs-windows-fastlaunch",
+				Name:     tt.name,
 				Template: tt.template,
 				Teardown: func() error {
 					return tt.ami.CleanUpAmi()
