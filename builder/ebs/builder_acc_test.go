@@ -1131,7 +1131,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 					}
 
 					if *img.State != "enabled" {
-						return fmt.Errorf("expected fast-launch state to be enabled, but is %q", *img.State)
+						return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
 					}
 
 					return nil
