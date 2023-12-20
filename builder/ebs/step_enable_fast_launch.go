@@ -40,6 +40,11 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 	amis := state.Get("amis").(map[string]string)
 
+	if len(amis) == 0 {
+		ui.Say("No AMI found in state, skipping fast-launch setup...")
+		return multistep.ActionContinue
+	}
+
 	for _, ami := range amis {
 		ui.Say(fmt.Sprintf("Enabling fast boot for AMI %s", ami))
 
