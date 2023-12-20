@@ -1766,6 +1766,7 @@ data "amazon-ami" "windows-ami" {
 	}
 	owners = ["801119661308"]
 	most_recent = true
+	region = "us-east-1"
 }
 
 source "amazon-ebs" "windows-fastboot" {
@@ -1802,6 +1803,7 @@ data "amazon-ami" "windows-ami" {
 	}
 	owners = ["801119661308"]
 	most_recent = true
+	region = "us-east-1"
 }
 
 source "amazon-ebs" "windows-fastboot" {
