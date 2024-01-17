@@ -153,7 +153,7 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 			errs, fmt.Errorf("invalid s3 encryption format '%s'. Only 'AES256' and 'aws:kms' are allowed", p.config.S3Encryption))
 	}
 
-	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" {
+	if p.config.BootMode != "legacy-bios" && p.config.BootMode != "uefi" && p.config.BootMode != "uefi-preferred" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid boot mode '%s'. Only 'uefi' and 'legacy-bios' are allowed", p.config.BootMode))
 	}
