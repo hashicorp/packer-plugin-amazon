@@ -26,6 +26,7 @@ import (
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
+	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 func TestAccBuilder_EbsBasic(t *testing.T) {
@@ -1122,7 +1123,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 					}
 
 					if len(fastLaunchImages.FastLaunchImages) != 1 {
-						return fmt.Errorf("go too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
+						return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
 					}
 
 					img := fastLaunchImages.FastLaunchImages[0]
@@ -1132,6 +1133,147 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 
 					if *img.State != "enabled" {
 						return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
+func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
+	amiNameWithoutLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-%d", time.Now().Unix())
+	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
+
+	flWithCopiesAMIs := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithoutLT,
+		},
+		{
+			Region: "us-east-2",
+			Name:   amiNameWithoutLT,
+		},
+	}
+
+	flWithCopiesAMIsAndLTs := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLT,
+		},
+		{
+			Region: "us-east-2",
+			Name:   amiNameWithLT,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		amiName            string
+		amiSpec            []amazon_acc.AMIHelper
+		stringsToFindInLog []string
+		template           string
+	}{
+		{
+			"ebs-windows-fast-launch-with-copies",
+			amiNameWithoutLT,
+			flWithCopiesAMIs,
+			[]string{
+				"no launch-template configured, will use defaults.",
+				"no template specified for region \"us-east-1\"",
+				"no template specified for region \"us-east-2\"",
+			},
+			testWindowsFastBootWithAMICopies,
+		},
+		{
+			"ebs-windows-fast-launch-with-copies-and-launch-templates",
+			amiNameWithLT,
+			flWithCopiesAMIsAndLTs,
+			[]string{
+				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
+				"found template in region \"us-east-2\": ID \"lt-0083091b6614b118c\"",
+			},
+			testWindowsFastBootWithAMICopiesAndLTs,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testcase := &acctest.PluginTestCase{
+				Name:     tt.name,
+				Template: fmt.Sprintf(tt.template, tt.amiName),
+				Teardown: func() error {
+					var errs error
+
+					for _, ami := range tt.amiSpec {
+						err := ami.CleanUpAmi()
+						if err != nil {
+							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
+							errs = packersdk.MultiErrorAppend(errs, err)
+						}
+					}
+
+					return errs
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					for _, ami := range tt.amiSpec {
+						amis, err := ami.GetAmi()
+						if err != nil {
+							return fmt.Errorf("failed to get AMI: %s", err)
+						}
+						if len(amis) != 1 {
+							return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
+						}
+
+						accessConfig := &awscommon.AccessConfig{}
+						session, err := accessConfig.Session()
+						if err != nil {
+							return fmt.Errorf("Unable to create aws session %s", err.Error())
+						}
+
+						regionconn := ec2.New(session.Copy(&aws.Config{
+							Region: aws.String(ami.Region),
+						}))
+
+						ami := amis[0]
+
+						fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+							ImageIds: []*string{ami.ImageId},
+						})
+
+						if err != nil {
+							return fmt.Errorf("failed to get fast-launch images: %s", err)
+						}
+
+						if len(fastLaunchImages.FastLaunchImages) != 1 {
+							return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
+						}
+
+						img := fastLaunchImages.FastLaunchImages[0]
+						if img.State == nil {
+							return fmt.Errorf("unexpected null fast-launch state")
+						}
+
+						if *img.State != "enabled" {
+							return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+						}
+					}
+
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						t.Fatalf("failed to read logs from logifle: %s", err)
+					}
+					logStr := string(logs)
+					for _, str := range tt.stringsToFindInLog {
+						if !strings.Contains(logStr, str) {
+							t.Errorf("exptected to find %q in logs, but did not", str)
+						}
 					}
 
 					return nil
@@ -1820,6 +1962,94 @@ source "amazon-ebs" "windows-fastboot" {
 		enable_fast_launch    = true
 		target_resource_count = 1
 		template_id           = "lt-0c82d8943c032fc0b"
+	}
+}
+
+build {
+	sources = ["amazon-ebs.windows-fastboot"]
+
+	provisioner "powershell" {
+		inline = [
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+		]
+	}
+}
+`
+
+const testWindowsFastBootWithAMICopies = `
+data "amazon-ami" "windows-ami" {
+	filters = {
+		name = "Windows_Server-2016-English-Core-Base-*"
+	}
+	owners = ["801119661308"]
+	most_recent = true
+	region = "us-east-1"
+}
+
+source "amazon-ebs" "windows-fastboot" {
+	ami_name             = "%s"
+	source_ami           = data.amazon-ami.windows-ami.id
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ami_regions          = ["us-east-2", "us-east-1"]
+	communicator         = "winrm"
+	winrm_username       = "Administrator"
+	winrm_password       = "e4sypa55!"
+	user_data_file       = "test-fixtures/ps_enable.ps"
+
+	fast_launch {
+		enable_fast_launch    = true
+		target_resource_count = 1
+	}
+}
+
+build {
+	sources = ["amazon-ebs.windows-fastboot"]
+
+	provisioner "powershell" {
+		inline = [
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+		]
+	}
+}
+`
+
+const testWindowsFastBootWithAMICopiesAndLTs = `
+data "amazon-ami" "windows-ami" {
+	filters = {
+		name = "Windows_Server-2016-English-Core-Base-*"
+	}
+	owners = ["801119661308"]
+	most_recent = true
+	region = "us-east-1"
+}
+
+source "amazon-ebs" "windows-fastboot" {
+	ami_name             = "%s"
+	source_ami           = data.amazon-ami.windows-ami.id
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ami_regions          = ["us-east-2", "us-east-1"]
+	communicator         = "winrm"
+	winrm_username       = "Administrator"
+	winrm_password       = "e4sypa55!"
+	user_data_file       = "test-fixtures/ps_enable.ps"
+
+	fast_launch {
+		enable_fast_launch    = true
+		target_resource_count = 1
+
+		region_launch_templates {
+			region = "us-east-1"
+			template_id = "lt-0c82d8943c032fc0b"
+		}
+
+		region_launch_templates {
+			region = "us-east-2"
+			template_id = "lt-0083091b6614b118c"
+		}
 	}
 }
 

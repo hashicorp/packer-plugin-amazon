@@ -9,76 +9,101 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type stepPrepareFastLaunchTemplate struct {
+	AccessConfig       *common.AccessConfig
 	AMISkipCreateImage bool
 	EnableFastLaunch   bool
-	TemplateID         string
-	TemplateName       string
-	TemplateVersion    int
+	RegionTemplates    []FastLaunchTemplateConfig
+}
+
+type TemplateSpec struct {
+	TemplateID string
+	Version    int
 }
 
 func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
 	ui := state.Get("ui").(packersdk.Ui)
-
-	if !s.EnableFastLaunch {
-		log.Printf("fast-boot disabled, no launch-template to set")
-		return multistep.ActionContinue
-	}
-
-	if s.TemplateID == "" && s.TemplateName == "" {
-		ui.Say("No fast-launch template specified")
-		return multistep.ActionContinue
-	}
 
 	if s.AMISkipCreateImage {
 		ui.Say("Skipping fast-launch template setup...")
 		return multistep.ActionContinue
 	}
 
-	tmpl, err := s.getTemplate(ec2conn)
-	if err != nil {
-		ui.Error(err.Error())
-		state.Put("error", err)
-		return multistep.ActionHalt
-	}
-
-	log.Printf("found template ID %q, name is %q", *tmpl.LaunchTemplateId, *tmpl.LaunchTemplateName)
-
-	state.Put("launch_template_id", *tmpl.LaunchTemplateId)
-	if s.TemplateVersion == 0 {
-		log.Printf("latest launch template version is %d", *tmpl.LatestVersionNumber)
-		state.Put("launch_template_version", int(*tmpl.LatestVersionNumber))
+	if !s.EnableFastLaunch {
+		log.Printf("fast-boot disabled, no launch-template to set")
 		return multistep.ActionContinue
 	}
 
-	if *tmpl.LatestVersionNumber < int64(s.TemplateVersion) {
-		err := fmt.Errorf("specified version (%d) is higher than the latest launch template version (%d)",
-			s.TemplateVersion,
-			tmpl.LatestVersionNumber)
-		ui.Error(err.Error())
-		state.Put("error", err)
-		return multistep.ActionHalt
+	if len(s.RegionTemplates) == 0 {
+		log.Printf("[INFO] no launch-template configured, will use defaults.")
+		return multistep.ActionContinue
 	}
 
-	log.Printf("setting launch template version to %d", s.TemplateVersion)
-	state.Put("launch_template_version", s.TemplateVersion)
+	templateIDsByRegion := map[string]TemplateSpec{}
+	for _, templateSpec := range s.RegionTemplates {
+		region := templateSpec.Region
+
+		if templateSpec.LaunchTemplateID == "" && templateSpec.LaunchTemplateName == "" {
+			log.Printf("[INFO] No fast-launch template specified for region %q", region)
+			continue
+		}
+
+		ec2conn, err := common.GetRegionConn(s.AccessConfig, region)
+		if err != nil {
+			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %s", region, err))
+			return multistep.ActionHalt
+		}
+
+		tmpl, err := getTemplate(ec2conn, templateSpec)
+		if err != nil {
+			ui.Error(fmt.Sprintf("Failed to get launch template from region %q: %s", region, err))
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		ts := TemplateSpec{
+			TemplateID: *tmpl.LaunchTemplateId,
+			Version:    templateSpec.LaunchTemplateVersion,
+		}
+
+		log.Printf("found template in region %q: ID %q, name %q", region, *tmpl.LaunchTemplateId, *tmpl.LaunchTemplateName)
+
+		if templateSpec.LaunchTemplateVersion == 0 {
+			ts.Version = int(*tmpl.LatestVersionNumber)
+		}
+
+		if *tmpl.LatestVersionNumber < int64(templateSpec.LaunchTemplateVersion) {
+			err := fmt.Errorf("specified version (%d) is higher than the latest launch template version (%d) for region %q",
+				templateSpec.LaunchTemplateVersion,
+				tmpl.LatestVersionNumber,
+				region)
+			ui.Error(err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		templateIDsByRegion[region] = ts
+	}
+
+	state.Put("launch_template_version", templateIDsByRegion)
 
 	return multistep.ActionContinue
 }
 
-func (s *stepPrepareFastLaunchTemplate) getTemplate(ec2conn *ec2.EC2) (*ec2.LaunchTemplate, error) {
+func getTemplate(ec2conn ec2iface.EC2API, templateSpec FastLaunchTemplateConfig) (*ec2.LaunchTemplate, error) {
 	requestInput := &ec2.DescribeLaunchTemplatesInput{}
 
-	if s.TemplateID != "" {
-		requestInput.LaunchTemplateIds = []*string{&s.TemplateID}
+	if templateSpec.LaunchTemplateID != "" {
+		requestInput.LaunchTemplateIds = []*string{&templateSpec.LaunchTemplateID}
 	}
-	if s.TemplateName != "" {
-		requestInput.LaunchTemplateNames = []*string{&s.TemplateName}
+	if templateSpec.LaunchTemplateName != "" {
+		requestInput.LaunchTemplateNames = []*string{&templateSpec.LaunchTemplateName}
 	}
 
 	lts, err := ec2conn.DescribeLaunchTemplates(requestInput)
@@ -89,7 +114,7 @@ func (s *stepPrepareFastLaunchTemplate) getTemplate(ec2conn *ec2.EC2) (*ec2.Laun
 	tmpls := lts.LaunchTemplates
 	if len(tmpls) != 1 {
 		return nil, fmt.Errorf("failed to get launch template %q; received %d responses, expected only one to match",
-			s.TemplateID,
+			templateSpec.LaunchTemplateID,
 			len(tmpls))
 	}
 

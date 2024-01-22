@@ -1671,24 +1671,43 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
 
 - `enable_fast_launch` (bool) - Configure fast-launch for Windows AMIs
 
-- `template_id` (string) - The ID of the launch template to use for the fast launch
+- `template_id` (string) - The ID of the launch template to use for fast launch for the main AMI.
   
   This cannot be specified in conjunction with the template name.
   
   If no template is specified, the default launch template will be used,
   as specified in the AWS docs.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
 
-- `template_name` (string) - The name of the launch template to use for fast launch
+- `template_name` (string) - The name of the launch template to use for fast launch for the main AMI.
   
   This cannot be specified in conjunction with the template ID.
   
   If no template is specified, the default launch template will be used,
   as specified in the AWS docs.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
 
-- `template_version` (int) - The version of the launch template to use
+- `template_version` (int) - The version of the launch template to use for fast launch for the main AMI.
   
   If unspecified, and a template is referenced, this will default to
   the latest version available for the template.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
+
+- `region_launch_templates` ([]FastLaunchTemplateConfig) - RegionLaunchTemplates is the list of launch templates per region.
+  
+  This should be specified if you want to use a custom launch
+  template for your fast-launched images, and you are copying
+  the image to other regions.
+  
+  Note: all the regions don't need an entry in this map, but if you
+  don't specify a region's template, a default one will be picked
+  by AWS.
 
 - `max_parallel_launches` (int) - Maximum number of instances to launch for creating pre-provisioned snapshots
   

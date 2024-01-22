@@ -284,6 +284,36 @@ func TestBuilderPrepare_FastLaunch(t *testing.T) {
 			false,
 		},
 		{
+			"Error - regional launch template specified, with same region as top-level",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"region_launch_templates": map[string]interface{}{
+						"region":           "us-east-1",
+						"template_name":    "name",
+						"template_version": 2,
+					},
+					"template_name":         "test",
+					"max_parallel_launches": 10,
+					"target_resource_count": 1,
+				},
+			},
+			true,
+		},
+		{
+			"Error - regional launch template specified, without region",
+			map[string]interface{}{
+				"fast_launch": map[string]interface{}{
+					"region_launch_templates": map[string]interface{}{
+						"template_name":    "name",
+						"template_version": 2,
+					},
+					"max_parallel_launches": 10,
+					"target_resource_count": 1,
+				},
+			},
+			true,
+		},
+		{
 			"Error - max parallel launches < 6",
 			map[string]interface{}{
 				"fast_launch": map[string]interface{}{
