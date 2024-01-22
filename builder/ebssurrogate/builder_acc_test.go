@@ -109,6 +109,75 @@ func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_EbssurrogateImageMethodCreate(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   "ebs-image-method-create-acc-test",
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebssurrogate_image_method_create_test",
+		Template: fmt.Sprintf(testBuilderAccImageMethodCreate, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbssurrogateImageMethodRegister(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   "ebs-image-method-register-acc-test",
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebssurrogate_image_method_register_test",
+		Template: fmt.Sprintf(testBuilderAccImageMethodRegister, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbssurrogateImageMethodEmpty(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   "ebs-image-method-empty-acc-test",
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebssurrogate_image_method_empty_test",
+		Template: fmt.Sprintf(testBuilderAccImageMethodRegister, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
 const testBuilderAccBasic = `
 source "amazon-ebssurrogate" "test" {
 	ami_name = "%s"
@@ -177,6 +246,92 @@ source "amazon-ebssurrogate" "test" {
 	iam_instance_profile = "SSMInstanceProfile"
 	communicator         = "ssh"
 	ssh_private_key_file = "%s"
+	launch_block_device_mappings {
+		device_name = "/dev/xvda"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	ami_virtualization_type = "hvm"
+	ami_root_device {
+		source_device_name = "/dev/xvda"
+		device_name = "/dev/sda1"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+}
+
+build {
+	sources = ["amazon-ebssurrogate.test"]
+}
+`
+
+const testBuilderAccImageMethodCreate = `
+source "amazon-ebssurrogate" "test" {
+	ami_name = "%s"
+	region = "us-east-1"
+	instance_type = "m3.medium"
+	source_ami = "ami-76b2a71e"
+	ssh_username = "ubuntu"
+	launch_block_device_mappings {
+		device_name = "/dev/xvda"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	ami_virtualization_type = "hvm"
+	ami_root_device {
+		source_device_name = "/dev/xvda"
+		device_name = "/dev/sda1"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+		image_method = "create"
+	}
+}
+
+build {
+	sources = ["amazon-ebssurrogate.test"]
+}
+`
+
+const testBuilderAccImageMethodRegister = `
+source "amazon-ebssurrogate" "test" {
+	ami_name = "%s"
+	region = "us-east-1"
+	instance_type = "m3.medium"
+	source_ami = "ami-76b2a71e"
+	ssh_username = "ubuntu"
+	launch_block_device_mappings {
+		device_name = "/dev/xvda"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	ami_virtualization_type = "hvm"
+	ami_root_device {
+		source_device_name = "/dev/xvda"
+		device_name = "/dev/sda1"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+		image_method = "create"
+	}
+}
+
+build {
+	sources = ["amazon-ebssurrogate.test"]
+}
+`
+
+const testBuilderAccImageMethodEmpty = `
+source "amazon-ebssurrogate" "test" {
+	ami_name = "%s"
+	region = "us-east-1"
+	instance_type = "m3.medium"
+	source_ami = "ami-76b2a71e"
+	ssh_username = "ubuntu"
 	launch_block_device_mappings {
 		device_name = "/dev/xvda"
 		delete_on_termination = true

@@ -36,6 +36,8 @@ type RootBlockDevice struct {
 	// The size of the volume, in GiB. Required if
 	// not specifying a snapshot_id.
 	VolumeSize int64 `mapstructure:"volume_size" required:"false"`
+	//Method used for image, create or register
+	ImageMethod string `mapstructure:"image_method" required:"false"`
 }
 
 func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
@@ -59,6 +61,10 @@ func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
 
 	if c.VolumeSize < 0 {
 		errs = append(errs, errors.New("volume_size must be greater than 0"))
+	}
+
+	if c.ImageMethod != "" && c.ImageMethod != "create" && c.ImageMethod != "register" {
+		errs = append(errs, errors.New("image_method must be empty string or 'create' or 'register'"))
 	}
 
 	if len(errs) > 0 {
