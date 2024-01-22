@@ -145,7 +145,24 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	errs = packersdk.MultiErrorAppend(errs, b.config.LaunchMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.RunConfig.Prepare(&b.config.ctx)...)
 
+	b.config.FastLaunch.defaultRegion = b.config.RawRegion
 	errs = packersdk.MultiErrorAppend(errs, b.config.FastLaunch.Prepare()...)
+	for _, templateConfig := range b.config.FastLaunch.RegionLaunchTemplates {
+		exists := false
+		for _, cpRegion := range b.config.AMIRegions {
+			if cpRegion == templateConfig.Region {
+				exists = true
+				break
+			}
+		}
+		if b.config.RawRegion == templateConfig.Region {
+			exists = true
+		}
+
+		if !exists {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Launch template specified for enabling fast-launch on region %q, but the AMI won't be copied there.", templateConfig.Region))
+		}
+	}
 
 	if b.config.IsSpotInstance() && (b.config.AMIENASupport.True() || b.config.AMISriovNetSupport) {
 		errs = packersdk.MultiErrorAppend(errs,
@@ -404,20 +421,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:               b.config.RunTags,
 			Ctx:                b.config.ctx,
 		},
-		&stepPrepareFastLaunchTemplate{
-			AMISkipCreateImage: b.config.AMISkipCreateImage,
-			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
-			TemplateID:         b.config.FastLaunch.LaunchTemplateID,
-			TemplateName:       b.config.FastLaunch.LaunchTemplateName,
-			TemplateVersion:    b.config.FastLaunch.LaunchTemplateVersion,
-		},
-		&stepEnableFastLaunch{
-			PollingConfig:      b.config.PollingConfig,
-			ResourceCount:      b.config.FastLaunch.TargetResourceCount,
-			AMISkipCreateImage: b.config.AMISkipCreateImage,
-			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
-			MaxInstances:       b.config.FastLaunch.MaxParallelLaunches,
-		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,
@@ -428,6 +431,20 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			OriginalRegion:     *ec2conn.Config.Region,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+		},
+		&stepPrepareFastLaunchTemplate{
+			AccessConfig:       &b.config.AccessConfig,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			RegionTemplates:    b.config.FastLaunch.RegionLaunchTemplates,
+		},
+		&stepEnableFastLaunch{
+			AccessConfig:       &b.config.AccessConfig,
+			PollingConfig:      b.config.PollingConfig,
+			ResourceCount:      b.config.FastLaunch.TargetResourceCount,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			MaxInstances:       b.config.FastLaunch.MaxParallelLaunches,
 		},
 		&stepEnableDeprecation{
 			AccessConfig:       &b.config.AccessConfig,
