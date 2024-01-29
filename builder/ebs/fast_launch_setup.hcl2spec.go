@@ -45,7 +45,7 @@ func (*FlatFastLaunchConfig) HCL2Spec() map[string]hcldec.Spec {
 // FlatFastLaunchTemplateConfig is an auto-generated flat version of FastLaunchTemplateConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatFastLaunchTemplateConfig struct {
-	Region                *string `mapstructure:"region" cty:"region" hcl:"region"`
+	Region                *string `mapstructure:"region" required:"true" cty:"region" hcl:"region"`
 	LaunchTemplateID      *string `mapstructure:"template_id" cty:"template_id" hcl:"template_id"`
 	LaunchTemplateName    *string `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
 	LaunchTemplateVersion *int    `mapstructure:"template_version" cty:"template_version" hcl:"template_version"`

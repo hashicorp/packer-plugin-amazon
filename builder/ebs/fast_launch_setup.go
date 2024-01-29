@@ -18,7 +18,7 @@ import (
 // copy, and each region may pick their own launch template.
 type FastLaunchTemplateConfig struct {
 	// The region in which to find the launch template to use
-	Region string `mapstructure:"region"`
+	Region string `mapstructure:"region" required:"true"`
 	// The ID of the launch template to use for the fast launch
 	//
 	// This cannot be specified in conjunction with the template name.
@@ -111,9 +111,12 @@ type FastLaunchConfig struct {
 	// template for your fast-launched images, and you are copying
 	// the image to other regions.
 	//
-	// Note: all the regions don't need an entry in this map, but if you
-	// don't specify a region's template, a default one will be picked
-	// by AWS.
+	// All regions don't need a launch template configuration, but for
+	// each that don't have a launch template specified, AWS will pick
+	// a default one for that purpose.
+	//
+	// For information about each entry, refer to the
+	// [Fast Launch Template Config](#fast-launch-template-config) documentation.
 	RegionLaunchTemplates []FastLaunchTemplateConfig `mapstructure:"region_launch_templates"`
 	// Maximum number of instances to launch for creating pre-provisioned snapshots
 	//

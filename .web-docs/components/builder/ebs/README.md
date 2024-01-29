@@ -1705,9 +1705,12 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
   template for your fast-launched images, and you are copying
   the image to other regions.
   
-  Note: all the regions don't need an entry in this map, but if you
-  don't specify a region's template, a default one will be picked
-  by AWS.
+  All regions don't need a launch template configuration, but for
+  each that don't have a launch template specified, AWS will pick
+  a default one for that purpose.
+  
+  For information about each entry, refer to the
+  [Fast Launch Template Config](#fast-launch-template-config) documentation.
 
 - `max_parallel_launches` (int) - Maximum number of instances to launch for creating pre-provisioned snapshots
   
@@ -1720,6 +1723,32 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
   march 2023, this defaults to 5 on AWS)
 
 <!-- End of code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; -->
+
+
+#### Fast Launch Template Config
+
+<!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
+
+- `template_id` (string) - The ID of the launch template to use for the fast launch
+  
+  This cannot be specified in conjunction with the template name.
+  
+  If no template is specified, the default launch template will be used,
+  as specified in the AWS docs.
+
+- `template_name` (string) - The name of the launch template to use for fast launch
+  
+  This cannot be specified in conjunction with the template ID.
+  
+  If no template is specified, the default launch template will be used,
+  as specified in the AWS docs.
+
+- `template_version` (int) - The version of the launch template to use
+  
+  If unspecified, and a template is referenced, this will default to
+  the latest version available for the template.
+
+<!-- End of code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; -->
 
 
 ## Accessing the Instance to Debug
