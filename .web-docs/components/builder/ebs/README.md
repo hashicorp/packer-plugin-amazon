@@ -1729,6 +1729,15 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
 
 <!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
 
+- `region` (string) - The region in which to find the launch template to use
+
+<!-- End of code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; -->
+
+
+**Optional:**
+
+<!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
+
 - `template_id` (string) - The ID of the launch template to use for the fast launch
   
   This cannot be specified in conjunction with the template name.
