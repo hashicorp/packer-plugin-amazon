@@ -6,7 +6,6 @@ package ebssurrogate
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -60,11 +59,15 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	for deviceName, volumeID := range deviceToVolumeMap {
-		ui.Say(fmt.Sprintf("Detaching EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-
-		_, err := ec2conn.DetachVolume(&ec2.DetachVolumeInput{VolumeId: &volumeID})
-		if err == nil {
-			err = s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2conn, volumeID)
+		omit, ok := s.LaunchOmitMap[deviceName]
+		if ok && omit {
+			ui.Say(fmt.Sprintf("Detaching Ommitted EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
+			err = s.detach_volume(ctx, ec2conn, deviceName, volumeID)
+		} else if deviceName == s.RootDevice.DeviceName || deviceName == s.RootDevice.SourceDeviceName || deviceName == "/dev/sda1" {
+			ui.Say(fmt.Sprintf("Detaching Root EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
+			err = s.detach_volume(ctx, ec2conn, deviceName, volumeID)
+		} else {
+			ui.Say(fmt.Sprintf("Skip Detach of EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
 		}
 
 		if err != nil {
@@ -73,53 +76,45 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
+
 	}
 
-	for deviceName, volumeID := range deviceToVolumeMap {
-		omit, ok := s.LaunchOmitMap[deviceName]
-		if ok && omit {
-			ui.Say(fmt.Sprintf("Skip Attaching Ommitted EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			continue
-		}
+	rootVolumeId := aws.String(deviceToVolumeMap[s.RootDevice.SourceDeviceName])
+	rootDeviceName := aws.String(s.RootDevice.DeviceName)
+	ui.Say(fmt.Sprintf("Attaching Root EBS Device Name %s, Volume ID: %s", *rootDeviceName, *rootVolumeId))
 
-		if deviceName == s.RootDevice.DeviceName {
-			ui.Say(fmt.Sprintf("Skip Attaching Root EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			continue
-		}
-		ui.Say(fmt.Sprintf("Attaching EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
+	_, err = ec2conn.AttachVolume(&ec2.AttachVolumeInput{
+		InstanceId: instance.InstanceId,
+		VolumeId:   rootVolumeId,
+		Device:     rootDeviceName,
+	})
 
-		attachVolume := deviceName
-		if deviceName == s.RootDevice.SourceDeviceName {
-			rootDeviceName := *aws.String(s.RootDevice.DeviceName)
-			ui.Say(fmt.Sprintf("Rename EBS Device Name: %s as the root device name %s\n", deviceName, rootDeviceName))
-			// For the API call, it expects "sd" prefixed devices.
-			attachVolume = strings.Replace(rootDeviceName, "/xvd", "/sd", 1)
-		}
+	if err != nil {
+		err := fmt.Errorf("error attaching volume: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
 
-		ui.Say(fmt.Sprintf("Attaching the volume to %s", attachVolume))
-		_, err := ec2conn.AttachVolume(&ec2.AttachVolumeInput{
-			InstanceId: instance.InstanceId,
-			VolumeId:   &volumeID,
-			Device:     &attachVolume,
-		})
-		if err != nil {
-			err := fmt.Errorf("error attaching volume: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-
-		// Wait for the volume to become attached
-		err = s.PollingConfig.WaitUntilVolumeAttached(ctx, ec2conn, volumeID)
-		if err != nil {
-			err := fmt.Errorf("error waiting for volume: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+	// Wait for the volume to become attached
+	err = s.PollingConfig.WaitUntilVolumeAttached(ctx, ec2conn, *rootVolumeId)
+	if err != nil {
+		err := fmt.Errorf("error waiting for volume: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
 	}
 
 	return multistep.ActionContinue
+}
+
+func (s *StepSwapVolumes) detach_volume(ctx context.Context, ec2conn *ec2.EC2, deviceName string, volumeId string) error {
+	_, err := ec2conn.DetachVolume(&ec2.DetachVolumeInput{VolumeId: &volumeId})
+	if err == nil {
+		return s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2conn, volumeId)
+	}
+
+	return err
 }
 
 func (s *StepSwapVolumes) Cleanup(state multistep.StateBag) {}

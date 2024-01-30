@@ -354,6 +354,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 		imageMethod = &StepCreateAMI{
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			RootDevice:         b.config.RootDevice,
+			AMIDevices:         amiDevices,
+			LaunchDevices:      launchDevices,
 			PollingConfig:      b.config.PollingConfig,
 			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			Tags:               b.config.RunTags,
