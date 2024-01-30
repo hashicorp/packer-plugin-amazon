@@ -68,7 +68,7 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 	if !s.IsRestricted {
 		ec2Tags, err := awscommon.TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
 		if err != nil {
-			err := fmt.Errorf("error tagging AMI: %s", err)
+			err := fmt.Errorf("Error tagging AMI: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
@@ -95,7 +95,7 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		return err
 	})
 	if err != nil {
-		err := fmt.Errorf("error creating AMI: %s", err)
+		err := fmt.Errorf("Error creating AMI: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
@@ -111,12 +111,12 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 	ui.Say("Waiting for AMI to become ready...")
 	if waitErr := s.PollingConfig.WaitUntilAMIAvailable(ctx, ec2conn, *createResp.ImageId); waitErr != nil {
 		// waitErr should get bubbled up if the issue is a wait timeout
-		err := fmt.Errorf("error waiting for AMI: %s", waitErr)
+		err := fmt.Errorf("Error waiting for AMI: %s", waitErr)
 		imResp, imerr := ec2conn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{createResp.ImageId}})
 		if imerr != nil {
 			// If there's a failure describing images, bubble that error up too, but don't erase the waitErr.
 			log.Printf("DescribeImages call was unable to determine reason waiting for AMI failed: %s", imerr)
-			err = fmt.Errorf("unknown error waiting for AMI; %s. DescribeImages returned an error: %s", waitErr, imerr)
+			err = fmt.Errorf("Unknown error waiting for AMI; %s. DescribeImages returned an error: %s", waitErr, imerr)
 		}
 		if imResp != nil && len(imResp.Images) > 0 {
 			// Finally, if there's a stateReason, store that with the wait err
@@ -124,7 +124,7 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 			if image != nil {
 				stateReason := image.StateReason
 				if stateReason != nil {
-					err = fmt.Errorf("error waiting for AMI: %s. DescribeImages returned the state reason: %s", waitErr, stateReason)
+					err = fmt.Errorf("Error waiting for AMI: %s. DescribeImages returned the state reason: %s", waitErr, stateReason)
 				}
 			}
 		}
@@ -135,7 +135,7 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 
 	imagesResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{createResp.ImageId}})
 	if err != nil {
-		err := fmt.Errorf("error searching for AMI: %s", err)
+		err := fmt.Errorf("Error searching for AMI: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
@@ -210,7 +210,7 @@ func (s *StepCreateAMI) Cleanup(state multistep.StateBag) {
 	})
 
 	if err != nil {
-		err := fmt.Errorf("error describing AMI: %s", err)
+		err := fmt.Errorf("Error describing AMI: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return
@@ -223,7 +223,7 @@ func (s *StepCreateAMI) Cleanup(state multistep.StateBag) {
 		})
 
 		if err != nil {
-			err := fmt.Errorf("error deregistering existing AMI: %s", err)
+			err := fmt.Errorf("Error deregistering existing AMI: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return
@@ -238,7 +238,7 @@ func (s *StepCreateAMI) Cleanup(state multistep.StateBag) {
 				})
 
 				if err != nil {
-					err := fmt.Errorf("error deleting existing snapshot: %s", err)
+					err := fmt.Errorf("Error deleting existing snapshot: %s", err)
 					state.Put("error", err)
 					ui.Error(err.Error())
 					return
