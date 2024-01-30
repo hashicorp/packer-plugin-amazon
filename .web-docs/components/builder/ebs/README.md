@@ -1671,6 +1671,73 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
 
 - `enable_fast_launch` (bool) - Configure fast-launch for Windows AMIs
 
+- `template_id` (string) - The ID of the launch template to use for fast launch for the main AMI.
+  
+  This cannot be specified in conjunction with the template name.
+  
+  If no template is specified, the default launch template will be used,
+  as specified in the AWS docs.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
+
+- `template_name` (string) - The name of the launch template to use for fast launch for the main AMI.
+  
+  This cannot be specified in conjunction with the template ID.
+  
+  If no template is specified, the default launch template will be used,
+  as specified in the AWS docs.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
+
+- `template_version` (int) - The version of the launch template to use for fast launch for the main AMI.
+  
+  If unspecified, and a template is referenced, this will default to
+  the latest version available for the template.
+  
+  If you copy the AMI to other regions, this option should not
+  be used, use instead the `fast_launch_template_config` option.
+
+- `region_launch_templates` ([]FastLaunchTemplateConfig) - RegionLaunchTemplates is the list of launch templates per region.
+  
+  This should be specified if you want to use a custom launch
+  template for your fast-launched images, and you are copying
+  the image to other regions.
+  
+  All regions don't need a launch template configuration, but for
+  each that don't have a launch template specified, AWS will pick
+  a default one for that purpose.
+  
+  For information about each entry, refer to the
+  [Fast Launch Template Config](#fast-launch-template-config) documentation.
+
+- `max_parallel_launches` (int) - Maximum number of instances to launch for creating pre-provisioned snapshots
+  
+  If specified, must be a minimum of `6`
+
+- `target_resource_count` (int) - The number of snapshots to pre-provision for later launching windows instances
+  from the resulting fast-launch AMI.
+  
+  If unspecified, this will create the default number of snapshots (as of
+  march 2023, this defaults to 5 on AWS)
+
+<!-- End of code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; -->
+
+
+#### Fast Launch Template Config
+
+<!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
+
+- `region` (string) - The region in which to find the launch template to use
+
+<!-- End of code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; -->
+
+
+**Optional:**
+
+<!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
+
 - `template_id` (string) - The ID of the launch template to use for the fast launch
   
   This cannot be specified in conjunction with the template name.
@@ -1690,17 +1757,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/win-ami-config-fast-launc
   If unspecified, and a template is referenced, this will default to
   the latest version available for the template.
 
-- `max_parallel_launches` (int) - Maximum number of instances to launch for creating pre-provisioned snapshots
-  
-  If specified, must be a minimum of `6`
-
-- `target_resource_count` (int) - The number of snapshots to pre-provision for later launching windows instances
-  from the resulting fast-launch AMI.
-  
-  If unspecified, this will create the default number of snapshots (as of
-  march 2023, this defaults to 5 on AWS)
-
-<!-- End of code generated from the comments of the FastLaunchConfig struct in builder/ebs/fast_launch_setup.go; -->
+<!-- End of code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; -->
 
 
 ## Accessing the Instance to Debug

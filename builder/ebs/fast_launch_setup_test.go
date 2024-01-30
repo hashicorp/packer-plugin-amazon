@@ -19,6 +19,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"OK - all specified, with template id",
 			FastLaunchConfig{
+				defaultRegion:         "us-east-1",
 				UseFastLaunch:         true,
 				LaunchTemplateID:      "id",
 				LaunchTemplateVersion: 2,
@@ -30,6 +31,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"OK - all specified, with template name",
 			FastLaunchConfig{
+				defaultRegion:         "us-east-1",
 				UseFastLaunch:         true,
 				LaunchTemplateName:    "name",
 				LaunchTemplateVersion: 2,
@@ -41,6 +43,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"Error - max parallel launches < 6",
 			FastLaunchConfig{
+				defaultRegion:       "us-east-1",
 				MaxParallelLaunches: 3,
 			},
 			true,
@@ -48,6 +51,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"Error - target resource count < 0",
 			FastLaunchConfig{
+				defaultRegion:       "us-east-1",
 				TargetResourceCount: -1,
 			},
 			true,
@@ -55,6 +59,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"Error - launch template ID & name specified",
 			FastLaunchConfig{
+				defaultRegion:      "us-east-1",
 				LaunchTemplateID:   "id",
 				LaunchTemplateName: "name",
 			},
@@ -63,6 +68,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"Error - launch template version without name/id",
 			FastLaunchConfig{
+				defaultRegion:         "us-east-1",
 				LaunchTemplateVersion: 2,
 			},
 			true,
@@ -70,6 +76,7 @@ func TestFastLaunchPrepare(t *testing.T) {
 		{
 			"Error - launch template version < 0",
 			FastLaunchConfig{
+				defaultRegion:         "us-east-1",
 				LaunchTemplateVersion: -1,
 			},
 			true,

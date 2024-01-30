@@ -5,11 +5,15 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -17,6 +21,7 @@ import (
 )
 
 type stepEnableFastLaunch struct {
+	AccessConfig       *common.AccessConfig
 	PollingConfig      *awscommon.AWSPollingConfig
 	AMISkipCreateImage bool
 	EnableFastLaunch   bool
@@ -37,7 +42,6 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 		return multistep.ActionContinue
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
 	amis := state.Get("amis").(map[string]string)
 
 	if len(amis) == 0 {
@@ -45,70 +49,114 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 		return multistep.ActionContinue
 	}
 
-	for _, ami := range amis {
-		ui.Say(fmt.Sprintf("Enabling fast boot for AMI %s", ami))
+	wg := &sync.WaitGroup{}
+	wg.Add(len(amis))
 
-		fastLaunchInput := s.prepareFastLaunchRequest(ami, state)
+	errWg := &sync.WaitGroup{}
+	errWg.Add(1)
 
-		// Create a timeout for the EnableFastLaunch call.
-		timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
-		defer cancel()
+	errCh := make(chan (error), 1)
+	var errs []error
+	go func() {
+		defer errWg.Done()
+		for err := range errCh {
+			errs = append(errs, err)
+		}
+	}()
 
-		err := retry.Config{
-			Tries: 5,
-			ShouldRetry: func(err error) bool {
-				log.Printf("Enabling fast launch failed: %s", err)
-				return true
-			},
-			RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
-		}.Run(timeoutCtx, func(ctx context.Context) error {
-			var err error
-			_, err = ec2conn.EnableFastLaunch(fastLaunchInput)
-			return err
-		})
+	for region, ami := range amis {
+		ec2connif, err := common.GetRegionConn(s.AccessConfig, region)
 		if err != nil {
-			err := fmt.Errorf("Error enabling fast boot for AMI: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
+			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %s", region, err))
 			return multistep.ActionHalt
 		}
 
-		// Wait for the image to become ready
-		ui.Say("Waiting for fast launch to become ready...")
-		waitErr := s.PollingConfig.WaitUntilFastLaunchEnabled(ctx, ec2conn, ami)
-		if waitErr != nil {
-			err := fmt.Errorf("Failed to enable fast launch: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+		go func(region, ami string) {
+			defer wg.Done()
 
-		flStatus, err := ec2conn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-			ImageIds: []*string{
-				&ami,
-			},
-		})
-		if err != nil {
-			err := fmt.Errorf("Failed to get fast-launch status for AMI %q: %s", ami, err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
+			// Casting is somewhat unsafe, but since the retryer below only
+			// accepts this type, and not ec2iface.EC2API, we can safely
+			// do this here, unless the `GetRegionConn` function evolves
+			// later, in which case this will fail.
+			ec2conn := ec2connif.(*ec2.EC2)
 
-		for _, img := range flStatus.FastLaunchImages {
-			if *img.State != "enabled" {
-				err := fmt.Errorf("Failed to enable fast-launch for AMI %q: %s", ami, *img.StateTransitionReason)
-				state.Put("error", err)
-				ui.Error(err.Error())
-				return multistep.ActionHalt
+			ui.Say(fmt.Sprintf("Enabling fast boot for AMI %s in region %s", ami, region))
+
+			fastLaunchInput := s.prepareFastLaunchRequest(ami, region, state)
+
+			// Create a timeout for the EnableFastLaunch call.
+			timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+
+			err = retry.Config{
+				Tries: 5,
+				ShouldRetry: func(err error) bool {
+					log.Printf("Enabling fast launch failed: %s", err)
+					return true
+				},
+				RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+			}.Run(timeoutCtx, func(ctx context.Context) error {
+				var err error
+				_, err = ec2conn.EnableFastLaunch(fastLaunchInput)
+				return err
+			})
+			if err != nil {
+				errCh <- fmt.Errorf("Error enabling fast boot for AMI in region %s: %s", region, err)
+				return
 			}
-		}
+
+			// Wait for the image to become ready
+			ui.Say(fmt.Sprintf("Waiting for fast launch to become ready on AMI %q in region %s...", ami, region))
+			waitErr := s.PollingConfig.WaitUntilFastLaunchEnabled(ctx, ec2conn, ami)
+			if waitErr != nil {
+				errCh <- fmt.Errorf("Failed to enable fast launch: %s", err)
+				return
+			}
+
+			flStatus, err := ec2conn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+				ImageIds: []*string{
+					&ami,
+				},
+			})
+			if err != nil {
+				errCh <- fmt.Errorf("Failed to get fast-launch status for AMI %q: %s", ami, err)
+				return
+			}
+
+			for _, img := range flStatus.FastLaunchImages {
+				if *img.State != "enabled" {
+					errCh <- fmt.Errorf("Failed to enable fast-launch for AMI %q: %s", ami, *img.StateTransitionReason)
+					return
+				}
+			}
+		}(region, ami)
+	}
+
+	wg.Wait()
+	close(errCh)
+	// Wait until we finished queueing the errors before continuing
+	//
+	// Otherwise we may end-up queueing an error and leaving the routine
+	// that processes with an error, and the error check below may execute
+	// before the error gets queued up, which may result in a build
+	// succeeding even if there was an error with the fast-launch on one AMI.
+	errWg.Wait()
+
+	for _, err := range errs {
+		ui.Error(err.Error())
+	}
+
+	if errs != nil {
+		err := errors.New("Failed to enable fast-launch because of errors")
+		ui.Error(err.Error())
+		state.Put("error", err)
+		return multistep.ActionHalt
 	}
 
 	return multistep.ActionContinue
 }
 
-func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, state multistep.StateBag) *ec2.EnableFastLaunchInput {
+func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, region string, state multistep.StateBag) *ec2.EnableFastLaunchInput {
 	fastLaunchInput := &ec2.EnableFastLaunchInput{
 		ImageId: &ami,
 	}
@@ -125,15 +173,21 @@ func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, state multis
 		}
 	}
 
-	templateID, ok := state.Get("launch_template_id").(string)
+	templateIDsByRegion, ok := state.GetOk("launch_template_version")
 	if !ok {
+		log.Printf("[TRACE] no template specified for region %q", region)
 		return fastLaunchInput
 	}
-	version := fmt.Sprintf("%d", state.Get("launch_template_version"))
+
+	templateConfig, ok := templateIDsByRegion.(map[string]TemplateSpec)[region]
+	if !ok {
+		log.Printf("[TRACE] no template specified for region %q", region)
+		return fastLaunchInput
+	}
 
 	fastLaunchInput.LaunchTemplate = &ec2.FastLaunchLaunchTemplateSpecificationRequest{
-		LaunchTemplateId: &templateID,
-		Version:          &version,
+		LaunchTemplateId: &templateConfig.TemplateID,
+		Version:          aws.String(fmt.Sprintf("%d", templateConfig.Version)),
 	}
 
 	return fastLaunchInput

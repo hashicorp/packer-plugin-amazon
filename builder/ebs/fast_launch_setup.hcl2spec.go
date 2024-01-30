@@ -10,12 +10,13 @@ import (
 // FlatFastLaunchConfig is an auto-generated flat version of FastLaunchConfig.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatFastLaunchConfig struct {
-	UseFastLaunch         *bool   `mapstructure:"enable_fast_launch" cty:"enable_fast_launch" hcl:"enable_fast_launch"`
-	LaunchTemplateID      *string `mapstructure:"template_id" cty:"template_id" hcl:"template_id"`
-	LaunchTemplateName    *string `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
-	LaunchTemplateVersion *int    `mapstructure:"template_version" cty:"template_version" hcl:"template_version"`
-	MaxParallelLaunches   *int    `mapstructure:"max_parallel_launches" cty:"max_parallel_launches" hcl:"max_parallel_launches"`
-	TargetResourceCount   *int    `mapstructure:"target_resource_count" cty:"target_resource_count" hcl:"target_resource_count"`
+	UseFastLaunch         *bool                          `mapstructure:"enable_fast_launch" cty:"enable_fast_launch" hcl:"enable_fast_launch"`
+	LaunchTemplateID      *string                        `mapstructure:"template_id" cty:"template_id" hcl:"template_id"`
+	LaunchTemplateName    *string                        `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
+	LaunchTemplateVersion *int                           `mapstructure:"template_version" cty:"template_version" hcl:"template_version"`
+	RegionLaunchTemplates []FlatFastLaunchTemplateConfig `mapstructure:"region_launch_templates" cty:"region_launch_templates" hcl:"region_launch_templates"`
+	MaxParallelLaunches   *int                           `mapstructure:"max_parallel_launches" cty:"max_parallel_launches" hcl:"max_parallel_launches"`
+	TargetResourceCount   *int                           `mapstructure:"target_resource_count" cty:"target_resource_count" hcl:"target_resource_count"`
 }
 
 // FlatMapstructure returns a new FlatFastLaunchConfig.
@@ -30,12 +31,42 @@ func (*FastLaunchConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcl
 // The decoded values from this spec will then be applied to a FlatFastLaunchConfig.
 func (*FlatFastLaunchConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"enable_fast_launch":    &hcldec.AttrSpec{Name: "enable_fast_launch", Type: cty.Bool, Required: false},
-		"template_id":           &hcldec.AttrSpec{Name: "template_id", Type: cty.String, Required: false},
-		"template_name":         &hcldec.AttrSpec{Name: "template_name", Type: cty.String, Required: false},
-		"template_version":      &hcldec.AttrSpec{Name: "template_version", Type: cty.Number, Required: false},
-		"max_parallel_launches": &hcldec.AttrSpec{Name: "max_parallel_launches", Type: cty.Number, Required: false},
-		"target_resource_count": &hcldec.AttrSpec{Name: "target_resource_count", Type: cty.Number, Required: false},
+		"enable_fast_launch":      &hcldec.AttrSpec{Name: "enable_fast_launch", Type: cty.Bool, Required: false},
+		"template_id":             &hcldec.AttrSpec{Name: "template_id", Type: cty.String, Required: false},
+		"template_name":           &hcldec.AttrSpec{Name: "template_name", Type: cty.String, Required: false},
+		"template_version":        &hcldec.AttrSpec{Name: "template_version", Type: cty.Number, Required: false},
+		"region_launch_templates": &hcldec.BlockListSpec{TypeName: "region_launch_templates", Nested: hcldec.ObjectSpec((*FlatFastLaunchTemplateConfig)(nil).HCL2Spec())},
+		"max_parallel_launches":   &hcldec.AttrSpec{Name: "max_parallel_launches", Type: cty.Number, Required: false},
+		"target_resource_count":   &hcldec.AttrSpec{Name: "target_resource_count", Type: cty.Number, Required: false},
+	}
+	return s
+}
+
+// FlatFastLaunchTemplateConfig is an auto-generated flat version of FastLaunchTemplateConfig.
+// Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
+type FlatFastLaunchTemplateConfig struct {
+	Region                *string `mapstructure:"region" required:"true" cty:"region" hcl:"region"`
+	LaunchTemplateID      *string `mapstructure:"template_id" cty:"template_id" hcl:"template_id"`
+	LaunchTemplateName    *string `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
+	LaunchTemplateVersion *int    `mapstructure:"template_version" cty:"template_version" hcl:"template_version"`
+}
+
+// FlatMapstructure returns a new FlatFastLaunchTemplateConfig.
+// FlatFastLaunchTemplateConfig is an auto-generated flat version of FastLaunchTemplateConfig.
+// Where the contents a fields with a `mapstructure:,squash` tag are bubbled up.
+func (*FastLaunchTemplateConfig) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spec } {
+	return new(FlatFastLaunchTemplateConfig)
+}
+
+// HCL2Spec returns the hcl spec of a FastLaunchTemplateConfig.
+// This spec is used by HCL to read the fields of FastLaunchTemplateConfig.
+// The decoded values from this spec will then be applied to a FlatFastLaunchTemplateConfig.
+func (*FlatFastLaunchTemplateConfig) HCL2Spec() map[string]hcldec.Spec {
+	s := map[string]hcldec.Spec{
+		"region":           &hcldec.AttrSpec{Name: "region", Type: cty.String, Required: false},
+		"template_id":      &hcldec.AttrSpec{Name: "template_id", Type: cty.String, Required: false},
+		"template_name":    &hcldec.AttrSpec{Name: "template_name", Type: cty.String, Required: false},
+		"template_version": &hcldec.AttrSpec{Name: "template_version", Type: cty.Number, Required: false},
 	}
 	return s
 }
