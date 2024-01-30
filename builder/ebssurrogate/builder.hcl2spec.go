@@ -390,7 +390,7 @@ type FlatRootBlockDevice struct {
 	IOPS                *int64  `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
 	VolumeType          *string `mapstructure:"volume_type" required:"false" cty:"volume_type" hcl:"volume_type"`
 	VolumeSize          *int64  `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
-	ImageMethod			*string `mapstructure:"image_method" required:"false" cty:"image_method" hcl:"image_method"`
+	ImageMethod         *string `mapstructure:"image_method" required:"false" cty:"image_method" hcl:"image_method"`
 }
 
 // FlatMapstructure returns a new FlatRootBlockDevice.
@@ -411,7 +411,7 @@ func (*FlatRootBlockDevice) HCL2Spec() map[string]hcldec.Spec {
 		"iops":                  &hcldec.AttrSpec{Name: "iops", Type: cty.Number, Required: false},
 		"volume_type":           &hcldec.AttrSpec{Name: "volume_type", Type: cty.String, Required: false},
 		"volume_size":           &hcldec.AttrSpec{Name: "volume_size", Type: cty.Number, Required: false},
-		"image_method":           &hcldec.AttrSpec{Name: "image_method", Type: cty.String, Required: false},
+		"image_method":          &hcldec.AttrSpec{Name: "image_method", Type: cty.String, Required: false},
 	}
 	return s
 }
