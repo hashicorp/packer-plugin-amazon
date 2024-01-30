@@ -162,7 +162,7 @@ func TestAccBuilder_EbssurrogateImageMethodEmpty(t *testing.T) {
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_empty_test",
-		Template: fmt.Sprintf(testBuilderAccImageMethodRegister, ami.Name),
+		Template: fmt.Sprintf(testBuilderAccImageMethodEmpty, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -316,7 +316,7 @@ source "amazon-ebssurrogate" "test" {
 		delete_on_termination = true
 		volume_size = 8
 		volume_type = "gp2"
-		image_method = "create"
+		image_method = "register"
 	}
 }
 
