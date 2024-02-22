@@ -63,10 +63,12 @@ func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, errors.New("volume_size must be greater than 0"))
 	}
 
-	if c.ImageMethod != "" && c.ImageMethod != "create" && c.ImageMethod != "register" {
+	if c.ImageMethod != "" c.ImageMethod != "create" && c.ImageMethod != "register" {
 		errs = append(errs, errors.New("image_method must be empty string or 'create' or 'register'"))
 	}
-
+	if c.ImageMethod == "" {
+           c.ImageMethod = "register"
+         }
 	if len(errs) > 0 {
 		return errs
 	}
