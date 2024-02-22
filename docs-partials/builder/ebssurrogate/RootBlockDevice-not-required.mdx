@@ -25,6 +25,10 @@
 - `volume_size` (int64) - The size of the volume, in GiB. Required if
   not specifying a snapshot_id.
 
-- `image_method` (string) - Method used for image, create or register
+- `image_method` (string) - Whether to create or register the AMI image. When set to create
+  the root volume is detached and swapped with the volume specified
+  by SourceDeviceName before the image is created.  All volume metadata is retained.
+  When set to register, the root volume is snapshotted and used when registering the image.
+  Volume metadata is not retained.  Both methods detach any ommitted volumes.
 
 <!-- End of code generated from the comments of the RootBlockDevice struct in builder/ebssurrogate/root_block_device.go; -->
