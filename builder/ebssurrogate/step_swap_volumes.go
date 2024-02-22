@@ -15,11 +15,8 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
-// StepSnapshotVolumes creates snapshots of the created volumes.
-//
-// Produces:
-//
-//	snapshot_ids map[string]string - IDs of the created snapshots
+// StepSwapVolumes detaches omitted volumes and original root volume and reattaches
+// the new root volume specified by ami_root_device.source_device_name.
 type StepSwapVolumes struct {
 	PollingConfig *awscommon.AWSPollingConfig
 	RootDevice    RootBlockDevice
