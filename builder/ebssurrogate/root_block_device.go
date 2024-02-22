@@ -36,7 +36,11 @@ type RootBlockDevice struct {
 	// The size of the volume, in GiB. Required if
 	// not specifying a snapshot_id.
 	VolumeSize int64 `mapstructure:"volume_size" required:"false"`
-	//Method used for image, create or register
+	//Whether to create or register the AMI image. When set to create
+	//the root volume is detached and swapped with the volume specified
+	//by SourceDeviceName before the image is created.  All volume metadata is retained.
+	//When set to register, the root volume is snapshotted and used when registering the image.
+	//Volume metadata is not retained.  Both methods detach any ommitted volumes.
 	ImageMethod string `mapstructure:"image_method" required:"false"`
 }
 
