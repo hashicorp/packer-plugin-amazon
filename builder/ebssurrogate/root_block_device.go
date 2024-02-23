@@ -36,11 +36,13 @@ type RootBlockDevice struct {
 	// The size of the volume, in GiB. Required if
 	// not specifying a snapshot_id.
 	VolumeSize int64 `mapstructure:"volume_size" required:"false"`
-	//Whether to create or register the AMI image. When set to create
-	//the root volume is detached and swapped with the volume specified
-	//by SourceDeviceName before the image is created.  All volume metadata is retained.
-	//When set to register, the root volume is snapshotted and used when registering the image.
-	//Volume metadata is not retained.  Both methods detach any ommitted volumes.
+	//Whether to use the CreateImage or RegisterImage API when creating the AMI.
+	//When set to `create`, CreateImage creates the image from the instance itself,
+	//and inherits properties from the instance. When set to `register`, the image
+	//is created from a snapshot of the specified EBS volume, and no properties
+	//are inherited from the instance.
+	//Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
+	//     https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
 	ImageMethod string `mapstructure:"image_method" required:"false"`
 }
 
