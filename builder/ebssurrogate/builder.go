@@ -318,18 +318,37 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	amiDevices := b.config.AMIMappings.BuildEC2BlockDeviceMappings()
 	launchDevices := b.config.LaunchMappings.BuildEC2BlockDeviceMappings()
 
-	var imageMethod multistep.Step
-	var volumeMethod multistep.Step
+	var buildAmiStep multistep.Step
+	var volumeStep multistep.Step
 
-	if b.config.RootDevice.ImageMethod != "create" {
-		volumeMethod = &StepSnapshotVolumes{
+	if b.config.RootDevice.UseCreateImage {
+		volumeStep = &StepSwapVolumes{
+			PollingConfig: b.config.PollingConfig,
+			RootDevice:    b.config.RootDevice,
+			LaunchDevices: launchDevices,
+			LaunchOmitMap: b.config.LaunchMappings.GetOmissions(),
+			Ctx:           b.config.ctx,
+		}
+
+		buildAmiStep = &StepCreateAMI{
+			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			RootDevice:         b.config.RootDevice,
+			AMIDevices:         amiDevices,
+			LaunchDevices:      launchDevices,
+			PollingConfig:      b.config.PollingConfig,
+			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
+			Tags:               b.config.RunTags,
+			Ctx:                b.config.ctx,
+		}
+	} else {
+		volumeStep = &StepSnapshotVolumes{
 			PollingConfig:   b.config.PollingConfig,
 			LaunchDevices:   launchDevices,
 			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
 			SnapshotTags:    b.config.SnapshotTags,
 			Ctx:             b.config.ctx,
 		}
-		imageMethod = &StepRegisterAMI{
+		buildAmiStep = &StepRegisterAMI{
 			RootDevice:               b.config.RootDevice,
 			AMIDevices:               amiDevices,
 			LaunchDevices:            launchDevices,
@@ -342,25 +361,6 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BootMode:                 b.config.BootMode,
 			UefiData:                 b.config.UefiData,
 			TpmSupport:               b.config.TpmSupport,
-		}
-	} else {
-		volumeMethod = &StepSwapVolumes{
-			PollingConfig: b.config.PollingConfig,
-			RootDevice:    b.config.RootDevice,
-			LaunchDevices: launchDevices,
-			LaunchOmitMap: b.config.LaunchMappings.GetOmissions(),
-			Ctx:           b.config.ctx,
-		}
-
-		imageMethod = &StepCreateAMI{
-			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
-			RootDevice:         b.config.RootDevice,
-			AMIDevices:         amiDevices,
-			LaunchDevices:      launchDevices,
-			PollingConfig:      b.config.PollingConfig,
-			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
-			Tags:               b.config.RunTags,
-			Ctx:                b.config.ctx,
 		}
 	}
 
@@ -466,7 +466,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
 			EnableAMIENASupport:      b.config.AMIENASupport,
 		},
-		volumeMethod,
+		volumeStep,
 		&awscommon.StepDeregisterAMI{
 			AccessConfig:        &b.config.AccessConfig,
 			ForceDeregister:     b.config.AMIForceDeregister,
@@ -474,7 +474,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIName:             b.config.AMIName,
 			Regions:             b.config.AMIRegions,
 		},
-		imageMethod,
+		buildAmiStep,
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,

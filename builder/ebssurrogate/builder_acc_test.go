@@ -109,14 +109,14 @@ func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-func TestAccBuilder_EbssurrogateImageMethodCreate(t *testing.T) {
+func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "ebs-image-method-create-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_create_test",
-		Template: fmt.Sprintf(testBuilderAccImageMethodCreate, ami.Name),
+		Template: fmt.Sprintf(testBuilderAccUseCreateImageTrue, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -132,14 +132,14 @@ func TestAccBuilder_EbssurrogateImageMethodCreate(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func TestAccBuilder_EbssurrogateImageMethodRegister(t *testing.T) {
+func TestAccBuilder_EbssurrogateUseCreateImageFalse(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "ebs-image-method-register-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_register_test",
-		Template: fmt.Sprintf(testBuilderAccImageMethodRegister, ami.Name),
+		Template: fmt.Sprintf(testBuilderAccUseCreateImageFalse, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -155,14 +155,14 @@ func TestAccBuilder_EbssurrogateImageMethodRegister(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func TestAccBuilder_EbssurrogateImageMethodEmpty(t *testing.T) {
+func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   "ebs-image-method-empty-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_empty_test",
-		Template: fmt.Sprintf(testBuilderAccImageMethodEmpty, ami.Name),
+		Template: fmt.Sprintf(testBuilderAccUseCreateImageOptional, ami.Name),
 		Teardown: func() error {
 			return ami.CleanUpAmi()
 		},
@@ -267,7 +267,7 @@ build {
 }
 `
 
-const testBuilderAccImageMethodCreate = `
+const testBuilderAccUseCreateImageTrue = `
 source "amazon-ebssurrogate" "test" {
 	ami_name = "%s"
 	region = "us-east-1"
@@ -296,7 +296,7 @@ build {
 }
 `
 
-const testBuilderAccImageMethodRegister = `
+const testBuilderAccUseCreateImageFalse = `
 source "amazon-ebssurrogate" "test" {
 	ami_name = "%s"
 	region = "us-east-1"
@@ -316,7 +316,7 @@ source "amazon-ebssurrogate" "test" {
 		delete_on_termination = true
 		volume_size = 8
 		volume_type = "gp2"
-		image_method = "register"
+		use_create_image = false
 	}
 }
 
@@ -325,7 +325,7 @@ build {
 }
 `
 
-const testBuilderAccImageMethodEmpty = `
+const testBuilderAccUseCreateImageOptional = `
 source "amazon-ebssurrogate" "test" {
 	ami_name = "%s"
 	region = "us-east-1"

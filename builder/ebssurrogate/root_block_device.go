@@ -37,13 +37,13 @@ type RootBlockDevice struct {
 	// not specifying a snapshot_id.
 	VolumeSize int64 `mapstructure:"volume_size" required:"false"`
 	//Whether to use the CreateImage or RegisterImage API when creating the AMI.
-	//When set to `create`, CreateImage creates the image from the instance itself,
-	//and inherits properties from the instance. When set to `register`, the image
-	//is created from a snapshot of the specified EBS volume, and no properties
-	//are inherited from the instance.
+	//When set to `true`, the CreateImage API is used and will create the image
+	//from the instance itself, and inherit properties from the instance.
+	//When set to `false`, the RegisterImage API is used and the image is created using
+	// a snapshot of the specified EBS volume, and no properties are inherited from the instance.
 	//Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
 	//     https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
-	ImageMethod string `mapstructure:"image_method" required:"false"`
+	UseCreateImage bool `mapstructure:"use_create_image" required:"false"`
 }
 
 func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
@@ -67,12 +67,6 @@ func (c *RootBlockDevice) Prepare(ctx *interpolate.Context) []error {
 
 	if c.VolumeSize < 0 {
 		errs = append(errs, errors.New("volume_size must be greater than 0"))
-	}
-
-	if c.ImageMethod == "" {
-		c.ImageMethod = "register"
-	} else if c.ImageMethod != "create" && c.ImageMethod != "register" {
-		errs = append(errs, errors.New("image_method must be 'create', 'register' or an empty string' "))
 	}
 
 	if len(errs) > 0 {
