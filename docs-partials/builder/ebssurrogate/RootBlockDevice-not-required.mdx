@@ -25,11 +25,11 @@
 - `volume_size` (int64) - The size of the volume, in GiB. Required if
   not specifying a snapshot_id.
 
-- `image_method` (string) - Whether to use the CreateImage or RegisterImage API when creating the AMI.
-  When set to `create`, CreateImage creates the image from the instance itself,
-  and inherits properties from the instance. When set to `register`, the image
-  is created from a snapshot of the specified EBS volume, and no properties
-  are inherited from the instance.
+- `use_create_image` (bool) - Whether to use the CreateImage or RegisterImage API when creating the AMI.
+  When set to `true`, the CreateImage API is used and will create the image
+  from the instance itself, and inherit properties from the instance.
+  When set to `false`, the RegisterImage API is used and the image is created using
+  a snapshot of the specified EBS volume, and no properties are inherited from the instance.
   Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
       https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
 
