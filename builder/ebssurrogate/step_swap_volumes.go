@@ -59,10 +59,10 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 		omit, ok := s.LaunchOmitMap[deviceName]
 		if ok && omit {
 			ui.Say(fmt.Sprintf("Detaching Ommitted EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			err = s.detach_volume(ctx, ec2conn, deviceName, volumeID)
+			err = s.detachVolume(ctx, ec2conn, deviceName, volumeID)
 		} else if deviceName == s.RootDevice.DeviceName || deviceName == s.RootDevice.SourceDeviceName || deviceName == "/dev/sda1" {
 			ui.Say(fmt.Sprintf("Detaching Root EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			err = s.detach_volume(ctx, ec2conn, deviceName, volumeID)
+			err = s.detachVolume(ctx, ec2conn, deviceName, volumeID)
 		} else {
 			ui.Say(fmt.Sprintf("Skip Detach of EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
 		}
@@ -105,7 +105,7 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepSwapVolumes) detach_volume(ctx context.Context, ec2conn *ec2.EC2, deviceName string, volumeId string) error {
+func (s *StepSwapVolumes) detachVolume(ctx context.Context, ec2conn *ec2.EC2, deviceName string, volumeId string) error {
 	_, err := ec2conn.DetachVolume(&ec2.DetachVolumeInput{VolumeId: &volumeId})
 	if err == nil {
 		return s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2conn, volumeId)
