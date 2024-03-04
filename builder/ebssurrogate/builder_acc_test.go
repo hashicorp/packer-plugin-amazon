@@ -274,6 +274,7 @@ source "amazon-ebssurrogate" "test" {
 	instance_type = "m3.medium"
 	source_ami = "ami-76b2a71e"
 	ssh_username = "ubuntu"
+	use_create_image = true
 	launch_block_device_mappings {
 		device_name = "/dev/xvda"
 		delete_on_termination = true
@@ -287,7 +288,6 @@ source "amazon-ebssurrogate" "test" {
 		delete_on_termination = true
 		volume_size = 8
 		volume_type = "gp2"
-		image_method = "create"
 	}
 }
 
@@ -303,6 +303,7 @@ source "amazon-ebssurrogate" "test" {
 	instance_type = "m3.medium"
 	source_ami = "ami-76b2a71e"
 	ssh_username = "ubuntu"
+	use_create_image = false
 	launch_block_device_mappings {
 		device_name = "/dev/xvda"
 		delete_on_termination = true
@@ -316,7 +317,6 @@ source "amazon-ebssurrogate" "test" {
 		delete_on_termination = true
 		volume_size = 8
 		volume_type = "gp2"
-		use_create_image = false
 	}
 }
 

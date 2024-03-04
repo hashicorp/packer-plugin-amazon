@@ -85,6 +85,15 @@ type Config struct {
 	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
 	// more information. Only enabled if a valid option is provided, otherwise ignored.
 	TpmSupport string `mapstructure:"tpm_support" required:"false"`
+	// Whether to use the CreateImage or RegisterImage API when creating the AMI.
+	// When set to `true`, the CreateImage API is used and will create the image
+	// from the instance itself, and inherit properties from the instance.
+	// When set to `false`, the RegisterImage API is used and the image is created using
+	// a snapshot of the specified EBS volume, and no properties are inherited from the instance.
+	// Defaults to `false`.
+	//Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
+	//     https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
+	UseCreateImage bool `mapstructure:"use_create_image" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -321,7 +330,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	var buildAmiStep multistep.Step
 	var volumeStep multistep.Step
 
-	if b.config.RootDevice.UseCreateImage {
+	if b.config.UseCreateImage {
 		volumeStep = &StepSwapVolumes{
 			PollingConfig: b.config.PollingConfig,
 			RootDevice:    b.config.RootDevice,
