@@ -86,6 +86,15 @@ necessary for this build to succeed and can be found further down the page.
   [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
   more information. Only enabled if a valid option is provided, otherwise ignored.
 
+- `use_create_image` (bool) - Whether to use the CreateImage or RegisterImage API when creating the AMI.
+  When set to `true`, the CreateImage API is used and will create the image
+  from the instance itself, and inherit properties from the instance.
+  When set to `false`, the RegisterImage API is used and the image is created using
+  a snapshot of the specified EBS volume, and no properties are inherited from the instance.
+  Defaults to `false`.
+  Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
+      https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
+
 <!-- End of code generated from the comments of the Config struct in builder/ebssurrogate/builder.go; -->
 
 
