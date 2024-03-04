@@ -85,6 +85,15 @@ type Config struct {
 	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
 	// more information. Only enabled if a valid option is provided, otherwise ignored.
 	TpmSupport string `mapstructure:"tpm_support" required:"false"`
+	// Whether to use the CreateImage or RegisterImage API when creating the AMI.
+	// When set to `true`, the CreateImage API is used and will create the image
+	// from the instance itself, and inherit properties from the instance.
+	// When set to `false`, the RegisterImage API is used and the image is created using
+	// a snapshot of the specified EBS volume, and no properties are inherited from the instance.
+	// Defaults to `false`.
+	//Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
+	//     https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
+	UseCreateImage bool `mapstructure:"use_create_image" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -318,6 +327,52 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	amiDevices := b.config.AMIMappings.BuildEC2BlockDeviceMappings()
 	launchDevices := b.config.LaunchMappings.BuildEC2BlockDeviceMappings()
 
+	var buildAmiStep multistep.Step
+	var volumeStep multistep.Step
+
+	if b.config.UseCreateImage {
+		volumeStep = &StepSwapVolumes{
+			PollingConfig: b.config.PollingConfig,
+			RootDevice:    b.config.RootDevice,
+			LaunchDevices: launchDevices,
+			LaunchOmitMap: b.config.LaunchMappings.GetOmissions(),
+			Ctx:           b.config.ctx,
+		}
+
+		buildAmiStep = &StepCreateAMI{
+			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			RootDevice:         b.config.RootDevice,
+			AMIDevices:         amiDevices,
+			LaunchDevices:      launchDevices,
+			PollingConfig:      b.config.PollingConfig,
+			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
+			Tags:               b.config.RunTags,
+			Ctx:                b.config.ctx,
+		}
+	} else {
+		volumeStep = &StepSnapshotVolumes{
+			PollingConfig:   b.config.PollingConfig,
+			LaunchDevices:   launchDevices,
+			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
+			SnapshotTags:    b.config.SnapshotTags,
+			Ctx:             b.config.ctx,
+		}
+		buildAmiStep = &StepRegisterAMI{
+			RootDevice:               b.config.RootDevice,
+			AMIDevices:               amiDevices,
+			LaunchDevices:            launchDevices,
+			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
+			EnableAMIENASupport:      b.config.AMIENASupport,
+			Architecture:             b.config.Architecture,
+			LaunchOmitMap:            b.config.LaunchMappings.GetOmissions(),
+			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
+			PollingConfig:            b.config.PollingConfig,
+			BootMode:                 b.config.BootMode,
+			UefiData:                 b.config.UefiData,
+			TpmSupport:               b.config.TpmSupport,
+		}
+	}
+
 	// Build the steps
 	steps := []multistep.Step{
 		&awscommon.StepPreValidate{
@@ -420,13 +475,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
 			EnableAMIENASupport:      b.config.AMIENASupport,
 		},
-		&StepSnapshotVolumes{
-			PollingConfig:   b.config.PollingConfig,
-			LaunchDevices:   launchDevices,
-			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
-			SnapshotTags:    b.config.SnapshotTags,
-			Ctx:             b.config.ctx,
-		},
+		volumeStep,
 		&awscommon.StepDeregisterAMI{
 			AccessConfig:        &b.config.AccessConfig,
 			ForceDeregister:     b.config.AMIForceDeregister,
@@ -434,20 +483,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIName:             b.config.AMIName,
 			Regions:             b.config.AMIRegions,
 		},
-		&StepRegisterAMI{
-			RootDevice:               b.config.RootDevice,
-			AMIDevices:               amiDevices,
-			LaunchDevices:            launchDevices,
-			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
-			EnableAMIENASupport:      b.config.AMIENASupport,
-			Architecture:             b.config.Architecture,
-			LaunchOmitMap:            b.config.LaunchMappings.GetOmissions(),
-			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
-			PollingConfig:            b.config.PollingConfig,
-			BootMode:                 b.config.BootMode,
-			UefiData:                 b.config.UefiData,
-			TpmSupport:               b.config.TpmSupport,
-		},
+		buildAmiStep,
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,
