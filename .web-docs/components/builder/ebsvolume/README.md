@@ -428,6 +428,8 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `snapshot_volume` (bool) - Create a Snapshot of this Volume.
 
+- `snapshot_description` (string) - The description for the snapshot.
+
 <!-- End of code generated from the comments of the BlockDevice struct in builder/ebsvolume/block_device.go; -->
 
 
