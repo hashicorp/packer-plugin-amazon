@@ -26,6 +26,7 @@ type FlatBlockDevice struct {
 	Tags                map[string]string     `mapstructure:"tags" required:"false" cty:"tags" hcl:"tags"`
 	Tag                 []config.FlatKeyValue `mapstructure:"tag" required:"false" cty:"tag" hcl:"tag"`
 	SnapshotVolume      *bool                 `mapstructure:"snapshot_volume" required:"false" cty:"snapshot_volume" hcl:"snapshot_volume"`
+	SnapshotDescription *string               `mapstructure:"snapshot_description" required:"false" cty:"snapshot_description" hcl:"snapshot_description"`
 	SnapshotTags        map[string]string     `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
 	SnapshotTag         []config.FlatKeyValue `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
 	SnapshotUsers       []string              `mapstructure:"snapshot_users" required:"false" cty:"snapshot_users" hcl:"snapshot_users"`
@@ -58,6 +59,7 @@ func (*FlatBlockDevice) HCL2Spec() map[string]hcldec.Spec {
 		"tags":                  &hcldec.AttrSpec{Name: "tags", Type: cty.Map(cty.String), Required: false},
 		"tag":                   &hcldec.BlockListSpec{TypeName: "tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_volume":       &hcldec.AttrSpec{Name: "snapshot_volume", Type: cty.Bool, Required: false},
+		"snapshot_description":  &hcldec.AttrSpec{Name: "snapshot_description", Type: cty.String, Required: false},
 		"snapshot_tags":         &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
 		"snapshot_tag":          &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":        &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},

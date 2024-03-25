@@ -27,6 +27,9 @@ type BlockDevice struct {
 	// Create a Snapshot of this Volume.
 	SnapshotVolume bool `mapstructure:"snapshot_volume" required:"false"`
 
+	// The description for the snapshot.
+	SnapshotDescription string `mapstructure:"snapshot_description" required:"false"`
+
 	awscommon.SnapshotConfig `mapstructure:",squash"`
 }
 
