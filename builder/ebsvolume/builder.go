@@ -161,6 +161,13 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			"Packer, inclusion of enable_t2_unlimited will error your builds.")
 	}
 
+	for _, configVolumeMapping := range b.config.VolumeMappings {
+		if configVolumeMapping.SnapshotDescription != "" && configVolumeMapping.SnapshotVolume != true {
+			warns = append(warns, "snapshot_description is ignored when "+
+			  "snapshot_volume is not set to true.")
+		}
+	}
+
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
 	}
