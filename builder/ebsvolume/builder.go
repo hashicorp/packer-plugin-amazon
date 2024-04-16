@@ -162,9 +162,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	for _, configVolumeMapping := range b.config.VolumeMappings {
-		if configVolumeMapping.SnapshotDescription != "" && configVolumeMapping.SnapshotVolume != true {
-			warns = append(warns, "snapshot_description is ignored when "+
-			  "snapshot_volume is not set to true.")
+		if configVolumeMapping.SnapshotDescription != "" && !configVolumeMapping.SnapshotVolume {
+			errs = packersdk.MultiErrorAppend(errs,
+				fmt.Errorf("All `ebs_volumes` blocks setting `snapshot_description` must also set `snapshot_volume`."))
 		}
 	}
 
