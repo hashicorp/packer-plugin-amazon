@@ -302,6 +302,83 @@ func (c *AMIConfig) prepareRegions(accessConfig *AccessConfig) (errs []error) {
 	return errs
 }
 
+func (c AMIConfig) getRegions() []string {
+	regions := map[string]struct{}{}
+
+	for _, region := range c.AMIRegions {
+		regions[region] = struct{}{}
+	}
+
+	for region := range c.AMIRegionKMSKeyIDs {
+		regions[region] = struct{}{}
+	}
+
+	ret := make([]string, 0, len(regions))
+	for region := range regions {
+		ret = append(ret, region)
+	}
+
+	return ret
+}
+
+// NonDefaultRegions attempts to detect usage of non-default regions.
+//
+// If a non-default region is defined, the build should use regional STS
+// endpoints instead of the global one, as these do not support the type of
+// token required by those endpoints.
+//
+// So this is meant to be called by builders/post-processors that need to
+// interact with AWS in those regions, so they can change the value of the
+// Session.STSEndpoint
+func (c *AMIConfig) NonDefaultRegions(accessConfig *AccessConfig) []string {
+	var retRegions []string
+
+	// If the default (build) region is already a non-default one, we will
+	// automatically use STSv2 tokens, even in 'legacy' (default) mode. Therefore
+	// in such a case, we can immediately return as we won't have a problem
+	// afterwards when it is time to copy the AMI to other regions.
+	if IsNonDefaultRegion(accessConfig.RawRegion) {
+		return retRegions
+	}
+
+	regions := c.getRegions()
+	for _, reg := range regions {
+		if IsNonDefaultRegion(reg) {
+			retRegions = append(retRegions, reg)
+		}
+	}
+
+	return retRegions
+}
+
+// Return true if the `region` is not a default one.
+//
+// Any region that is not one of those that are defined here will require opt-in
+// and STSv2, hence why we try to figure it out here.
+func IsNonDefaultRegion(region string) bool {
+	switch region {
+	case "ap-south-1",
+		"eu-north-1",
+		"eu-west-3",
+		"eu-west-2",
+		"eu-west-1",
+		"ap-northeast-3",
+		"ap-northeast-2",
+		"ap-northeast-1",
+		"ca-central-1",
+		"sa-east-1",
+		"ap-southeast-1",
+		"ap-southeast-2",
+		"eu-central-1",
+		"us-east-1",
+		"us-east-2",
+		"us-west-1",
+		"us-west-2":
+		return false
+	}
+	return true
+}
+
 // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CopyImage.html
 func ValidateKmsKey(kmsKey string) (valid bool) {
 	//Pattern for matching KMS Key ID for multi-region keys

@@ -277,6 +277,7 @@ func (c *AccessConfig) Session() (*session.Session, error) {
 		return nil, err
 	}
 	log.Printf("Found region %s", *sess.Config.Region)
+
 	c.session = sess
 
 	cp, err := c.session.Config.Credentials.Get()
