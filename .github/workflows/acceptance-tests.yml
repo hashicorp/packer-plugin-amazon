@@ -26,7 +26,7 @@ jobs:
     outputs:
       go-version: ${{ steps.get-go-version.outputs.go-version }}
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: 'Determine Go version'
         id: get-go-version
         run: |
@@ -42,16 +42,16 @@ jobs:
       contents: read
     name: AWS EBS Acceptance tests
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           ref: ${{ github.event.inputs.branch }}
-      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version: ${{ needs.get-go-version.outputs.go-version }}
       - name: "Compile/install the plugin on the current branch"
         run: |
           make dev
-      - uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: "${{ secrets.AWS_ACC_TEST_KEY_ID }}"
           aws-secret-access-key: "${{ secrets.AWS_ACC_TEST_KEY_SECRET }}"
@@ -68,7 +68,7 @@ jobs:
             ./builder/ebs
       - run: zip ebs_failure_logs.zip builder/ebs/*txt
         if: ${{ failure() }}
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         if: ${{ failure() }}
         with:
           name: "ebs_failure_logs.zip"
@@ -84,16 +84,16 @@ jobs:
       contents: read
     name: AWS EBS Surrogate Acceptance tests
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           ref: ${{ github.event.inputs.branch }}
-      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version: ${{ needs.get-go-version.outputs.go-version }}
       - name: "Compile/install the plugin on the current branch"
         run: |
           make dev
-      - uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           aws-access-key-id: "${{ secrets.AWS_ACC_TEST_KEY_ID }}"
           aws-secret-access-key: "${{ secrets.AWS_ACC_TEST_KEY_SECRET }}"
@@ -110,7 +110,7 @@ jobs:
             ./builder/ebssurrogate
       - run: zip ebssurrogate_failure_logs.zip builder/ebssurrogate/*txt
         if: ${{ failure() }}
-      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         if: ${{ failure() }}
         with:
           name: "ebssurrogate_failure_logs.zip"
