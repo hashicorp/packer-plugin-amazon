@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"slices"
 	"strings"
 	"time"
 
@@ -386,7 +385,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		Type: aws.String("instant"),
 	}
 
-	if slices.Contains(ec2.SpotAllocationStrategy_Values(), s.SpotAllocationStrategy) {
+	if s.SpotAllocationStrategy != "" {
 		createFleetInput.SpotOptions = &ec2.SpotOptionsRequest{
 			AllocationStrategy: aws.String(s.SpotAllocationStrategy),
 		}

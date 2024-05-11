@@ -11,9 +11,11 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -838,6 +840,13 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		if c.SpotPrice == "" || c.SpotPrice == "0" {
 			errs = append(errs, fmt.Errorf(
 				"spot_tags should not be set when not requesting a spot instance"))
+		}
+	}
+
+	if c.SpotAllocationStrategy != "" {
+		if !slices.Contains(ec2.SpotAllocationStrategy_Values(), c.SpotAllocationStrategy) {
+			errs = append(errs, fmt.Errorf(
+				"Unknown spot_allocation_strategy: %s", c.SpotAllocationStrategy))
 		}
 	}
 
