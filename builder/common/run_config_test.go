@@ -461,3 +461,13 @@ func TestRunConfigPrepare_InvalidTenantForHost(t *testing.T) {
 		})
 	}
 }
+
+func TestRunConfigPrepare_EnableSpotInstanceBadSpotAllocationStrategy(t *testing.T) {
+	c := testConfig()
+	// There should be some error when Spot Allocation Strategy is invalid.
+	c.SpotAllocationStrategy = "very-expensive-one"
+	err := c.Prepare(nil)
+	if len(err) != 1 {
+		t.Fatalf("Should error if spot_allocation_strategy is invalid.")
+	}
+}

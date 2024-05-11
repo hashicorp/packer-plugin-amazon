@@ -47,6 +47,7 @@ type StepRunSpotInstance struct {
 	InstanceType                      string
 	Region                            string
 	SourceAMI                         string
+	SpotAllocationStrategy            string
 	SpotPrice                         string
 	SpotTags                          map[string]string
 	SpotInstanceTypes                 []string
@@ -381,6 +382,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			DefaultTargetCapacityType: aws.String("spot"),
 		},
 		Type: aws.String("instant"),
+	}
+
+	if s.SpotAllocationStrategy != "" {
+		createFleetInput.SpotOptions = &ec2.SpotOptionsRequest{
+			AllocationStrategy: aws.String(s.SpotAllocationStrategy),
+		}
 	}
 
 	fleetTags, err := TagMap(s.FleetTags).EC2Tags(s.Ctx, s.Region, state)

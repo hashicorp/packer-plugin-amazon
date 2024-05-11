@@ -11,9 +11,11 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -402,6 +404,12 @@ type RunConfig struct {
 	//   criteria provided in `source_ami_filter`; this pins the AMI returned by the
 	//   filter, but will cause Packer to fail if the `source_ami` does not exist.
 	SourceAmiFilter AmiFilterOptions `mapstructure:"source_ami_filter" required:"false"`
+	// One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
+	// The strategy that determines how to allocate the target Spot Instance capacity
+	// across the Spot Instance pools specified by the EC2 Fleet launch configuration.
+	// If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
+	// For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
+	SpotAllocationStrategy string `mapstructure:"spot_allocation_strategy" required:"false"`
 	// a list of acceptable instance
 	// types to run your build on. We will request a spot instance using the max
 	// price of spot_price and the allocation strategy of "lowest price".
@@ -840,6 +848,13 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		if c.SpotPrice == "" || c.SpotPrice == "0" {
 			errs = append(errs, fmt.Errorf(
 				"spot_tags should not be set when not requesting a spot instance"))
+		}
+	}
+
+	if c.SpotAllocationStrategy != "" {
+		if !slices.Contains(ec2.SpotAllocationStrategy_Values(), c.SpotAllocationStrategy) {
+			errs = append(errs, fmt.Errorf(
+				"Unknown spot_allocation_strategy: %s", c.SpotAllocationStrategy))
 		}
 	}
 
