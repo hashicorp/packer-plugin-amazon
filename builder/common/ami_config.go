@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -155,6 +156,10 @@ type AMIConfig struct {
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 	// for more information. Defaults to legacy.
 	AMIIMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
+	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
+	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
+	DeprecationTime string `mapstructure:"deprecate_at"`
 
 	SnapshotConfig `mapstructure:",squash"`
 }
@@ -258,6 +263,14 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
 				ec2.ImdsSupportValuesV20),
 		)
+	}
+
+	if c.DeprecationTime != "" {
+		if _, err := time.Parse(time.RFC3339, c.DeprecationTime); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"deprecate_at is not a valid time: %q. Expect time format: YYYY-MM-DDTHH:MM:SSZ",
+				c.DeprecationTime))
+		}
 	}
 
 	if len(errs) > 0 {

@@ -10,9 +10,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
+
+func testEC2Conn(region string) (*ec2.EC2, error) {
+	access := &common.AccessConfig{RawRegion: region}
+	session, err := access.Session()
+	if err != nil {
+		return nil, err
+	}
+
+	return ec2.New(session), nil
+}
 
 func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
@@ -171,6 +184,59 @@ func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
 				if buildCommand.ProcessState.ExitCode() != 0 {
 					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 				}
+			}
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("ebssurrogate-deprecate-at-acctest-%d", time.Now().Unix()),
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "ebssurrogate - deprecate at set",
+		Template: fmt.Sprintf(testBuilderAcc_WithDeprecateAt, ami.Name, time.Now().Add(time.Hour).UTC().Format("2006-01-02T15:04:05Z")),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+
+				conn, err := testEC2Conn("us-east-1")
+				if err != nil {
+					return fmt.Errorf("failed to get connection to us-east-1: %s", err)
+				}
+
+				out, err := conn.DescribeImages(&ec2.DescribeImagesInput{
+					Filters: []*ec2.Filter{{
+						Name:   aws.String("name"),
+						Values: []*string{&ami.Name},
+					}},
+				})
+				if err != nil {
+					return fmt.Errorf("unable to describe images: %s", err)
+				}
+
+				if len(out.Images) != 1 {
+					return fmt.Errorf("got %d images, should have been one", len(out.Images))
+				}
+
+				img := out.Images[0]
+				if img.DeprecationTime == nil {
+					return fmt.Errorf("no depreciation time set for image %s", ami.Name)
+				}
+
+				if *img.DeprecationTime == "" {
+					return fmt.Errorf("no depreciation time set for image %s", ami.Name)
+				}
+
+				return nil
 			}
 			return nil
 		},
@@ -346,6 +412,35 @@ source "amazon-ebssurrogate" "test" {
 		volume_size = 8
 		volume_type = "gp2"
 	}
+}
+
+build {
+	sources = ["amazon-ebssurrogate.test"]
+}
+`
+
+const testBuilderAcc_WithDeprecateAt = `
+source "amazon-ebssurrogate" "test" {
+	ami_name = "%s"
+	region = "us-east-1"
+	instance_type = "m3.medium"
+	source_ami = "ami-76b2a71e"
+	ssh_username = "ubuntu"
+	launch_block_device_mappings {
+		device_name = "/dev/xvda"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	ami_virtualization_type = "hvm"
+	ami_root_device {
+		source_device_name = "/dev/xvda"
+		device_name = "/dev/sda1"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	deprecate_at = "%s"
 }
 
 build {

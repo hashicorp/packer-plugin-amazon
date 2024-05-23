@@ -531,6 +531,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Name:              b.config.AMIName,
 			OriginalRegion:    *ec2conn.Config.Region,
 		},
+		&awscommon.StepEnableDeprecation{
+			AccessConfig:    &b.config.AccessConfig,
+			DeprecationTime: b.config.DeprecationTime,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
