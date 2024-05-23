@@ -887,11 +887,24 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	}
 
-	if c.CapacityReservationPreference == "" {
+	capacityReservationTargetSet := false
+	if c.CapacityReservationId != "" || c.CapacityReservationGroupArn != "" {
+		capacityReservationTargetSet = true
+	}
+
+	if c.CapacityReservationGroupArn != "" && c.CapacityReservationId != "" {
+		errs = append(errs, fmt.Errorf("capacity_reservation_id and capacity_reservation_group_arn are mutually exclusive, only one should be used"))
+	}
+
+	if capacityReservationTargetSet && c.CapacityReservationPreference != "" {
+		errs = append(errs, fmt.Errorf("capacity_reservation_id, capacity_reservation_group_arn and capacity_reservation_preference are mutually exclusive, only one should be set"))
+	}
+
+	if c.CapacityReservationPreference == "" && c.CapacityReservationId == "" && c.CapacityReservationGroupArn == "" {
 		c.CapacityReservationPreference = "none"
 	}
 	switch c.CapacityReservationPreference {
-	case "none", "open":
+	case "", "none", "open":
 	default:
 		errs = append(errs, fmt.Errorf(`capacity_reservation_preference only accepts 'none' or 'open' values`))
 	}
