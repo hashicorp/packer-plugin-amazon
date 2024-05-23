@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ebs
+package common
 
 import (
 	"context"
@@ -9,18 +9,17 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
-type stepEnableDeprecation struct {
-	AccessConfig       *common.AccessConfig
+type StepEnableDeprecation struct {
+	AccessConfig       *AccessConfig
 	DeprecationTime    string
 	AMISkipCreateImage bool
 }
 
-func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
+func (s *StepEnableDeprecation) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
 	if s.AMISkipCreateImage || s.DeprecationTime == "" {
 		ui.Say("Skipping Enable AMI deprecation...")
@@ -39,7 +38,7 @@ func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s) in region %q ...", ami, region))
 
-		conn, err := common.GetRegionConn(s.AccessConfig, region)
+		conn, err := GetRegionConn(s.AccessConfig, region)
 		if err != nil {
 			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
 			state.Put("error", err.Error())
@@ -60,6 +59,6 @@ func (s *stepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	}
 	return multistep.ActionContinue
 }
-func (s *stepEnableDeprecation) Cleanup(state multistep.StateBag) {
+func (s *StepEnableDeprecation) Cleanup(state multistep.StateBag) {
 	// No cleanup...
 }

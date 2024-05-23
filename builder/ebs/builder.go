@@ -14,7 +14,6 @@ package ebs
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -78,10 +77,6 @@ type Config struct {
 	// make sure you don't set this for *nix guests; behavior may be
 	// unpredictable.
 	NoEphemeral bool `mapstructure:"no_ephemeral" required:"false"`
-	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
-	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
-	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
-	DeprecationTime string `mapstructure:"deprecate_at"`
 	// The configuration for fast launch support.
 	//
 	// Fast launch is only relevant for Windows AMIs, and should not be used
@@ -169,12 +164,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			fmt.Errorf("Spot instances do not support modification, which is required "+
 				"when either `ena_support` or `sriov_support` are set. Please ensure "+
 				"you use an AMI that already has either SR-IOV or ENA enabled."))
-	}
-
-	if b.config.DeprecationTime != "" {
-		if _, err := time.Parse(time.RFC3339, b.config.DeprecationTime); err != nil {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("deprecate_at is not a valid time. Expect time format: YYYY-MM-DDTHH:MM:SSZ"))
-		}
 	}
 
 	if b.config.RunConfig.SpotPriceAutoProduct != "" {
@@ -446,7 +435,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
 			MaxInstances:       b.config.FastLaunch.MaxParallelLaunches,
 		},
-		&stepEnableDeprecation{
+		&awscommon.StepEnableDeprecation{
 			AccessConfig:       &b.config.AccessConfig,
 			DeprecationTime:    b.config.DeprecationTime,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,

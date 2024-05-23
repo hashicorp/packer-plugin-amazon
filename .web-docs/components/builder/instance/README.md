@@ -261,6 +261,10 @@ necessary for this build to succeed and can be found further down the page.
   [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
   for more information. Defaults to legacy.
 
+- `deprecate_at` (string) - The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
+  If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
+  You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
+
 <!-- End of code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; -->
 
 
