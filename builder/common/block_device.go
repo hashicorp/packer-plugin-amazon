@@ -92,8 +92,14 @@ type BlockDevice struct {
 	// [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
 	// for more information
 	Throughput *int64 `mapstructure:"throughput" required:"false"`
-	// The virtual device name. See the documentation on Block Device Mapping
+	// The virtual device name. See the documentation on
+	// [Block Device Mapping](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html)
 	// for more information.
+	//
+	// Note: virtual_name only applies for ephemeral (instance) volumes. Any
+	// EBS-backed volume will have a `snapshot_id` instead.
+	//
+	// The volume virtual_name should be in the `ephemeral[0-23]` form, e.g. ephemeral1
 	VirtualName string `mapstructure:"virtual_name" required:"false"`
 	// The volume type. gp2 & gp3 for General Purpose (SSD) volumes, io1 & io2
 	// for Provisioned IOPS (SSD) volumes, st1 for Throughput Optimized HDD,
