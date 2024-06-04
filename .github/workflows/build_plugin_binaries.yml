@@ -1,0 +1,146 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+name: hashicorp/packer-plugin-amazon/build_plugin_binaries
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+    - main
+jobs:
+  build_darwin:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: darwin
+        GOARCH: amd64
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: darwin
+        GOARCH: arm64
+  build_freebsd:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: freebsd
+        GOARCH: 386
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: freebsd
+        GOARCH: amd64
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: freebsd
+        GOARCH: arm
+  build_linux:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: linux
+        GOARCH: 386
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: linux
+        GOARCH: amd64
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: linux
+        GOARCH: arm
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: linux
+        GOARCH: arm64
+  build_netbsd:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: netbsd
+        GOARCH: 386
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: netbsd
+        GOARCH: amd64
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: netbsd
+        GOARCH: arm
+  build_openbsd:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: openbsd
+        GOARCH: 386
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: openbsd
+        GOARCH: amd64
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: openbsd
+        GOARCH: arm
+  build_solaris:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: solaris
+        GOARCH: amd64
+  build_windows:
+    defaults:
+      run:
+        working-directory: ~/go/src/github.com/hashicorp/packer-plugin-amazon
+    runs-on: ubuntu-latest
+    container:
+      image: docker.mirror.hashicorp.services/cimg/go:1.21
+    steps:
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: windows
+        GOARCH: 386
+    - uses: "./.github/actions/build-and-persist-plugin-binary"
+      with:
+        GOOS: windows
+        GOARCH: amd64

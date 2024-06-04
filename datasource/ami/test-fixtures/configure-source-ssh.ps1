@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 <powershell>
 # Version and download URL
 $openSSHVersion = "8.1.0.0p1-Beta"

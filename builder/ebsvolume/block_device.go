@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 
 package ebsvolume
@@ -23,6 +26,9 @@ type BlockDevice struct {
 
 	// Create a Snapshot of this Volume.
 	SnapshotVolume bool `mapstructure:"snapshot_volume" required:"false"`
+
+	// The description for the snapshot.
+	SnapshotDescription string `mapstructure:"snapshot_description" required:"false"`
 
 	awscommon.SnapshotConfig `mapstructure:",squash"`
 }

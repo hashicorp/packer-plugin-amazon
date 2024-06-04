@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -16,13 +19,15 @@ import (
 // that is used throughout the AMI creation process.
 //
 // Produces:
-//   source_image *ec2.Image - the source AMI info
+//
+//	source_image *ec2.Image - the source AMI info
 type StepSourceAMIInfo struct {
 	SourceAmi                string
 	EnableAMISriovNetSupport bool
 	EnableAMIENASupport      confighelper.Trilean
 	AMIVirtType              string
 	AmiFilters               AmiFilterOptions
+	IncludeDeprecated        bool
 }
 
 type imageSort []*ec2.Image
@@ -46,7 +51,9 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 	ui := state.Get("ui").(packersdk.Ui)
 
-	params := &ec2.DescribeImagesInput{}
+	params := &ec2.DescribeImagesInput{
+		IncludeDeprecated: &s.IncludeDeprecated,
+	}
 
 	if s.SourceAmi != "" {
 		params.ImageIds = []*string{&s.SourceAmi}

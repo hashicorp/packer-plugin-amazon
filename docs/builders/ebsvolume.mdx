@@ -102,8 +102,7 @@ Block devices can be nested in the
 
 Usage Example
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 source "amazon-ebs" "basic-example" {
@@ -120,8 +119,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -149,8 +147,6 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-</Tab>
-</Tabs>
 
 @include 'builders/aws-session-manager.mdx'
 
@@ -172,8 +168,7 @@ source "amazon-ebs" "basic-example" {
 
 ## Basic Example
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 source "amazon-ebsvolume" "basic-example" {
@@ -221,8 +216,7 @@ build {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 {
@@ -270,8 +264,6 @@ build {
 }
 ```
 
-</Tab>
-</Tabs>
 
 -> **Note:** Packer can also read the access key and secret access key from
 environmental variables. See the configuration reference in the section above
@@ -342,8 +334,7 @@ The generated variables available for this builder are:
 
 Usage example:
 
-<Tabs>
-<Tab heading="HCL2">
+**HCL2**
 
 ```hcl
 // When accessing one of these variables from inside the builder, you need to
@@ -371,8 +362,7 @@ post-processor "manifest" {
 }
 ```
 
-</Tab>
-<Tab heading="JSON">
+**JSON**
 
 ```json
 "post-processors": [
@@ -387,7 +377,5 @@ post-processor "manifest" {
 ]
 ```
 
-</Tab>
-</Tabs>
 
 @include 'builders/aws-ssh-differentiation-table.mdx'

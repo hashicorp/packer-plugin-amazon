@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "amazon-parameterstore" "test" {
   name = "packer_datasource_parameterstore_test_parameter"
   with_decryption = false

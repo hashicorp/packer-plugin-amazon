@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -32,6 +35,9 @@ type mockEC2Conn struct {
 }
 
 func (m *mockEC2Conn) CopyImage(copyInput *ec2.CopyImageInput) (*ec2.CopyImageOutput, error) {
+	if !*copyInput.CopyImageTags {
+		return nil, fmt.Errorf("CopyImageTags should always be true, but was %t", *copyInput.CopyImageTags)
+	}
 	m.lock.Lock()
 	m.copyImageCount++
 	m.lock.Unlock()

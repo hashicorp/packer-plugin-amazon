@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -387,5 +390,195 @@ func TestRunConfigPrepare_EnableNitroEnclaveGood(t *testing.T) {
 	err := c.Prepare(nil)
 	if len(err) != 0 {
 		t.Fatalf("Should not error with valid Nitro Enclave config")
+	}
+}
+
+func TestRunConfigPrepare_FailIfBothHostIDAndGroupSpecified(t *testing.T) {
+	c := testConfig()
+	c.Placement.HostId = "host"
+	c.Placement.HostResourceGroupArn = "group"
+	err := c.Prepare(nil)
+	if len(err) != 1 {
+		t.Fatalf("Should error if both host_id and host_resource_group_arn are set")
+	}
+}
+
+func TestRunConfigPrepare_InvalidTenantForHost(t *testing.T) {
+	tests := []struct {
+		name         string
+		setHost      string
+		setGroup     string
+		setTenant    string
+		expectErrors int
+	}{
+		{
+			"no host_id, no host_resource_group_arn, with valid tenant",
+			"",
+			"",
+			"",
+			0,
+		},
+		{
+			"host_id set, tenant host",
+			"host",
+			"",
+			"host",
+			0,
+		},
+		{
+			"no host_id, host_resource_group_arn set, with tenant host",
+			"",
+			"group",
+			"host",
+			0,
+		},
+		{
+			"host_id set, invalid tenant",
+			"host",
+			"",
+			"dedicated",
+			1,
+		},
+		{
+			"no host_id, host_resource_group_arn set, invalid tenant",
+			"",
+			"group",
+			"dedicated",
+			1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testConfig()
+			c.Placement.HostId = tt.setHost
+			c.Placement.HostResourceGroupArn = tt.setGroup
+			c.Placement.Tenancy = tt.setTenant
+			errs := c.Prepare(nil)
+			if len(errs) != tt.expectErrors {
+				t.Errorf("expected %d errors, got %d", tt.expectErrors, len(errs))
+			}
+		})
+	}
+}
+
+func TestRunConfigPrepare_WithCapacityReservations(t *testing.T) {
+	tests := []struct {
+		name                          string
+		reservationID                 string
+		reservationPreference         string
+		reservationARN                string
+		expectedReservationID         string
+		expectedReservationPreference string
+		expectedReservationARN        string
+		expectError                   bool
+	}{
+		{
+			name:                          "None set, preference should be set to none, no error",
+			reservationID:                 "",
+			reservationPreference:         "",
+			reservationARN:                "",
+			expectedReservationID:         "",
+			expectedReservationPreference: "none",
+			expectedReservationARN:        "",
+			expectError:                   false,
+		},
+		{
+			name:                          "Preference set to none, preference should be set to none, no error",
+			reservationID:                 "",
+			reservationPreference:         "none",
+			reservationARN:                "",
+			expectedReservationID:         "",
+			expectedReservationPreference: "none",
+			expectedReservationARN:        "",
+			expectError:                   false,
+		},
+		{
+			name:                          "Preference set to open, preference should be set to open, no error",
+			reservationID:                 "",
+			reservationPreference:         "open",
+			reservationARN:                "",
+			expectedReservationID:         "",
+			expectedReservationPreference: "open",
+			expectedReservationARN:        "",
+			expectError:                   false,
+		},
+		{
+			name:                          "Preference set to and invalid value, expect an error",
+			reservationID:                 "",
+			reservationPreference:         "invalid",
+			reservationARN:                "",
+			expectedReservationID:         "",
+			expectedReservationPreference: "invalid",
+			expectedReservationARN:        "",
+			expectError:                   true,
+		},
+		{
+			name:                          "ID set to something, no preference, no error, no changes to config",
+			reservationID:                 "cr-123456",
+			reservationPreference:         "",
+			reservationARN:                "",
+			expectedReservationID:         "cr-123456",
+			expectedReservationPreference: "",
+			expectedReservationARN:        "",
+			expectError:                   false,
+		},
+		{
+			name:                          "ARN set to something, no preference, no error, no changes to config",
+			reservationID:                 "",
+			reservationPreference:         "",
+			reservationARN:                "arn-asduilovgf",
+			expectedReservationID:         "",
+			expectedReservationPreference: "",
+			expectedReservationARN:        "arn-asduilovgf",
+			expectError:                   false,
+		},
+		{
+			name:                          "Preference set to none, ID not empty, should error as both are incompatible",
+			reservationID:                 "cr-123456",
+			reservationPreference:         "none",
+			reservationARN:                "",
+			expectedReservationID:         "cr-123456",
+			expectedReservationPreference: "none",
+			expectedReservationARN:        "",
+			expectError:                   true,
+		},
+		{
+			name:                          "ID and ARN not empty, should error as both are incompatible",
+			reservationID:                 "cr-123456",
+			reservationPreference:         "",
+			reservationARN:                "arn-aseldigubh",
+			expectedReservationID:         "cr-123456",
+			expectedReservationPreference: "",
+			expectedReservationARN:        "arn-aseldigubh",
+			expectError:                   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testConfig()
+			c.CapacityReservationGroupArn = tt.reservationARN
+			c.CapacityReservationId = tt.reservationID
+			c.CapacityReservationPreference = tt.reservationPreference
+
+			errs := c.Prepare(nil)
+			if (len(errs) != 0) != tt.expectError {
+				t.Errorf("expected %t errors, got %t", tt.expectError, len(errs) != 0)
+				t.Logf("errors: %v", errs)
+			}
+
+			if c.CapacityReservationGroupArn != tt.expectedReservationARN {
+				t.Errorf("expected Reservation ARN %q, got %q", tt.expectedReservationARN, c.CapacityReservationGroupArn)
+			}
+
+			if c.CapacityReservationId != tt.expectedReservationID {
+				t.Errorf("expected Reservation ID %q, got %q", tt.expectedReservationARN, c.CapacityReservationId)
+			}
+
+			if c.CapacityReservationPreference != tt.expectedReservationPreference {
+				t.Errorf("expected Reservation Preference %q, got %q", tt.expectedReservationPreference, c.CapacityReservationPreference)
+			}
+		})
 	}
 }

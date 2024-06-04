@@ -56,6 +56,8 @@ type FlatConfig struct {
 	AMIKmsKeyId                               *string                                `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	AMIRegionKMSKeyIDs                        map[string]string                      `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion                        *bool                                  `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
+	AMIIMDSSupport                            *string                                `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
+	DeprecationTime                           *string                                `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	SnapshotTags                              map[string]string                      `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
 	SnapshotTag                               []config.FlatKeyValue                  `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
 	SnapshotUsers                             []string                               `mapstructure:"snapshot_users" required:"false" cty:"snapshot_users" hcl:"snapshot_users"`
@@ -161,7 +163,7 @@ type FlatConfig struct {
 	VolumeRunTags                             map[string]string                      `mapstructure:"run_volume_tags" cty:"run_volume_tags" hcl:"run_volume_tags"`
 	VolumeRunTag                              []config.FlatNameValue                 `mapstructure:"run_volume_tag" required:"false" cty:"run_volume_tag" hcl:"run_volume_tag"`
 	NoEphemeral                               *bool                                  `mapstructure:"no_ephemeral" required:"false" cty:"no_ephemeral" hcl:"no_ephemeral"`
-	DeprecationTime                           *string                                `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
+	FastLaunch                                *FlatFastLaunchConfig                  `mapstructure:"fast_launch" required:"false" cty:"fast_launch" hcl:"fast_launch"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -220,6 +222,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"kms_key_id":                      &hcldec.AttrSpec{Name: "kms_key_id", Type: cty.String, Required: false},
 		"region_kms_key_ids":              &hcldec.AttrSpec{Name: "region_kms_key_ids", Type: cty.Map(cty.String), Required: false},
 		"skip_save_build_region":          &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
+		"imds_support":                    &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
+		"deprecate_at":                    &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"snapshot_tags":                   &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
 		"snapshot_tag":                    &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":                  &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},
@@ -325,7 +329,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"run_volume_tags":              &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},
 		"run_volume_tag":               &hcldec.BlockListSpec{TypeName: "run_volume_tag", Nested: hcldec.ObjectSpec((*config.FlatNameValue)(nil).HCL2Spec())},
 		"no_ephemeral":                 &hcldec.AttrSpec{Name: "no_ephemeral", Type: cty.Bool, Required: false},
-		"deprecate_at":                 &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
+		"fast_launch":                  &hcldec.BlockSpec{TypeName: "fast_launch", Nested: hcldec.ObjectSpec((*FlatFastLaunchConfig)(nil).HCL2Spec())},
 	}
 	return s
 }

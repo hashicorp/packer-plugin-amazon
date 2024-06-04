@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type AWSPollingConfig
 package common
@@ -45,18 +48,22 @@ type StateChangeConf struct {
 //
 // HCL2 example:
 // ```hcl
-// aws_polling {
-//	 delay_seconds = 30
-//	 max_attempts = 50
-// }
+//
+//	aws_polling {
+//		 delay_seconds = 30
+//		 max_attempts = 50
+//	}
+//
 // ```
 //
 // JSON example:
 // ```json
-// "aws_polling" : {
-// 	 "delay_seconds": 30,
-// 	 "max_attempts": 50
-// }
+//
+//	"aws_polling" : {
+//		 "delay_seconds": 30,
+//		 "max_attempts": 50
+//	}
+//
 // ```
 type AWSPollingConfig struct {
 	// Specifies the maximum number of attempts the waiter will check for resource state.
@@ -99,7 +106,7 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, conn ec2iface.
 	return err
 }
 
-func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx aws.Context, conn *ec2.EC2, instanceId string) error {
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx aws.Context, conn ec2iface.EC2API, instanceId string) error {
 
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&instanceId},
@@ -206,6 +213,20 @@ func (w *AWSPollingConfig) WaitUntilImageImported(ctx aws.Context, conn *ec2.EC2
 	return err
 }
 
+func (w *AWSPollingConfig) WaitUntilFastLaunchEnabled(ctx aws.Context, conn *ec2.EC2, imageID string) error {
+	fastLaunchDescribeInput := &ec2.DescribeFastLaunchImagesInput{
+		ImageIds: []*string{
+			&imageID,
+		},
+	}
+
+	err := WaitUntilFastLaunchEnabled(conn,
+		ctx,
+		fastLaunchDescribeInput,
+		w.getWaiterOptions()...)
+	return err
+}
+
 // Custom waiters using AWS's request.Waiter
 
 func WaitForVolumeToBeAttached(c *ec2.EC2, ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.WaiterOption) error {
@@ -297,6 +318,49 @@ func WaitForImageToBeImported(c *ec2.EC2, ctx aws.Context, input *ec2.DescribeIm
 				inCpy = &tmp
 			}
 			req, _ := c.DescribeImportImageTasksRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+	w.ApplyOptions(opts...)
+
+	return w.WaitWithContext(ctx)
+}
+
+func WaitUntilFastLaunchEnabled(c *ec2.EC2, ctx aws.Context, input *ec2.DescribeFastLaunchImagesInput, opts ...request.WaiterOption) error {
+	w := request.Waiter{
+		Name:        "DescribeFastLaunchImages",
+		MaxAttempts: 500,
+		Delay:       request.ConstantWaiterDelay(15 * time.Second),
+		Acceptors: []request.WaiterAcceptor{
+			{
+				State:    request.SuccessWaiterState,
+				Matcher:  request.PathAllWaiterMatch,
+				Argument: "FastLaunchImages[].State",
+				Expected: "enabled",
+			},
+			{
+				State:    request.FailureWaiterState,
+				Matcher:  request.PathAllWaiterMatch,
+				Argument: "FastLaunchImages[].State",
+				Expected: "enabling-failed",
+			},
+			{
+				State:    request.FailureWaiterState,
+				Matcher:  request.PathAllWaiterMatch,
+				Argument: "FastLaunchImages[].State",
+				Expected: "enabled-failed",
+			},
+		},
+		Logger: c.Config.Logger,
+		NewRequest: func(opts []request.Option) (*request.Request, error) {
+			var inCpy *ec2.DescribeFastLaunchImagesInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeFastLaunchImagesRequest(inCpy)
 			req.SetContext(ctx)
 			req.ApplyOptions(opts...)
 			return req, nil

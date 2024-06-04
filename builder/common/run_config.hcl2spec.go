@@ -11,9 +11,10 @@ import (
 // FlatAmiFilterOptions is an auto-generated flat version of AmiFilterOptions.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatAmiFilterOptions struct {
-	Filters    map[string]string `mapstructure:"filters" cty:"filters" hcl:"filters"`
-	Owners     []string          `mapstructure:"owners" cty:"owners" hcl:"owners"`
-	MostRecent *bool             `mapstructure:"most_recent" cty:"most_recent" hcl:"most_recent"`
+	Filters           map[string]string `mapstructure:"filters" cty:"filters" hcl:"filters"`
+	Owners            []string          `mapstructure:"owners" cty:"owners" hcl:"owners"`
+	MostRecent        *bool             `mapstructure:"most_recent" cty:"most_recent" hcl:"most_recent"`
+	IncludeDeprecated *bool             `mapstructure:"include_deprecated" cty:"include_deprecated" hcl:"include_deprecated"`
 }
 
 // FlatMapstructure returns a new FlatAmiFilterOptions.
@@ -28,9 +29,10 @@ func (*AmiFilterOptions) FlatMapstructure() interface{ HCL2Spec() map[string]hcl
 // The decoded values from this spec will then be applied to a FlatAmiFilterOptions.
 func (*FlatAmiFilterOptions) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
-		"filters":     &hcldec.AttrSpec{Name: "filters", Type: cty.Map(cty.String), Required: false},
-		"owners":      &hcldec.AttrSpec{Name: "owners", Type: cty.List(cty.String), Required: false},
-		"most_recent": &hcldec.AttrSpec{Name: "most_recent", Type: cty.Bool, Required: false},
+		"filters":            &hcldec.AttrSpec{Name: "filters", Type: cty.Map(cty.String), Required: false},
+		"owners":             &hcldec.AttrSpec{Name: "owners", Type: cty.List(cty.String), Required: false},
+		"most_recent":        &hcldec.AttrSpec{Name: "most_recent", Type: cty.Bool, Required: false},
+		"include_deprecated": &hcldec.AttrSpec{Name: "include_deprecated", Type: cty.Bool, Required: false},
 	}
 	return s
 }
@@ -114,6 +116,7 @@ func (*FlatMetadataOptions) HCL2Spec() map[string]hcldec.Spec {
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatPlacement struct {
 	HostResourceGroupArn *string `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
+	HostId               *string `mapstructure:"host_id" required:"false" cty:"host_id" hcl:"host_id"`
 	Tenancy              *string `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 }
 
@@ -130,6 +133,7 @@ func (*Placement) FlatMapstructure() interface{ HCL2Spec() map[string]hcldec.Spe
 func (*FlatPlacement) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"host_resource_group_arn": &hcldec.AttrSpec{Name: "host_resource_group_arn", Type: cty.String, Required: false},
+		"host_id":                 &hcldec.AttrSpec{Name: "host_id", Type: cty.String, Required: false},
 		"tenancy":                 &hcldec.AttrSpec{Name: "tenancy", Type: cty.String, Required: false},
 	}
 	return s

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config
 
 package amazonimport
@@ -50,6 +53,7 @@ type Config struct {
 	Format          string            `mapstructure:"format"`
 	Architecture    string            `mapstructure:"architecture"`
 	BootMode        string            `mapstructure:"boot_mode"`
+	Platform        string            `mapstructure:"platform"`
 
 	ctx interpolate.Context
 }
@@ -89,6 +93,8 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		p.config.Architecture = "x86_64"
 	}
 
+	errs := new(packersdk.MultiError)
+
 	if p.config.BootMode == "" {
 		// Graviton instance types run uefi by default
 		if p.config.Architecture == "arm64" {
@@ -96,9 +102,12 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 		} else {
 			p.config.BootMode = "legacy-bios"
 		}
+	} else {
+		err := awscommon.IsValidBootMode(p.config.BootMode)
+		if err != nil {
+			errs = packersdk.MultiErrorAppend(errs, err)
+		}
 	}
-
-	errs := new(packersdk.MultiError)
 
 	// Check and render s3_key_name
 	if err = interpolate.Validate(p.config.S3Key, &p.config.ctx); err != nil {
@@ -128,6 +137,17 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 			errs, fmt.Errorf("invalid format '%s'. Only 'ova', 'raw', 'vhd', 'vhdx', or 'vmdk' are allowed", p.config.Format))
 	}
 
+	switch p.config.Platform {
+	case "windows", "linux":
+	case "":
+		if p.config.BootMode == "uefi" {
+			errs = packersdk.MultiErrorAppend(
+				errs, fmt.Errorf("invalid platform '%s', 'platform' must be set for 'uefi' image imports", p.config.Platform))
+		}
+	default:
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(
+			"invalid platform '%s'. Only 'linux' and 'windows' are allowed", p.config.Platform))
+	}
 	if p.config.S3Encryption != "" && p.config.S3Encryption != "AES256" && p.config.S3Encryption != "aws:kms" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid s3 encryption format '%s'. Only 'AES256' and 'aws:kms' are allowed", p.config.S3Encryption))
@@ -251,6 +271,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		},
 		Architecture: &p.config.Architecture,
 		BootMode:     &p.config.BootMode,
+		Platform:     &p.config.Platform,
 	}
 
 	if p.config.Encrypt && p.config.KMSKey != "" {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 
 package common
@@ -6,7 +9,9 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"time"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
@@ -106,8 +111,8 @@ type AMIConfig struct {
 	AMIEncryptBootVolume config.Trilean `mapstructure:"encrypt_boot" required:"false"`
 	// ID, alias or ARN of the KMS key to use for AMI encryption. This
 	// only applies to the main `region` -- any regions the AMI gets copied to
-	// copied will be encrypted by the default EBS KMS key for that region,
-	// unless you set region-specific keys in AMIRegionKMSKeyIDs.
+	// will be encrypted by the default EBS KMS key for that region,
+	// unless you set region-specific keys in `region_kms_key_ids`.
 	//
 	// Set this value if you select `encrypt_boot`, but don't want to use the
 	// region's default KMS key.
@@ -146,6 +151,15 @@ type AMIConfig struct {
 	// the intermediary AMI into any regions provided in `ami_regions`, then
 	// delete the intermediary AMI. Default `false`.
 	AMISkipBuildRegion bool `mapstructure:"skip_save_build_region"`
+	// Enforce version of the Instance Metadata Service on the built AMI.
+	// Valid options are unset (legacy) and `v2.0`. See the documentation on
+	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+	// for more information. Defaults to legacy.
+	AMIIMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
+	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
+	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
+	DeprecationTime string `mapstructure:"deprecate_at"`
 
 	SnapshotConfig `mapstructure:",squash"`
 }
@@ -170,7 +184,7 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 	}
 
 	// Make sure that if we have region_kms_key_ids defined,
-	//  the regions in region_kms_key_ids are also in ami_regions
+	// the regions in region_kms_key_ids are also in ami_regions
 	if len(c.AMIRegionKMSKeyIDs) > 0 {
 		for kmsKeyRegion := range c.AMIRegionKMSKeyIDs {
 			if !stringInSlice(c.AMIRegions, kmsKeyRegion) {
@@ -244,6 +258,21 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 			"filter to automatically clean your ami name."))
 	}
 
+	if c.AMIIMDSSupport != "" && c.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+		errs = append(errs,
+			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
+				ec2.ImdsSupportValuesV20),
+		)
+	}
+
+	if c.DeprecationTime != "" {
+		if _, err := time.Parse(time.RFC3339, c.DeprecationTime); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"deprecate_at is not a valid time: %q. Expect time format: YYYY-MM-DDTHH:MM:SSZ",
+				c.DeprecationTime))
+		}
+	}
+
 	if len(errs) > 0 {
 		return errs
 	}
@@ -309,7 +338,7 @@ func ValidateKmsKey(kmsKey string) (valid bool) {
 	}
 
 	// Check if kmsKey is the full ARN
-	kmsArnStartPattern := `^arn:aws(-us-gov)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
+	kmsArnStartPattern := `^arn:aws(-[a-z]{2}(-gov)?)?:kms:([a-z]{2}-(gov-)?[a-z]+-\d{1})?:(\d{12}):`
 	if regexp.MustCompile(fmt.Sprintf("%skey/%s", kmsArnStartPattern, kmsKeyIdPattern)).MatchString(kmsKey) {
 		return true
 	}

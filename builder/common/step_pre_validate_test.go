@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -9,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-//DescribeVpcs mocks an ec2.DescribeVpcsOutput for a given input
+// DescribeVpcs mocks an ec2.DescribeVpcsOutput for a given input
 func (m *mockEC2Conn) DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
 
 	if input == nil || aws.StringValue(input.VpcIds[0]) == "" {

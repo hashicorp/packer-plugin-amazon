@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type BlockDevice
 
@@ -33,21 +36,25 @@ const (
 // HCL2 example:
 //
 // ```hcl
-// launch_block_device_mappings {
-//     device_name = "/dev/sda1"
-//     encrypted = true
-//     kms_key_id = "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
-// }
+//
+//	launch_block_device_mappings {
+//	    device_name = "/dev/sda1"
+//	    encrypted = true
+//	    kms_key_id = "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
+//	}
+//
 // ```
 //
 // JSON example:
 // ```json
 // "launch_block_device_mappings": [
-//   {
-//      "device_name": "/dev/sda1",
-//      "encrypted": true,
-//      "kms_key_id": "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
-//   }
+//
+//	{
+//	   "device_name": "/dev/sda1",
+//	   "encrypted": true,
+//	   "kms_key_id": "1a2b3c4d-5e6f-1a2b-3c4d-5e6f1a2b3c4d"
+//	}
+//
 // ]
 // ```
 //
@@ -56,7 +63,6 @@ const (
 //
 // Documentation for Block Devices Mappings can be found here:
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html
-//
 type BlockDevice struct {
 	// Indicates whether the EBS volume is deleted on instance termination.
 	// Default false. NOTE: If this value is not explicitly set to true and
@@ -242,8 +248,8 @@ func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
 				minIopsGp3, maxIopsGp3, b.DeviceName)
 		}
 	} else if b.Throughput != nil {
-		return fmt.Errorf("Throughput is not available for device %s",
-			b.DeviceName)
+		return fmt.Errorf("Throughput is only valid for gp3 volumes, %q is of type %s",
+			b.DeviceName, b.VolumeType)
 	}
 
 	_, err := interpolate.RenderInterface(&b, ctx)

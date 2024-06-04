@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,RootBlockDevice,BlockDevice
 
@@ -78,11 +81,19 @@ type Config struct {
 	// Base64 representation of the non-volatile UEFI variable store. For more information
 	// see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 	UefiData string `mapstructure:"uefi_data" required:"false"`
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
+	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+	// more information. Only enabled if a valid option is provided, otherwise ignored.
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
+	// Whether to use the CreateImage or RegisterImage API when creating the AMI.
+	// When set to `true`, the CreateImage API is used and will create the image
+	// from the instance itself, and inherit properties from the instance.
+	// When set to `false`, the RegisterImage API is used and the image is created using
+	// a snapshot of the specified EBS volume, and no properties are inherited from the instance.
+	// Defaults to `false`.
+	//Ref: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateImage.html
+	//     https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RegisterImage.html
+	UseCreateImage bool `mapstructure:"use_create_image" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -185,20 +196,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
-	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
-		valid := false
-		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
-			if validBootMode == b.config.BootMode {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid boot_mode values are "legacy-bios" and "uefi"`))
+		err := awscommon.IsValidBootMode(b.config.BootMode)
+		if err != nil {
+			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 
@@ -322,6 +327,52 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	amiDevices := b.config.AMIMappings.BuildEC2BlockDeviceMappings()
 	launchDevices := b.config.LaunchMappings.BuildEC2BlockDeviceMappings()
 
+	var buildAmiStep multistep.Step
+	var volumeStep multistep.Step
+
+	if b.config.UseCreateImage {
+		volumeStep = &StepSwapVolumes{
+			PollingConfig: b.config.PollingConfig,
+			RootDevice:    b.config.RootDevice,
+			LaunchDevices: launchDevices,
+			LaunchOmitMap: b.config.LaunchMappings.GetOmissions(),
+			Ctx:           b.config.ctx,
+		}
+
+		buildAmiStep = &StepCreateAMI{
+			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			RootDevice:         b.config.RootDevice,
+			AMIDevices:         amiDevices,
+			LaunchDevices:      launchDevices,
+			PollingConfig:      b.config.PollingConfig,
+			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
+			Tags:               b.config.RunTags,
+			Ctx:                b.config.ctx,
+		}
+	} else {
+		volumeStep = &StepSnapshotVolumes{
+			PollingConfig:   b.config.PollingConfig,
+			LaunchDevices:   launchDevices,
+			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
+			SnapshotTags:    b.config.SnapshotTags,
+			Ctx:             b.config.ctx,
+		}
+		buildAmiStep = &StepRegisterAMI{
+			RootDevice:               b.config.RootDevice,
+			AMIDevices:               amiDevices,
+			LaunchDevices:            launchDevices,
+			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
+			EnableAMIENASupport:      b.config.AMIENASupport,
+			Architecture:             b.config.Architecture,
+			LaunchOmitMap:            b.config.LaunchMappings.GetOmissions(),
+			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
+			PollingConfig:            b.config.PollingConfig,
+			BootMode:                 b.config.BootMode,
+			UefiData:                 b.config.UefiData,
+			TpmSupport:               b.config.TpmSupport,
+		}
+	}
+
 	// Build the steps
 	steps := []multistep.Step{
 		&awscommon.StepPreValidate{
@@ -340,13 +391,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIVirtType:              b.config.AMIVirtType,
 		},
 		&awscommon.StepNetworkInfo{
-			VpcId:               b.config.VpcId,
-			VpcFilter:           b.config.VpcFilter,
-			SecurityGroupIds:    b.config.SecurityGroupIds,
-			SecurityGroupFilter: b.config.SecurityGroupFilter,
-			SubnetId:            b.config.SubnetId,
-			SubnetFilter:        b.config.SubnetFilter,
-			AvailabilityZone:    b.config.AvailabilityZone,
+			VpcId:                    b.config.VpcId,
+			VpcFilter:                b.config.VpcFilter,
+			SecurityGroupIds:         b.config.SecurityGroupIds,
+			SecurityGroupFilter:      b.config.SecurityGroupFilter,
+			SubnetId:                 b.config.SubnetId,
+			SubnetFilter:             b.config.SubnetFilter,
+			AvailabilityZone:         b.config.AvailabilityZone,
+			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
+			RequestedMachineType:     b.config.InstanceType,
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
@@ -368,6 +421,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                       b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
+			PollingConfig:                             b.config.PollingConfig,
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
@@ -389,6 +443,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
+			SSHConfig:        &b.config.Comm.SSH,
 		},
 		&awscommon.StepEC2InstanceConnect{
 			AWSSession:    session,
@@ -427,13 +482,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
 			EnableAMIENASupport:      b.config.AMIENASupport,
 		},
-		&StepSnapshotVolumes{
-			PollingConfig:   b.config.PollingConfig,
-			LaunchDevices:   launchDevices,
-			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
-			SnapshotTags:    b.config.SnapshotTags,
-			Ctx:             b.config.ctx,
-		},
+		volumeStep,
 		&awscommon.StepDeregisterAMI{
 			AccessConfig:        &b.config.AccessConfig,
 			ForceDeregister:     b.config.AMIForceDeregister,
@@ -441,20 +490,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIName:             b.config.AMIName,
 			Regions:             b.config.AMIRegions,
 		},
-		&StepRegisterAMI{
-			RootDevice:               b.config.RootDevice,
-			AMIDevices:               amiDevices,
-			LaunchDevices:            launchDevices,
-			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
-			EnableAMIENASupport:      b.config.AMIENASupport,
-			Architecture:             b.config.Architecture,
-			LaunchOmitMap:            b.config.LaunchMappings.GetOmissions(),
-			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
-			PollingConfig:            b.config.PollingConfig,
-			BootMode:                 b.config.BootMode,
-			UefiData:                 b.config.UefiData,
-			IMDSSupport:              b.config.IMDSSupport,
-		},
+		buildAmiStep,
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:       &b.config.AccessConfig,
 			Regions:            b.config.AMIRegions,
@@ -465,6 +501,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			OriginalRegion:     *ec2conn.Config.Region,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 		},
+		&awscommon.StepEnableDeprecation{
+			AccessConfig:    &b.config.AccessConfig,
+			DeprecationTime: b.config.DeprecationTime,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
@@ -474,6 +514,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,
+			IMDSSupport:    b.config.AMIIMDSSupport,
 			Ctx:            b.config.ctx,
 			GeneratedData:  generatedData,
 		},

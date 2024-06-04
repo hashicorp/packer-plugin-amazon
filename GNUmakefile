@@ -1,5 +1,6 @@
 NAME=amazon
 BINARY=packer-plugin-${NAME}
+PLUGIN_FQN="$(shell grep -E '^module' <go.mod | sed -E 's/module *//')"
 
 COUNT?=1
 TEST?=$(shell go list ./...)
@@ -10,19 +11,15 @@ HASHICORP_PACKER_PLUGIN_SDK_VERSION?=$(shell go list -m github.com/hashicorp/pac
 build:
 	@go build -o ${BINARY}
 
-dev: build
-	@mkdir -p ~/.packer.d/plugins/
-	@mv ${BINARY} ~/.packer.d/plugins/${BINARY}
+dev:
+	@go build -ldflags="-X '${PLUGIN_FQN}/version.VersionPrerelease=dev'" -o '${BINARY}'
+	packer plugins install --path ${BINARY} "$(shell echo "${PLUGIN_FQN}" | sed 's/packer-plugin-//')"
 
 test:
 	@go test -race -count $(COUNT) $(TEST) -timeout=3m
 
 install-packer-sdc: ## Install packer sofware development command
 	@go install github.com/hashicorp/packer-plugin-sdk/cmd/packer-sdc@${HASHICORP_PACKER_PLUGIN_SDK_VERSION}
-
-ci-release-docs: install-packer-sdc
-	@packer-sdc renderdocs -src docs -partials docs-partials/ -dst docs/
-	@/bin/sh -c "[ -d docs ] && zip -r docs.zip docs/"
 
 plugin-check: install-packer-sdc build
 	@packer-sdc plugin-check ${BINARY}
@@ -32,4 +29,7 @@ testacc: dev
 
 generate: install-packer-sdc
 	@go generate ./...
-
+	@rm -rf .docs
+	@packer-sdc renderdocs -src "docs" -partials docs-partials/ -dst ".docs/"
+	@./.web-docs/scripts/compile-to-webdocs.sh "." ".docs" ".web-docs" "hashicorp"
+	@rm -r ".docs"

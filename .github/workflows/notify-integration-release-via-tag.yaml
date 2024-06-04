@@ -1,0 +1,55 @@
+name: Notify Integration Release (Tag)
+on:
+  push:
+    tags:
+      - '*.*.*'   # Proper releases
+jobs:
+  strip-version:
+    runs-on: ubuntu-latest
+    outputs:
+      packer-version: ${{ steps.strip.outputs.packer-version }}
+    steps:
+      - name: Strip leading v from version tag
+        id: strip
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          echo "packer-version=$(echo "$REF" | sed -E 's/v?([0-9]+\.[0-9]+\.[0-9]+)/\1/')" >> "$GITHUB_OUTPUT"
+  notify-release:
+    needs:
+      - strip-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        with:
+          ref: ${{ github.ref }}
+      # Ensure that Docs are Compiled
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+      - shell: bash
+        run: make generate
+      - shell: bash
+        run: |
+          uncommitted="$(git status -s)"
+          if [[ -z "$uncommitted" ]]; then
+            echo "OK"
+          else
+            echo "Docs have been updated, but the compiled docs have not been committed."
+            echo "Run 'make generate', and commit the result to resolve this error."
+            echo "Generated but uncommitted files:"
+            echo "$uncommitted"
+            exit 1
+          fi
+      # Perform the Release
+      - name: Checkout integration-release-action
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        with:
+          repository: hashicorp/integration-release-action
+          path: ./integration-release-action
+      - name: Notify Release
+        uses: ./integration-release-action
+        with:
+          integration_identifier: "packer/hashicorp/amazon"
+          release_version: ${{ needs.strip-version.outputs.packer-version }}
+          release_sha: ${{ github.ref }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

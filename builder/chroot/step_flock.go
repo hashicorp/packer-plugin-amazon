@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package chroot
 
 import (
@@ -14,7 +17,8 @@ import (
 // StepFlock provisions the instance within a chroot.
 //
 // Produces:
-//   flock_cleanup Cleanup - To perform early cleanup
+//
+//	flock_cleanup Cleanup - To perform early cleanup
 type StepFlock struct {
 	fh *os.File
 }

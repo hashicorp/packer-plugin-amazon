@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 data "amazon-secretsmanager" "test" {
   name = "packer_datasource_secretsmanager_test_secret"
   key  = "packer_test_key"

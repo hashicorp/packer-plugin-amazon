@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,BlockDevice
 
@@ -158,6 +161,13 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			"Packer, inclusion of enable_t2_unlimited will error your builds.")
 	}
 
+	for _, configVolumeMapping := range b.config.VolumeMappings {
+		if configVolumeMapping.SnapshotDescription != "" && !configVolumeMapping.SnapshotVolume {
+			errs = packersdk.MultiErrorAppend(errs,
+				fmt.Errorf("All `ebs_volumes` blocks setting `snapshot_description` must also set `snapshot_volume`."))
+		}
+	}
+
 	if errs != nil && len(errs.Errors) > 0 {
 		return nil, warns, errs
 	}
@@ -272,13 +282,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AmiFilters:               b.config.SourceAmiFilter,
 		},
 		&awscommon.StepNetworkInfo{
-			VpcId:               b.config.VpcId,
-			VpcFilter:           b.config.VpcFilter,
-			SecurityGroupIds:    b.config.SecurityGroupIds,
-			SecurityGroupFilter: b.config.SecurityGroupFilter,
-			SubnetId:            b.config.SubnetId,
-			SubnetFilter:        b.config.SubnetFilter,
-			AvailabilityZone:    b.config.AvailabilityZone,
+			VpcId:                    b.config.VpcId,
+			VpcFilter:                b.config.VpcFilter,
+			SecurityGroupIds:         b.config.SecurityGroupIds,
+			SecurityGroupFilter:      b.config.SecurityGroupFilter,
+			SubnetId:                 b.config.SubnetId,
+			SubnetFilter:             b.config.SubnetFilter,
+			AvailabilityZone:         b.config.AvailabilityZone,
+			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
+			RequestedMachineType:     b.config.InstanceType,
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
@@ -300,6 +312,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                       b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
+			PollingConfig:                             b.config.PollingConfig,
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
@@ -322,6 +335,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
+			SSHConfig:        &b.config.Comm.SSH,
 		},
 		&awscommon.StepEC2InstanceConnect{
 			AWSSession:    session,

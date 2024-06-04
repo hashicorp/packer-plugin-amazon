@@ -38,22 +38,6 @@ Further information about the import process can be found in AWS's [EC2
 Import/Export Instance
 documentation](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instances_of_your_vm.html).
 
-### How to use this plugin
-
-From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
-Then, run [`packer init`](/packer/docs/commands/init).
-
-```hcl
-packer {
-  required_plugins {
-    amazon = {
-      version = ">= 1.1.1"
-      source = "github.com/hashicorp/amazon"
-    }
-  }
-}
-```
-
 ## Configuration
 
 There are some configuration options available for the post-processor. They are
@@ -118,6 +102,11 @@ Optional:
 - `boot_mode` (string) - The supported boot mode of the resultant AMI. One of:
   `legacy-bios` or `uefi`. If `architecture` is set to `arm64` then this value
   must be set to  `uefi`.
+
+- `platform` (string) - The operating system of the virtual machine. One of:
+  `linux` or `windows`. If `boot_mode` is set to `uefi` then this value must be 
+  set to either `windows` or `linux` depending on the operating system of the 
+  virtual machine.
 
 - `custom_endpoint_ec2` (string) - This option is useful if you use a cloud
   provider whose API is compatible with aws EC2. Specify another endpoint

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -114,6 +117,8 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 
 	}
 
+	ui := state.Get("ui").(packersdk.Ui)
+
 	iamInstanceProfile := aws.String(state.Get("iamInstanceProfile").(string))
 
 	// Create a launch template.
@@ -142,6 +147,9 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 			SubnetId:            aws.String(subnetId),
 		}
 		if s.AssociatePublicIpAddress != confighelper.TriUnset {
+			ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
+				*s.AssociatePublicIpAddress.ToBoolPointer(),
+				subnetId))
 			networkInterface.SetAssociatePublicIpAddress(*s.AssociatePublicIpAddress.ToBoolPointer())
 		}
 		templateData.SetNetworkInterfaces([]*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{&networkInterface})
@@ -316,6 +324,14 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 				Tags:         ec2Tags,
 			},
 		)
+
+		launchTemplate.LaunchTemplateData.TagSpecifications = append(
+			launchTemplate.LaunchTemplateData.TagSpecifications,
+			&ec2.LaunchTemplateTagSpecificationRequest{
+				ResourceType: aws.String("network-interface"),
+				Tags:         ec2Tags,
+			},
+		)
 	}
 
 	if len(volumeTags) > 0 {
@@ -438,8 +454,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	instanceId = *createOutput.Instances[0].InstanceIds[0]
 	// Set the instance ID so that the cleanup works properly
 	s.instanceId = instanceId
-
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
+	if err := waitForInstanceReadiness(ctx, instanceId, ec2conn, ui, state, s.PollingConfig.WaitUntilInstanceRunning); err != nil {
+		return multistep.ActionHalt
+	}
 
 	// Get information about the created instance
 	var describeOutput *ec2.DescribeInstancesOutput

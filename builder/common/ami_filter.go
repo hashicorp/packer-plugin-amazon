@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 package common
 
@@ -22,6 +25,10 @@ type AmiFilterOptions struct {
 	// Selects the newest created image when true.
 	// This is most useful for selecting a daily distro build.
 	MostRecent bool `mapstructure:"most_recent"`
+	// Include deprecated AMIs in the filtered response. Defaults to false.
+	// If you are the AMI owner, deprecated AMIs appear in the response
+	// regardless of what is specified for `include_deprecated`.
+	IncludeDeprecated bool `mapstructure:"include_deprecated"`
 }
 
 func (d *AmiFilterOptions) GetOwners() []*string {
@@ -54,6 +61,8 @@ func (d *AmiFilterOptions) GetFilteredImage(params *ec2.DescribeImagesInput, ec2
 	if len(d.Owners) > 0 {
 		params.Owners = d.GetOwners()
 	}
+
+	params.IncludeDeprecated = &d.IncludeDeprecated
 
 	log.Printf("Using AMI Filters %v", params)
 	req, imageResp := ec2conn.DescribeImagesRequest(params)

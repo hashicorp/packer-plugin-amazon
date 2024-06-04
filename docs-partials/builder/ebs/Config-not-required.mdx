@@ -40,8 +40,11 @@
   make sure you don't set this for *nix guests; behavior may be
   unpredictable.
 
-- `deprecate_at` (string) - The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
-  If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
-  You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
+- `fast_launch` (FastLaunchConfig) - The configuration for fast launch support.
+  
+  Fast launch is only relevant for Windows AMIs, and should not be used
+  for other OSes.
+  See the [Fast Launch Configuration](#fast-launch-config) section for
+  information on the attributes supported for this block.
 
 <!-- End of code generated from the comments of the Config struct in builder/ebs/builder.go; -->

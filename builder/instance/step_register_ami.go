@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package instance
 
 import (
@@ -18,7 +21,7 @@ type StepRegisterAMI struct {
 	EnableAMIENASupport      confighelper.Trilean
 	EnableAMISriovNetSupport bool
 	AMISkipBuildRegion       bool
-	IMDSSupport              string
+	TpmSupport               string
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -66,8 +69,8 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 		// As of February 2017, this applies to C5, I3, P2, R4, X1, and m4.16xlarge
 		registerOpts.EnaSupport = aws.Bool(true)
 	}
-	if s.IMDSSupport != "" {
-		registerOpts.ImdsSupport = aws.String(s.IMDSSupport)
+	if s.TpmSupport != "" {
+		registerOpts.TpmSupport = aws.String(s.TpmSupport)
 	}
 
 	registerResp, err := ec2conn.RegisterImage(registerOpts)

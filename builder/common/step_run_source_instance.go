@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -10,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -44,6 +48,7 @@ type StepRunSourceInstance struct {
 	Tags                              map[string]string
 	LicenseSpecifications             []LicenseSpecification
 	HostResourceGroupArn              string
+	HostId                            string
 	Tenancy                           string
 	UserData                          string
 	UserDataFile                      string
@@ -181,6 +186,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		}
 
 		tagSpecs = append(tagSpecs, runTags)
+
+		networkInterfaceTags := &ec2.TagSpecification{
+			ResourceType: aws.String("network-interface"),
+			Tags:         ec2Tags,
+		}
+
+		tagSpecs = append(tagSpecs, networkInterfaceTags)
 	}
 
 	if len(volTags) > 0 {
@@ -206,6 +218,9 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	subnetId := state.Get("subnet_id").(string)
 
 	if subnetId != "" && s.AssociatePublicIpAddress != confighelper.TriUnset {
+		ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
+			*s.AssociatePublicIpAddress.ToBoolPointer(),
+			subnetId))
 		runOpts.NetworkInterfaces = []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				DeviceIndex:              aws.Int64(0),
@@ -258,6 +273,10 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		runOpts.Placement.HostResourceGroupArn = aws.String(s.HostResourceGroupArn)
 	}
 
+	if s.HostId != "" {
+		runOpts.Placement.HostId = aws.String(s.HostId)
+	}
+
 	if s.Tenancy != "" {
 		runOpts.Placement.Tenancy = aws.String(s.Tenancy)
 	}
@@ -294,31 +313,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	// Set the instance ID so that the cleanup works properly
 	s.instanceId = instanceId
-
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
-	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
-
+	if err := waitForInstanceReadiness(ctx, instanceId, ec2conn, ui, state, s.PollingConfig.WaitUntilInstanceRunning); err != nil {
+		return multistep.ActionHalt
+	}
 	describeInstance := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{aws.String(instanceId)},
-	}
-
-	if err := s.PollingConfig.WaitUntilInstanceRunning(ctx, ec2conn, instanceId); err != nil {
-		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-
-		// try to get some context from AWS on why was instance
-		// transitioned to the unexpected state
-		if resp, e := ec2conn.DescribeInstances(describeInstance); e == nil {
-			if len(resp.Reservations) > 0 && len(resp.Reservations[0].Instances) > 0 {
-				instance := resp.Reservations[0].Instances[0]
-				if instance.StateTransitionReason != nil && instance.StateReason != nil && instance.StateReason.Message != nil {
-					ui.Error(fmt.Sprintf("Instance state change details: %s: %s",
-						*instance.StateTransitionReason, *instance.StateReason.Message))
-				}
-			}
-		}
-		return multistep.ActionHalt
 	}
 
 	// there's a race condition that can happen because of AWS's eventual
@@ -396,6 +395,18 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 			return multistep.ActionHalt
 		}
 
+		if len(ec2Tags) > 0 {
+			for _, networkInterface := range instance.NetworkInterfaces {
+				log.Printf("Tagging network interface %s", *networkInterface.NetworkInterfaceId)
+				_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
+					Tags:      ec2Tags,
+					Resources: []*string{networkInterface.NetworkInterfaceId},
+				})
+				if err != nil {
+					ui.Error(fmt.Sprintf("Error tagging source instance's network interface %q: %s", *networkInterface.NetworkInterfaceId, err))
+				}
+			}
+		}
 		// Now tag volumes
 
 		volumeIds := make([]*string, 0)
@@ -432,6 +443,42 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	return multistep.ActionContinue
+}
+
+func waitForInstanceReadiness(
+	ctx context.Context,
+	instanceId string,
+	ec2conn ec2iface.EC2API,
+	ui packersdk.Ui,
+	state multistep.StateBag,
+	waitUntilInstanceRunning func(context.Context, ec2iface.EC2API, string) error,
+) error {
+	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
+	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
+
+	describeInstance := &ec2.DescribeInstancesInput{
+		InstanceIds: []*string{aws.String(instanceId)},
+	}
+
+	if err := waitUntilInstanceRunning(ctx, ec2conn, instanceId); err != nil {
+		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+
+		// try to get some context from AWS on why was instance
+		// transitioned to the unexpected state
+		if resp, e := ec2conn.DescribeInstances(describeInstance); e == nil {
+			if len(resp.Reservations) > 0 && len(resp.Reservations[0].Instances) > 0 {
+				instance := resp.Reservations[0].Instances[0]
+				if instance.StateTransitionReason != nil && instance.StateReason != nil && instance.StateReason.Message != nil {
+					ui.Error(fmt.Sprintf("Instance state change details: %s: %s",
+						*instance.StateTransitionReason, *instance.StateReason.Message))
+				}
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *StepRunSourceInstance) Cleanup(state multistep.StateBag) {

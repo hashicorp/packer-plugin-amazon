@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ebsvolume
 
 import (
@@ -56,6 +59,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				input := &ec2.CreateSnapshotInput{
 					VolumeId:          aws.String(*instanceBlockDevice.Ebs.VolumeId),
 					TagSpecifications: []*ec2.TagSpecification{tagSpec},
+					Description:       aws.String(configVolumeMapping.SnapshotDescription),
 				}
 
 				//Dont try to set an empty tag spec

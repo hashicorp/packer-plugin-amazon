@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ebssurrogate
 
 import (
@@ -18,7 +21,8 @@ import (
 // StepSnapshotVolumes creates snapshots of the created volumes.
 //
 // Produces:
-//   snapshot_ids map[string]string - IDs of the created snapshots
+//
+//	snapshot_ids map[string]string - IDs of the created snapshots
 type StepSnapshotVolumes struct {
 	PollingConfig   *awscommon.AWSPollingConfig
 	LaunchDevices   []*ec2.BlockDeviceMapping

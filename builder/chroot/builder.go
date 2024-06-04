@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,BlockDevices,BlockDevice
 
@@ -202,11 +205,10 @@ type Config struct {
 	// Base64 representation of the non-volatile UEFI variable store. For more information
 	// see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 	UefiData string `mapstructure:"uefi_data" required:"false"`
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
+	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+	// more information. Only enabled if a valid option is provided, otherwise ignored.
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -378,20 +380,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
-	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
-		valid := false
-		for _, validBootMode := range []string{"legacy-bios", "uefi"} {
-			if validBootMode == b.config.BootMode {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid boot_mode values are "legacy-bios" and "uefi"`))
+		err := awscommon.IsValidBootMode(b.config.BootMode)
+		if err != nil {
+			errs = packersdk.MultiErrorAppend(errs, err)
 		}
 	}
 
@@ -524,7 +520,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:            b.config.PollingConfig,
 			BootMode:                 b.config.BootMode,
 			UefiData:                 b.config.UefiData,
-			IMDSSupport:              b.config.IMDSSupport,
+			TpmSupport:               b.config.TpmSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,
@@ -535,6 +531,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Name:              b.config.AMIName,
 			OriginalRegion:    *ec2conn.Config.Region,
 		},
+		&awscommon.StepEnableDeprecation{
+			AccessConfig:    &b.config.AccessConfig,
+			DeprecationTime: b.config.DeprecationTime,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
@@ -544,6 +544,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,
+			IMDSSupport:    b.config.AMIIMDSSupport,
 			Ctx:            b.config.ctx,
 			GeneratedData:  generatedData,
 		},

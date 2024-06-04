@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type AmiFilterOptions,SecurityGroupFilterOptions,SubnetFilterOptions,VpcFilterOptions,PolicyDocument,Statement,MetadataOptions,LicenseConfigurationRequest,LicenseSpecification,Placement
 
@@ -64,12 +67,32 @@ type LicenseSpecification struct {
 type Placement struct {
 	// The ARN of the host resource group in which to launch the instances.
 	HostResourceGroupArn string `mapstructure:"host_resource_group_arn" required:"false"`
+	// The ID of the host used when Packer launches an EC2 instance.
+	HostId string `mapstructure:"host_id" required:"false"`
 	// [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
 	// when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
 	//
 	// The default is "default", meaning shared tenancy. Allowed values are "default",
 	// "dedicated" and "host".
 	Tenancy string `mapstructure:"tenancy" required:"false"`
+}
+
+func (p Placement) Prepare() []error {
+	var errs []error
+
+	if p.HostId != "" && p.HostResourceGroupArn != "" {
+		errs = append(errs, fmt.Errorf("The `host_id` and `host_resource_group_arn` settings cannot be specified at the same time."))
+	}
+
+	if p.HostId != "" || p.HostResourceGroupArn != "" {
+		switch p.Tenancy {
+		case "", "host":
+		default:
+			errs = append(errs, fmt.Errorf("The tenancy should be `host` if either the `host_id` or `host_resource_group_arn` attributes are specified."))
+		}
+	}
+
+	return errs
 }
 
 // Configures the metadata options.
@@ -96,6 +119,21 @@ type RunConfig struct {
 	// If using a non-default VPC,
 	// public IP addresses are not provided by default. If this is true, your
 	// new instance will get a Public IP. default: unset
+	//
+	// Note: when specifying this attribute without a `subnet_[id|filter]` or
+	// `vpc_[id|filter]`, we will attempt to infer this information from the
+	// default VPC/Subnet.
+	// This operation may require some extra permissions to the IAM role that
+	// runs the build:
+	//
+	// * ec2:DescribeVpcs
+	// * ec2:DescribeSubnets
+	//
+	// Additionally, since we filter subnets/AZs by their capability to host
+	// an instance of the selected type, you may also want to define the
+	// `ec2:DescribeInstanceTypeOfferings` action to the role running the build.
+	// Otherwise, Packer will pick the most available subnet in the VPC selected,
+	// which may not be able to host the instance type you provided.
 	AssociatePublicIpAddress confighelper.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
@@ -278,7 +316,7 @@ type RunConfig struct {
 	//
 	// `security_group_ids` take precedence over this.
 	SecurityGroupFilter SecurityGroupFilterOptions `mapstructure:"security_group_filter" required:"false"`
-	// Key/value pair tags to apply to the generated key-pair, security group, snapshot and instance
+	// Key/value pair tags to apply to the generated key-pair, security group, iam profile and role, snapshot, network interfaces and instance
 	// that is *launched* to create the EBS volumes. The resulting AMI will also inherit these tags.
 	// This is a [template
 	// engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
@@ -849,11 +887,24 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	}
 
-	if c.CapacityReservationPreference == "" {
+	capacityReservationTargetSet := false
+	if c.CapacityReservationId != "" || c.CapacityReservationGroupArn != "" {
+		capacityReservationTargetSet = true
+	}
+
+	if c.CapacityReservationGroupArn != "" && c.CapacityReservationId != "" {
+		errs = append(errs, fmt.Errorf("capacity_reservation_id and capacity_reservation_group_arn are mutually exclusive, only one should be used"))
+	}
+
+	if capacityReservationTargetSet && c.CapacityReservationPreference != "" {
+		errs = append(errs, fmt.Errorf("capacity_reservation_id, capacity_reservation_group_arn and capacity_reservation_preference are mutually exclusive, only one should be set"))
+	}
+
+	if c.CapacityReservationPreference == "" && c.CapacityReservationId == "" && c.CapacityReservationGroupArn == "" {
 		c.CapacityReservationPreference = "none"
 	}
 	switch c.CapacityReservationPreference {
-	case "none", "open":
+	case "", "none", "open":
 	default:
 		errs = append(errs, fmt.Errorf(`capacity_reservation_preference only accepts 'none' or 'open' values`))
 	}
@@ -876,6 +927,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		tenancy != "host" {
 		errs = append(errs, fmt.Errorf("Error: Unknown tenancy type %s", tenancy))
 	}
+
+	errs = append(errs, c.Placement.Prepare()...)
 
 	if c.EnableNitroEnclave {
 		if c.SpotPrice != "" {

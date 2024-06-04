@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config
 
@@ -88,11 +91,10 @@ type Config struct {
 	// okay to create this directory as part of the provisioning process.
 	// Defaults to /tmp.
 	X509UploadPath string `mapstructure:"x509_upload_path" required:"false"`
-	// Enforce version of the Instance Metadata Service on the built AMI.
-	// Valid options are unset (legacy) and `v2.0`. See the documentation on
-	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-	// for more information. Defaults to legacy.
-	IMDSSupport string `mapstructure:"imds_support" required:"false"`
+	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
+	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
+	// more information. Only enabled if a valid option is provided, otherwise ignored.
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -238,8 +240,8 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 			"Packer, inclusion of enable_t2_unlimited will error your builds.")
 	}
 
-	if b.config.IMDSSupport != "" && b.config.IMDSSupport != ec2.ImdsSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid imds_support values are %q or the empty string`, ec2.ImdsSupportValuesV20))
+	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {
@@ -351,13 +353,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIVirtType:              b.config.AMIVirtType,
 		},
 		&awscommon.StepNetworkInfo{
-			VpcId:               b.config.VpcId,
-			VpcFilter:           b.config.VpcFilter,
-			SecurityGroupIds:    b.config.SecurityGroupIds,
-			SecurityGroupFilter: b.config.SecurityGroupFilter,
-			SubnetId:            b.config.SubnetId,
-			SubnetFilter:        b.config.SubnetFilter,
-			AvailabilityZone:    b.config.AvailabilityZone,
+			VpcId:                    b.config.VpcId,
+			VpcFilter:                b.config.VpcFilter,
+			SecurityGroupIds:         b.config.SecurityGroupIds,
+			SecurityGroupFilter:      b.config.SecurityGroupFilter,
+			SubnetId:                 b.config.SubnetId,
+			SubnetFilter:             b.config.SubnetFilter,
+			AvailabilityZone:         b.config.AvailabilityZone,
+			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
+			RequestedMachineType:     b.config.InstanceType,
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
@@ -379,6 +383,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                       b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
+			PollingConfig:                             b.config.PollingConfig,
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
@@ -397,6 +402,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
+			SSHConfig:        &b.config.Comm.SSH,
 		},
 		&awscommon.StepEC2InstanceConnect{
 			AWSSession:    session,
@@ -446,7 +452,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMIENASupport:      b.config.AMIENASupport,
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
-			IMDSSupport:              b.config.IMDSSupport,
+			TpmSupport:               b.config.TpmSupport,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:      &b.config.AccessConfig,
@@ -457,6 +463,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Name:              b.config.AMIName,
 			OriginalRegion:    *ec2conn.Config.Region,
 		},
+		&awscommon.StepEnableDeprecation{
+			AccessConfig:    &b.config.AccessConfig,
+			DeprecationTime: b.config.DeprecationTime,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
@@ -466,6 +476,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:   b.config.AMIProductCodes,
 			SnapshotUsers:  b.config.SnapshotUsers,
 			SnapshotGroups: b.config.SnapshotGroups,
+			IMDSSupport:    b.config.AMIIMDSSupport,
 			Ctx:            b.config.ctx,
 			GeneratedData:  generatedData,
 		},

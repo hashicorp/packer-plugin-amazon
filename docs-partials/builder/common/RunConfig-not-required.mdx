@@ -3,6 +3,21 @@
 - `associate_public_ip_address` (confighelper.Trilean) - If using a non-default VPC,
   public IP addresses are not provided by default. If this is true, your
   new instance will get a Public IP. default: unset
+  
+  Note: when specifying this attribute without a `subnet_[id|filter]` or
+  `vpc_[id|filter]`, we will attempt to infer this information from the
+  default VPC/Subnet.
+  This operation may require some extra permissions to the IAM role that
+  runs the build:
+  
+  * ec2:DescribeVpcs
+  * ec2:DescribeSubnets
+  
+  Additionally, since we filter subnets/AZs by their capability to host
+  an instance of the selected type, you may also want to define the
+  `ec2:DescribeInstanceTypeOfferings` action to the role running the build.
+  Otherwise, Packer will pick the most available subnet in the VPC selected,
+  which may not be able to host the instance type you provided.
 
 - `availability_zone` (string) - Destination availability zone to launch
   instance in. Leave this empty to allow Amazon to auto-assign.
@@ -180,7 +195,7 @@
   
   `security_group_ids` take precedence over this.
 
-- `run_tags` (map[string]string) - Key/value pair tags to apply to the generated key-pair, security group, snapshot and instance
+- `run_tags` (map[string]string) - Key/value pair tags to apply to the generated key-pair, security group, iam profile and role, snapshot, network interfaces and instance
   that is *launched* to create the EBS volumes. The resulting AMI will also inherit these tags.
   This is a [template
   engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template

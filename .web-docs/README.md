@@ -1,73 +1,65 @@
----
-description: |
-  The Amazon plugin is able to create Amazon AMIs. To achieve this, the plugin comes with
-  multiple builders depending on the strategy you want to use to build the AMI.
-page_title: Amazon AMI - Builders
-sidebar_title: Overview
----
+The Amazon plugin can be used with HashiCorp Packer to create custom images on AWS. To achieve this, the plugin comes with
+multiple builders, data sources, and a post-processor to build the AMI depending on the strategy you want to use.
 
-# Amazon AMI Builder
+### Installation
 
-The Amazon plugin is able to create Amazon AMIs. To achieve this, the plugin comes with
-multiple builders depending on the strategy you want to use to build the AMI.
-
-The Amazon plugin supports the following builders at the moment:
-
-- [amazon-ebs](/packer/plugins/builders/amazon/ebs) - Create EBS-backed AMIs by
-  launching a source AMI and re-packaging it into a new AMI after
-  provisioning. If in doubt, use this builder, which is the easiest to get
-  started with.
-
-- [amazon-instance](/packer/plugins/builders/amazon/instance) - Create
-  instance-store AMIs by launching and provisioning a source instance, then
-  rebundling it and uploading it to S3.
-
-- [amazon-chroot](/packer/plugins/builders/amazon/chroot) - Create EBS-backed AMIs
-  from an existing EC2 instance by mounting the root device and using a
-  [Chroot](https://en.wikipedia.org/wiki/Chroot) environment to provision
-  that device. This is an **advanced builder and should not be used by
-  newcomers**. However, it is also the fastest way to build an EBS-backed AMI
-  since no new EC2 instance needs to be launched.
-
-- [amazon-ebssurrogate](/packer/plugins/builders/amazon/ebssurrogate) - Create EBS
-  -backed AMIs from scratch. Works similarly to the `chroot` builder but does
-  not require running in AWS. This is an **advanced builder and should not be
-  used by newcomers**.
-
--> **Don't know which builder to use?** If in doubt, use the [amazon-ebs
-builder](/packer/plugins/builders/amazon/ebs). It is much easier to use and Amazon
-generally recommends EBS-backed images nowadays.
-
-## How to use this plugin
-
-From Packer v1.7.0, copy and paste this code into your Packer configuration to install this plugin.
-Then, run [`packer init`](/packer/docs/commands/init).
+To install this plugin, copy and paste this code into your Packer configuration, then run [`packer init`](https://www.packer.io/docs/commands/init).
 
 ```hcl
 packer {
   required_plugins {
     amazon = {
-      version = ">= 1.1.1"
-      source = "github.com/hashicorp/amazon"
+      source  = "github.com/hashicorp/amazon"
+      version = "~> 1"
     }
   }
 }
 ```
 
-# Amazon EBS Volume Builder
+Alternatively, you can use `packer plugins install` to manage installation of this plugin.
 
-The Amazon Plugin is able to create Amazon EBS Volumes which are preinitialized with a
-filesystem and data.
+```sh
+$ packer plugins install github.com/hashicorp/amazon
+```
 
-- [amazon-ebsvolume](/packer/plugins/builders/amazon/ebsvolume) - Create EBS
-  volumes by launching a source AMI with block devices mapped. Provision the
-  instance, then destroy it, retaining the EBS volumes and or Snapshot.
+### Components
 
-<!-- TODO: fix -->
+**Don't know which builder to use?** If in doubt, use the [amazon-ebs builder](/packer/plugins/builders/amazon/ebs).
+It is much easier to use and Amazon generally recommends EBS-backed images nowadays.
 
-<span id="specifying-amazon-credentials"></span>
+#### Builders
+- [amazon-ebs](/packer/integrations/hashicorp/amazon/latest/components/builder/ebs) - Create EBS-backed AMIs by
+  launching a source AMI and re-packaging it into a new AMI after
+  provisioning. If in doubt, use this builder, which is the easiest to get
+  started with.
+- [amazon-instance](/packer/integrations/hashicorp/amazon/latest/components/builder/instance) - Create
+  instance-store AMIs by launching and provisioning a source instance, then
+  rebundling it and uploading it to S3.
+- [amazon-chroot](/packer/integrations/hashicorp/amazon/latest/components/builder/chroot) - Create EBS-backed AMIs
+  from an existing EC2 instance by mounting the root device and using a
+  [Chroot](https://en.wikipedia.org/wiki/Chroot) environment to provision
+  that device. This is an **advanced builder and should not be used by
+  newcomers**. However, it is also the fastest way to build an EBS-backed AMI
+  since no new EC2 instance needs to be launched.
+- [amazon-ebssurrogate](/packer/integrations/hashicorp/amazon/latest/components/builder/ebssurrogate) - Create EBS
+  -backed AMIs from scratch. Works similarly to the `chroot` builder but does
+  not require running in AWS. This is an **advanced builder and should not be
+  used by newcomers**.
+- [amazon-ebs-volume](/packer/integrations/hashicorp/amazon/latest/components/builder/ebsvolume) - Create prepopulated
+  EBS volumes by launching an instance and provisioning attached volumes.
+  This is an **advanced builder and should not be used by newcomers**.
 
-## Authentication
+#### Data sources
+- [amazon-ami](/packer/integrations/hashicorp/amazon/latest/components/data-source/ami) - Filter and fetch an Amazon AMI to output all the AMI information.
+- [amazon-secretsmanager](/packer/integrations/hashicorp/amazon/latest/components/data-source/secretsmanager) - Retrieve information
+  about a Secrets Manager secret version, including its secret value.
+- [amazon-parameterstore](/packer/integrations/hashicorp/amazon/latest/components/data-source/parameterstore) - Retrieve information about a parameter in SSM.
+
+#### Post-Processors
+- [amazon-import](/packer/integrations/hashicorp/amazon/latest/components/post-processor/import) -  The Amazon Import post-processor takes an OVA artifact 
+  from various builders and imports it to an AMI available to Amazon Web Services EC2.
+
+### Authentication
 
 The AWS provider offers a flexible means of providing credentials for
 authentication. The following methods are supported, in this order, and
@@ -78,13 +70,10 @@ explained below:
 - Shared credentials file
 - EC2 Role
 
-### Static Credentials
+#### Static Credentials
 
 Static credentials can be provided in the form of an access key id and secret.
 These look like:
-
-<Tabs>
-<Tab heading="JSON">
 
 ```json
 "builders": {
@@ -95,19 +84,13 @@ These look like:
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
-
 ```hcl
 source "amazon-ebs" "basic-example" {
   access_key = "AKIAIOSFODNN7EXAMPLE"
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-  region         = "us-east-1"
+  region     = "us-east-1"
 }
 ```
-
-</Tab>
-</Tabs>
 
 If you would like, you may also assume a role using the assume_role
 configuration option. You must still have one of the valid credential resources
@@ -164,7 +147,7 @@ JSON config example:
 
 - `transitive_tag_keys` ([]string) - Set of assume role session tag keys to pass to any subsequent sessions.
 
-### Environment variables
+#### Environment variables
 
 You can provide your credentials via the `AWS_ACCESS_KEY_ID` and
 `AWS_SECRET_ACCESS_KEY`, environment variables, representing your AWS Access
@@ -180,7 +163,7 @@ Usage:
     $ export AWS_DEFAULT_REGION="us-west-2"
     $ packer build template.pkr.hcl
 
-### Shared Credentials file
+#### Shared Credentials file
 
 You can use an AWS credentials file to specify your credentials. The default
 location is `$HOME/.aws/credentials` on Linux and OS X, or
@@ -198,9 +181,6 @@ The format for the credentials file is like so
 You may also configure the profile to use by setting the `profile`
 configuration option, or setting the `AWS_PROFILE` environment variable:
 
-<Tabs>
-<Tab heading="JSON">
-
 ```json
 "builders": {
   "type": "amazon-ebs"
@@ -209,9 +189,6 @@ configuration option, or setting the `AWS_PROFILE` environment variable:
 }
 ```
 
-</Tab>
-<Tab heading="HCL2">
-
 ```hcl
 source "amazon-ebs" "basic-example" {
   profile = "customprofile"
@@ -219,10 +196,7 @@ source "amazon-ebs" "basic-example" {
 }
 ```
 
-</Tab>
-</Tabs>
-
-### IAM Task or Instance Role
+#### IAM Task or Instance Role
 
 Finally, the plugin will use credentials provided by the task's or instance's IAM
 role, if it has one.
@@ -245,7 +219,7 @@ for the Amazon plugin to work:
         "ec2:AuthorizeSecurityGroupIngress",
         "ec2:CopyImage",
         "ec2:CreateImage",
-        "ec2:CreateKeypair",
+        "ec2:CreateKeyPair",
         "ec2:CreateSecurityGroup",
         "ec2:CreateSnapshot",
         "ec2:CreateTags",
@@ -295,9 +269,33 @@ If you are using the `vpc_filter` option, you must also add:
 
     ec2:DescribeVpcs
 
-## Troubleshooting
+This permission may also be needed by the `associate_public_ip_address` option, if specified without a subnet.
+In this case the plugin will invoke `DescribeVpcs` to find information about the default VPC.
 
-### Attaching IAM Policies to Roles
+When using `associate_public_ip_address` without a subnet, you will also benefit from having:
+
+    ec2:DescribeInstanceTypeOfferings
+
+This will ensure that the plugin will pick a subnet/AZ that can host the type of instance
+you're requesting in your template.
+
+If you are using the `deprecate_at` attribute in your templates, you will also need:
+
+    ec2:EnableImageDeprecation
+
+If you are using SSM to connect to the instance, and are specifying a private key file, you must also add:
+
+    ec2-instance-connect:SendSSHPublicKey
+
+If you are building a Windows AMI, and want to enable fast-launch, you will also need:
+
+    ec2:EnableFastLaunch
+    ec2:DescribeLaunchTemplates
+    ec2:DescribeFastLaunchImages
+
+### Troubleshooting
+
+#### Attaching IAM Policies to Roles
 
 IAM policies can be associated with users or roles. If you use the plugin with IAM
 roles, you may encounter an error like this one:
@@ -373,10 +371,9 @@ using to run the Packer build, your key will also need
 ("kms:CreateGrant", "kms:DescribeKey")
 ```
 
-### Checking that system time is current
+#### Check System Time
 
-Amazon uses the current time as part of the [request signing
-process](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html). If
+Amazon uses the current time as part of the [request signing process](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html). If
 your system clock is too skewed from the current time, your requests might
 fail. If that's the case, you might see an error like this:
 
@@ -386,7 +383,7 @@ If you suspect your system's date is wrong, you can compare it against
 `http://www.time.gov/`. On Linux/OS X, you can run the `date` command to get the current time. If you're
 on Linux, you can try setting the time with ntp by running `sudo ntpd -q`.
 
-### ResourceNotReady Error
+#### ResourceNotReady Error
 
 This error generally appears as either `ResourceNotReady: exceeded wait attempts` or `ResourceNotReady: failed waiting for successful resource state`.
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config
 
@@ -11,7 +14,6 @@ package ebs
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -75,10 +77,13 @@ type Config struct {
 	// make sure you don't set this for *nix guests; behavior may be
 	// unpredictable.
 	NoEphemeral bool `mapstructure:"no_ephemeral" required:"false"`
-	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
-	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
-	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
-	DeprecationTime string `mapstructure:"deprecate_at"`
+	// The configuration for fast launch support.
+	//
+	// Fast launch is only relevant for Windows AMIs, and should not be used
+	// for other OSes.
+	// See the [Fast Launch Configuration](#fast-launch-config) section for
+	// information on the attributes supported for this block.
+	FastLaunch FastLaunchConfig `mapstructure:"fast_launch" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -135,17 +140,30 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	errs = packersdk.MultiErrorAppend(errs, b.config.LaunchMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.RunConfig.Prepare(&b.config.ctx)...)
 
+	b.config.FastLaunch.defaultRegion = b.config.RawRegion
+	errs = packersdk.MultiErrorAppend(errs, b.config.FastLaunch.Prepare()...)
+	for _, templateConfig := range b.config.FastLaunch.RegionLaunchTemplates {
+		exists := false
+		for _, cpRegion := range b.config.AMIRegions {
+			if cpRegion == templateConfig.Region {
+				exists = true
+				break
+			}
+		}
+		if b.config.RawRegion == templateConfig.Region {
+			exists = true
+		}
+
+		if !exists {
+			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("Launch template specified for enabling fast-launch on region %q, but the AMI won't be copied there.", templateConfig.Region))
+		}
+	}
+
 	if b.config.IsSpotInstance() && (b.config.AMIENASupport.True() || b.config.AMISriovNetSupport) {
 		errs = packersdk.MultiErrorAppend(errs,
 			fmt.Errorf("Spot instances do not support modification, which is required "+
 				"when either `ena_support` or `sriov_support` are set. Please ensure "+
 				"you use an AMI that already has either SR-IOV or ENA enabled."))
-	}
-
-	if b.config.DeprecationTime != "" {
-		if _, err := time.Parse(time.RFC3339, b.config.DeprecationTime); err != nil {
-			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("deprecate_at is not a valid time. Expect time format: YYYY-MM-DDTHH:MM:SSZ"))
-		}
 	}
 
 	if b.config.RunConfig.SpotPriceAutoProduct != "" {
@@ -264,6 +282,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:                              b.config.RunTags,
 			LicenseSpecifications:             b.config.LicenseSpecifications,
 			HostResourceGroupArn:              b.config.Placement.HostResourceGroupArn,
+			HostId:                            b.config.Placement.HostId,
 			Tenancy:                           tenancy,
 			UserData:                          b.config.UserData,
 			UserDataFile:                      b.config.UserDataFile,
@@ -278,6 +297,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			DestAmiName:        b.config.AMIName,
 			ForceDeregister:    b.config.AMIForceDeregister,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			VpcId:              b.config.VpcId,
 			SubnetId:           b.config.SubnetId,
 			HasSubnetFilter:    !b.config.SubnetFilter.Empty(),
@@ -290,13 +310,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMIVirtType:              b.config.AMIVirtType,
 		},
 		&awscommon.StepNetworkInfo{
-			VpcId:               b.config.VpcId,
-			VpcFilter:           b.config.VpcFilter,
-			SecurityGroupIds:    b.config.SecurityGroupIds,
-			SecurityGroupFilter: b.config.SecurityGroupFilter,
-			SubnetId:            b.config.SubnetId,
-			SubnetFilter:        b.config.SubnetFilter,
-			AvailabilityZone:    b.config.AvailabilityZone,
+			VpcId:                    b.config.VpcId,
+			VpcFilter:                b.config.VpcFilter,
+			SecurityGroupIds:         b.config.SecurityGroupIds,
+			SecurityGroupFilter:      b.config.SecurityGroupFilter,
+			SubnetId:                 b.config.SubnetId,
+			SubnetFilter:             b.config.SubnetFilter,
+			AvailabilityZone:         b.config.AvailabilityZone,
+			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
+			RequestedMachineType:     b.config.InstanceType,
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,
@@ -318,9 +340,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                       b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
+			PollingConfig:                             b.config.PollingConfig,
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
+			Tags: b.config.RunTags,
+			Ctx:  b.config.ctx,
 		},
 		&awscommon.StepCleanupVolumes{
 			LaunchMappings: b.config.LaunchMappings,
@@ -339,6 +364,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
+			SSHConfig:        &b.config.Comm.SSH,
 		},
 		&awscommon.StepEC2InstanceConnect{
 			AWSSession:    session,
@@ -402,7 +428,21 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
 		},
-		&stepEnableDeprecation{
+		&stepPrepareFastLaunchTemplate{
+			AccessConfig:       &b.config.AccessConfig,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			RegionTemplates:    b.config.FastLaunch.RegionLaunchTemplates,
+		},
+		&stepEnableFastLaunch{
+			AccessConfig:       &b.config.AccessConfig,
+			PollingConfig:      b.config.PollingConfig,
+			ResourceCount:      b.config.FastLaunch.TargetResourceCount,
+			AMISkipCreateImage: b.config.AMISkipCreateImage,
+			EnableFastLaunch:   b.config.FastLaunch.UseFastLaunch,
+			MaxInstances:       b.config.FastLaunch.MaxParallelLaunches,
+		},
+		&awscommon.StepEnableDeprecation{
 			AccessConfig:       &b.config.AccessConfig,
 			DeprecationTime:    b.config.DeprecationTime,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
@@ -417,6 +457,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			ProductCodes:       b.config.AMIProductCodes,
 			SnapshotUsers:      b.config.SnapshotUsers,
 			SnapshotGroups:     b.config.SnapshotGroups,
+			IMDSSupport:        b.config.AMIIMDSSupport,
 			Ctx:                b.config.ctx,
 			GeneratedData:      generatedData,
 		},

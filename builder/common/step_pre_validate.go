@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package common
 
 import (
@@ -17,11 +20,11 @@ import (
 
 // StepPreValidate provides an opportunity to pre-validate any configuration for
 // the build before actually doing any time consuming work
-//
 type StepPreValidate struct {
 	DestAmiName        string
 	ForceDeregister    bool
 	AMISkipBuildRegion bool
+	AMISkipCreateImage bool
 	VpcId              string
 	SubnetId           string
 	HasSubnetFilter    bool
@@ -87,6 +90,11 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 		return multistep.ActionContinue
 	}
 
+	if s.AMISkipCreateImage {
+		ui.Say("skip_create_ami was set; not prevalidating AMI name")
+		return multistep.ActionContinue
+	}
+
 	ec2conn := state.Get("ec2").(*ec2.EC2)
 
 	// Validate VPC settings for non-default VPCs
@@ -99,6 +107,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 
 	ui.Say(fmt.Sprintf("Prevalidating AMI Name: %s", s.DestAmiName))
 	req, resp := ec2conn.DescribeImagesRequest(&ec2.DescribeImagesInput{
+		Owners: []*string{aws.String("self")},
 		Filters: []*ec2.Filter{{
 			Name:   aws.String("name"),
 			Values: []*string{aws.String(s.DestAmiName)},
