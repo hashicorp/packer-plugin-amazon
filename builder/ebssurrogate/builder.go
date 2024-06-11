@@ -71,7 +71,7 @@ type Config struct {
 	// will allow you to create those programatically.
 	VolumeRunTag config.NameValues `mapstructure:"run_volume_tag" required:"false"`
 	// what architecture to use when registering the final AMI; valid options
-	// are "arm64", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
+	// are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
 	Architecture string `mapstructure:"ami_architecture" required:"false"`
 	// The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
 	// [boot modes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-boot.html) for
@@ -186,14 +186,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		b.config.Architecture = "x86_64"
 	}
 	valid := false
-	for _, validArch := range []string{"arm64", "i386", "x86_64", "x86_64_mac"} {
+	for _, validArch := range []string{"arm64", "arm64_mac", "i386", "x86_64", "x86_64_mac"} {
 		if validArch == b.config.Architecture {
 			valid = true
 			break
 		}
 	}
 	if !valid {
-		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "i386", "x86_64", or "x86_64_mac"`))
+		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
 	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {

@@ -72,7 +72,7 @@ necessary for this build to succeed and can be found further down the page.
   will allow you to create those programatically.
 
 - `ami_architecture` (string) - what architecture to use when registering the final AMI; valid options
-  are "arm64", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
+  are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
 
 - `boot_mode` (string) - The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
   [boot modes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-boot.html) for
