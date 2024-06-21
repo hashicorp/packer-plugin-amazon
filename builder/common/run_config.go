@@ -16,7 +16,6 @@ import (
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
@@ -134,7 +133,7 @@ type RunConfig struct {
 	// `ec2:DescribeInstanceTypeOfferings` action to the role running the build.
 	// Otherwise, Packer will pick the most available subnet in the VPC selected,
 	// which may not be able to host the instance type you provided.
-	AssociatePublicIpAddress confighelper.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
+	AssociatePublicIpAddress config.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
 	AvailabilityZone string `mapstructure:"availability_zone" required:"false"`

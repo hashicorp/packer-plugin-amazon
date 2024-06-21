@@ -20,13 +20,13 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
 type StepRunSourceInstance struct {
 	PollingConfig                     *AWSPollingConfig
-	AssociatePublicIpAddress          confighelper.Trilean
+	AssociatePublicIpAddress          config.Trilean
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
 	CapacityReservationPreference     string
 	CapacityReservationId             string
@@ -217,7 +217,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	subnetId := state.Get("subnet_id").(string)
 
-	if subnetId != "" && s.AssociatePublicIpAddress != confighelper.TriUnset {
+	if subnetId != "" && s.AssociatePublicIpAddress != config.TriUnset {
 		ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
 			*s.AssociatePublicIpAddress.ToBoolPointer(),
 			subnetId))

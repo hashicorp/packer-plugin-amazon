@@ -12,12 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 type StepModifyEBSBackedInstance struct {
 	Skip                     bool
-	EnableAMIENASupport      confighelper.Trilean
+	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
 }
 
@@ -50,7 +50,7 @@ func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.S
 
 	// Handle EnaSupport flag.
 	// As of February 2017, this applies to C5, I3, P2, R4, X1, and m4.16xlarge
-	if s.EnableAMIENASupport != confighelper.TriUnset {
+	if s.EnableAMIENASupport != config.TriUnset {
 		var prefix string
 		if s.EnableAMIENASupport.True() {
 			prefix = "En"
