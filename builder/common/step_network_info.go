@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 // StepNetworkInfo queries AWS for information about
@@ -31,7 +31,7 @@ type StepNetworkInfo struct {
 	VpcFilter                VpcFilterOptions
 	SubnetId                 string
 	SubnetFilter             SubnetFilterOptions
-	AssociatePublicIpAddress confighelper.Trilean
+	AssociatePublicIpAddress config.Trilean
 	AvailabilityZone         string
 	SecurityGroupIds         []string
 	SecurityGroupFilter      SecurityGroupFilterOptions
@@ -152,7 +152,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 
 	// Set VPC/Subnet if we explicitely enable or disable public IP assignment to the instance
 	// and we did not set or get a subnet ID before
-	if s.AssociatePublicIpAddress != confighelper.TriUnset && s.SubnetId == "" {
+	if s.AssociatePublicIpAddress != config.TriUnset && s.SubnetId == "" {
 		err := s.GetDefaultVPCAndSubnet(ui, ec2conn, state)
 		if err != nil {
 			ui.Say("associate_public_ip_address is set without a subnet_id.")

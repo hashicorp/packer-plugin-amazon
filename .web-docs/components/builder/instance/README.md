@@ -517,7 +517,7 @@ JSON example:
 
 <!-- Code generated from the comments of the RunConfig struct in builder/common/run_config.go; DO NOT EDIT MANUALLY -->
 
-- `associate_public_ip_address` (confighelper.Trilean) - If using a non-default VPC,
+- `associate_public_ip_address` (boolean) - If using a non-default VPC,
   public IP addresses are not provided by default. If this is true, your
   new instance will get a Public IP. default: unset
   

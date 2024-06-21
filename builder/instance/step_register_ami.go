@@ -13,12 +13,12 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 type StepRegisterAMI struct {
 	PollingConfig            *awscommon.AWSPollingConfig
-	EnableAMIENASupport      confighelper.Trilean
+	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
 	AMISkipBuildRegion       bool
 	TpmSupport               string

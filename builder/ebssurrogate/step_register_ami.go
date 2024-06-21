@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 // StepRegisterAMI creates the AMI.
@@ -22,7 +22,7 @@ type StepRegisterAMI struct {
 	RootDevice               RootBlockDevice
 	AMIDevices               []*ec2.BlockDeviceMapping
 	LaunchDevices            []*ec2.BlockDeviceMapping
-	EnableAMIENASupport      confighelper.Trilean
+	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
 	Architecture             string
 	image                    *ec2.Image

@@ -21,7 +21,7 @@ import (
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
-	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
@@ -31,7 +31,7 @@ type EC2BlockDeviceMappingsBuilder interface {
 
 type StepRunSpotInstance struct {
 	PollingConfig                     *AWSPollingConfig
-	AssociatePublicIpAddress          confighelper.Trilean
+	AssociatePublicIpAddress          config.Trilean
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
 	BlockDurationMinutes              int64
 	Debug                             bool
@@ -146,7 +146,7 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 			DeviceIndex:         aws.Int64(0),
 			SubnetId:            aws.String(subnetId),
 		}
-		if s.AssociatePublicIpAddress != confighelper.TriUnset {
+		if s.AssociatePublicIpAddress != config.TriUnset {
 			ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
 				*s.AssociatePublicIpAddress.ToBoolPointer(),
 				subnetId))
