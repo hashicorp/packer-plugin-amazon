@@ -6,6 +6,7 @@ package ebsvolume
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -55,11 +56,14 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 					ResourceType: aws.String("snapshot"),
 					Tags:         tags,
 				}
-
+				description := configVolumeMapping.SnapshotDescription
+				if description == "" {
+					description = fmt.Sprintf("Packer: %s", time.Now().String())
+				}
 				input := &ec2.CreateSnapshotInput{
 					VolumeId:          aws.String(*instanceBlockDevice.Ebs.VolumeId),
 					TagSpecifications: []*ec2.TagSpecification{tagSpec},
-					Description:       aws.String(configVolumeMapping.SnapshotDescription),
+					Description:       aws.String(description),
 				}
 
 				//Dont try to set an empty tag spec

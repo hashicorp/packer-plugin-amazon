@@ -24,13 +24,14 @@ import (
 //
 //	snapshot_ids map[string]string - IDs of the created snapshots
 type StepSnapshotVolumes struct {
-	PollingConfig   *awscommon.AWSPollingConfig
-	LaunchDevices   []*ec2.BlockDeviceMapping
-	snapshotIds     map[string]string
-	snapshotMutex   sync.Mutex
-	SnapshotOmitMap map[string]bool
-	SnapshotTags    map[string]string
-	Ctx             interpolate.Context
+	PollingConfig       *awscommon.AWSPollingConfig
+	LaunchDevices       []*ec2.BlockDeviceMapping
+	snapshotIds         map[string]string
+	snapshotMutex       sync.Mutex
+	SnapshotOmitMap     map[string]bool
+	SnapshotTags        map[string]string
+	SnapshotDescription string
+	Ctx                 interpolate.Context
 }
 
 func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName string, state multistep.StateBag) error {
@@ -58,7 +59,6 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	snapshotTags.Report(ui)
 
 	ui.Say(fmt.Sprintf("Creating snapshot of EBS Volume %s...", volumeId))
-	description := fmt.Sprintf("Packer: %s", time.Now().String())
 
 	// Collect tags for tagging on resource creation
 	var tagSpecs []*ec2.TagSpecification
@@ -68,13 +68,15 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 			ResourceType: aws.String("snapshot"),
 			Tags:         snapshotTags,
 		}
-
 		tagSpecs = append(tagSpecs, snapTags)
 	}
-
+	description := s.SnapshotDescription
+	if description == "" {
+		description = fmt.Sprintf("Packer: %s", time.Now().String())
+	}
 	createSnapResp, err := ec2conn.CreateSnapshot(&ec2.CreateSnapshotInput{
 		VolumeId:          &volumeId,
-		Description:       &description,
+		Description:       aws.String(description),
 		TagSpecifications: tagSpecs,
 	})
 	if err != nil {
