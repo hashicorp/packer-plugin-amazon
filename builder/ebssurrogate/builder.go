@@ -35,6 +35,8 @@ type Config struct {
 	awscommon.RunConfig    `mapstructure:",squash"`
 	awscommon.AMIConfig    `mapstructure:",squash"`
 
+	// The description for the snapshot.
+	SnapshotDescription string `mapstructure:"snapshot_description" required:"false"`
 	// Add one or more block device mappings to the AMI. These will be attached
 	// when booting a new instance from your AMI. To add a block device during
 	// the Packer build see `launch_block_device_mappings` below. Your options
@@ -351,11 +353,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		}
 	} else {
 		volumeStep = &StepSnapshotVolumes{
-			PollingConfig:   b.config.PollingConfig,
-			LaunchDevices:   launchDevices,
-			SnapshotOmitMap: b.config.LaunchMappings.GetOmissions(),
-			SnapshotTags:    b.config.SnapshotTags,
-			Ctx:             b.config.ctx,
+			PollingConfig:       b.config.PollingConfig,
+			LaunchDevices:       launchDevices,
+			SnapshotOmitMap:     b.config.LaunchMappings.GetOmissions(),
+			SnapshotTags:        b.config.SnapshotTags,
+			SnapshotDescription: b.config.SnapshotDescription,
+			Ctx:                 b.config.ctx,
 		}
 		buildAmiStep = &StepRegisterAMI{
 			RootDevice:               b.config.RootDevice,

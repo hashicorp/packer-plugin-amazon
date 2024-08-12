@@ -44,6 +44,8 @@ necessary for this build to succeed and can be found further down the page.
 
 <!-- Code generated from the comments of the Config struct in builder/ebssurrogate/builder.go; DO NOT EDIT MANUALLY -->
 
+- `snapshot_description` (string) - The description for the snapshot.
+
 - `ami_block_device_mappings` (awscommon.BlockDevices) - Add one or more block device mappings to the AMI. These will be attached
   when booting a new instance from your AMI. To add a block device during
   the Packer build see `launch_block_device_mappings` below. Your options
