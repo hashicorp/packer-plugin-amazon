@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	AmazonSSMManagedInstanceCorePolicyArn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+	AmazonSSMManagedInstanceCorePolicyArnPart = "iam::aws:policy/AmazonSSMManagedInstanceCore"
 )
 
 type StepIamInstanceProfile struct {
@@ -27,6 +27,7 @@ type StepIamInstanceProfile struct {
 	SkipProfileValidation                     bool
 	TemporaryIamInstanceProfilePolicyDocument *PolicyDocument
 	SSMAgentEnabled                           bool
+	IsRestricted                              bool
 	createdInstanceProfileName                string
 	createdRoleName                           string
 	createdPolicyName                         string
@@ -81,18 +82,22 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 
 		ui.Sayf("Creating temporary role for this instance: %s", profileName)
-		trustPolicy := `{
-				"Version": "2012-10-17",
-				"Statement": [
-						{
-								"Effect": "Allow",
-								"Principal": {
-										"Service": "ec2.amazonaws.com"
-								},
-								"Action": "sts:AssumeRole"
-						}
-				]
-		}`
+		service := "ec2.amazonaws.com"
+		if s.IsRestricted {
+			service = "ec2.amazonaws.com.cn"
+		}
+		trustPolicy := fmt.Sprintf(`{
+			"Version": "2012-10-17",
+			"Statement": [
+					{
+							"Effect": "Allow",
+							"Principal": {
+									"Service": "%s"
+							},
+							"Action": "sts:AssumeRole"
+					}
+			]
+	}`, service)
 		roleResp, err := iamsvc.CreateRole(&iam.CreateRoleInput{
 			RoleName:                 aws.String(profileName),
 			Description:              aws.String("Temporary role for Packer"),
@@ -136,7 +141,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			s.createdPolicyName = profileName
 		}
 		if s.SSMAgentEnabled {
-			ssmPolicyArn := aws.String(AmazonSSMManagedInstanceCorePolicyArn)
+			ssmPolicyArn := aws.String(fmt.Sprintf("arn:%s:%s", AwsPartition(s.IsRestricted), AmazonSSMManagedInstanceCorePolicyArnPart))
 			_, err = iamsvc.AttachRolePolicy(&iam.AttachRolePolicyInput{
 				PolicyArn: ssmPolicyArn,
 				RoleName:  aws.String(s.createdRoleName),
@@ -204,7 +209,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 
 		if s.SSMAgentEnabled {
 			iamsvc.DetachRolePolicy(&iam.DetachRolePolicyInput{
-				PolicyArn: aws.String(AmazonSSMManagedInstanceCorePolicyArn),
+				PolicyArn: aws.String(fmt.Sprintf("arn:%s:%s", AwsPartition(s.IsRestricted), AmazonSSMManagedInstanceCorePolicyArnPart)),
 				RoleName:  aws.String(s.createdRoleName),
 			})
 		}
