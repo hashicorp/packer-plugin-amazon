@@ -76,3 +76,10 @@ func DestroyAMIs(imageids []*string, ec2conn *ec2.EC2) error {
 	}
 	return nil
 }
+
+func AwsPartition(isRestricted bool) string {
+	if isRestricted {
+		return "aws-cn"
+	}
+	return "aws"
+}
