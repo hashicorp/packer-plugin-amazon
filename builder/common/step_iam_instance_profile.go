@@ -71,8 +71,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		if err != nil {
 			return handleError(state, err, "Error parsing policy document")
 		}
-
-		ui.Say(fmt.Sprintf("Creating temporary instance profile for this instance: %s", profileName))
+		ui.Sayf("Creating temporary instance profile for this instance: %s", profileName)
 
 		region := state.Get("region").(*string)
 		iamProfileTags, err := TagMap(s.Tags).IamTags(s.Ctx, *region, state)
@@ -80,7 +79,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return handleError(state, err, "Error creating IAM tags")
 		}
 
-		ui.Say(fmt.Sprintf("Creating temporary role for this instance: %s", profileName))
+		ui.Sayf("Creating temporary role for this instance: %s", profileName)
 		trustPolicy := `{
 				"Version": "2012-10-17",
 				"Statement": [
@@ -118,7 +117,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return handleError(state, err, fmt.Sprintf("Timed out waiting for temporary role %s", s.createdRoleName))
 		}
 
-		ui.Say(fmt.Sprintf("Attaching policy to the temporary role: %s", profileName))
+		ui.Sayf("Attaching policy to the temporary role: %s", profileName)
 
 		_, err = iamsvc.PutRolePolicy(&iam.PutRolePolicyInput{
 			RoleName:       aws.String(s.createdRoleName),
