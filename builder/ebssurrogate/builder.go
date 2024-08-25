@@ -427,6 +427,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:                             b.config.PollingConfig,
 			IamInstanceProfile:                        b.config.IamInstanceProfile,
 			SkipProfileValidation:                     b.config.SkipProfileValidation,
+			SSMAgentEnabled:                           b.config.SSMAgentEnabled(),
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
 		},
 		&awscommon.StepCleanupVolumes{
