@@ -208,7 +208,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 		ui.Say("Detaching temporary role from instance profile...")
 
 		if s.SSMAgentEnabled {
-			iamsvc.DetachRolePolicy(&iam.DetachRolePolicyInput{
+			_, _ = iamsvc.DetachRolePolicy(&iam.DetachRolePolicyInput{
 				PolicyArn: aws.String(fmt.Sprintf("arn:%s:%s", AwsPartition(s.IsRestricted), AmazonSSMManagedInstanceCorePolicyArnPart)),
 				RoleName:  aws.String(s.createdRoleName),
 			})
