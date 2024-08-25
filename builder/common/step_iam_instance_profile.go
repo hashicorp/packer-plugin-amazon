@@ -17,11 +17,16 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
 
+const (
+	AmazonSSMManagedInstanceCorePolicyArn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+)
+
 type StepIamInstanceProfile struct {
 	PollingConfig                             *AWSPollingConfig
 	IamInstanceProfile                        string
 	SkipProfileValidation                     bool
 	TemporaryIamInstanceProfilePolicyDocument *PolicyDocument
+	SSMAgentEnabled                           bool
 	createdInstanceProfileName                string
 	createdRoleName                           string
 	createdPolicyName                         string
@@ -63,14 +68,10 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		return multistep.ActionContinue
 	}
 
-	if s.TemporaryIamInstanceProfilePolicyDocument != nil {
+	if s.SSMAgentEnabled || s.TemporaryIamInstanceProfilePolicyDocument != nil {
 		// Create the profile
 		profileName := fmt.Sprintf("packer-%s", uuid.TimeOrderedUUID())
 
-		inlinePolicyJSON, err := json.Marshal(s.TemporaryIamInstanceProfilePolicyDocument)
-		if err != nil {
-			return handleError(state, err, "Error parsing policy document")
-		}
 		ui.Sayf("Creating temporary instance profile for this instance: %s", profileName)
 
 		region := state.Get("region").(*string)
@@ -119,15 +120,44 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Sayf("Attaching policy to the temporary role: %s", profileName)
 
-		_, err = iamsvc.PutRolePolicy(&iam.PutRolePolicyInput{
-			RoleName:       aws.String(s.createdRoleName),
-			PolicyName:     aws.String(profileName),
-			PolicyDocument: aws.String(string(inlinePolicyJSON)),
-		})
-		if err != nil {
-			return handleError(state, err, "Error attaching policy to role")
+		if s.TemporaryIamInstanceProfilePolicyDocument != nil {
+			inlinePolicyJSON, err := json.Marshal(s.TemporaryIamInstanceProfilePolicyDocument)
+			if err != nil {
+				return handleError(state, err, "Error parsing policy document")
+			}
+			_, err = iamsvc.PutRolePolicy(&iam.PutRolePolicyInput{
+				RoleName:       aws.String(s.createdRoleName),
+				PolicyName:     aws.String(profileName),
+				PolicyDocument: aws.String(string(inlinePolicyJSON)),
+			})
+			if err != nil {
+				return handleError(state, err, "Error attaching policy to role")
+			}
+			s.createdPolicyName = profileName
 		}
-		s.createdPolicyName = profileName
+		if s.SSMAgentEnabled {
+			ssmPolicyArn := aws.String(AmazonSSMManagedInstanceCorePolicyArn)
+			_, err = iamsvc.AttachRolePolicy(&iam.AttachRolePolicyInput{
+				PolicyArn: ssmPolicyArn,
+				RoleName:  aws.String(s.createdRoleName),
+			})
+			if err != nil {
+				return handleError(state, err, "Error attaching AmazonSSMManagedInstanceCore policy to role")
+			}
+			log.Printf("[DEBUG] Waiting for AmazonSSMManagedInstanceCore attached policy ready")
+			err = iamsvc.WaitUntilPolicyExistsWithContext(
+				aws.BackgroundContext(),
+				&iam.GetPolicyInput{
+					PolicyArn: ssmPolicyArn,
+				},
+				s.PollingConfig.getWaiterOptions()...,
+			)
+			if err == nil {
+				log.Printf("[DEBUG] Found AmazonSSMManagedInstanceCore attached policy in %s", s.createdRoleName)
+			} else {
+				return handleError(state, err, fmt.Sprintf("Timed out waiting for AmazonSSMManagedInstanceCore attached policy in %s", s.createdRoleName))
+			}
+		}
 
 		profileResp, err := iamsvc.CreateInstanceProfile(&iam.CreateInstanceProfileInput{
 			InstanceProfileName: aws.String(profileName),
@@ -172,6 +202,12 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 	if s.roleIsAttached {
 		ui.Say("Detaching temporary role from instance profile...")
 
+		if s.SSMAgentEnabled {
+			iamsvc.DetachRolePolicy(&iam.DetachRolePolicyInput{
+				PolicyArn: aws.String(AmazonSSMManagedInstanceCorePolicyArn),
+				RoleName:  aws.String(s.createdRoleName),
+			})
+		}
 		_, err := iamsvc.RemoveRoleFromInstanceProfile(&iam.RemoveRoleFromInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
 			RoleName:            aws.String(s.createdRoleName),

@@ -8,6 +8,7 @@ package common
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"regexp"
@@ -796,10 +797,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 			msg := fmt.Errorf(`session_manager connectivity is not supported with the "winrm" communicator; please use "ssh"`)
 			errs = append(errs, msg)
 		}
-
-		if c.IamInstanceProfile == "" && c.TemporaryIamInstanceProfilePolicyDocument == nil {
-			msg := fmt.Errorf(`no iam_instance_profile defined; session_manager connectivity requires a valid instance profile with AmazonSSMManagedInstanceCore permissions. Alternatively a temporary_iam_instance_profile_policy_document can be used.`)
-			errs = append(errs, msg)
+		if c.IamInstanceProfile != "" {
+			log.Printf("[WARNING] (aws): session_manager connectivity requires a valid instance profile with AmazonSSMManagedInstanceCore permissions. Please make sure iam_instance_profile has proper permissions.")
 		}
 	}
 
@@ -963,8 +962,7 @@ func (c *RunConfig) IsSpotInstance() bool {
 }
 
 func (c *RunConfig) SSMAgentEnabled() bool {
-	hasIamInstanceProfile := c.IamInstanceProfile != "" || c.TemporaryIamInstanceProfilePolicyDocument != nil
-	return c.SSHInterface == "session_manager" && hasIamInstanceProfile
+	return c.SSHInterface == "session_manager"
 }
 
 // IsBurstableInstanceType checks if the InstanceType for the config is one
