@@ -945,13 +945,7 @@ JSON example:
   ]
   ```
   
-    - `host_resource_group_arn` (string) - The ARN of the host resource
-      group in which to launch the instances. If you specify a host
-      resource group ARN, omit the Tenancy parameter or set it to `host`.
-    - `tenancy` (string) - The tenancy of the instance (if the instance is
-      running in a VPC). An instance with a tenancy of `dedicated` runs on
-      single-tenant hardware. The default is `default`, meaning shared
-      tenancy. Allowed values are `default`, `dedicated` and `host`.
+  Refer to the [Placement docs](#placement-configuration) for more information on the supported attributes for placement configuration.
 
 - `tenancy` (string) - Deprecated: Use Placement Tenancy instead.
 
@@ -1066,6 +1060,23 @@ JSON example:
   This option is only used when `ssh_interface` is set `session_manager`.
 
 <!-- End of code generated from the comments of the RunConfig struct in builder/common/run_config.go; -->
+
+
+#### Placement Configuration
+
+<!-- Code generated from the comments of the Placement struct in builder/common/run_config.go; DO NOT EDIT MANUALLY -->
+
+- `host_resource_group_arn` (string) - The ARN of the host resource group in which to launch the instances.
+
+- `host_id` (string) - The ID of the host used when Packer launches an EC2 instance.
+
+- `tenancy` (string) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
+  when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
+  
+  The default is "default", meaning shared tenancy. Allowed values are "default",
+  "dedicated" and "host".
+
+<!-- End of code generated from the comments of the Placement struct in builder/common/run_config.go; -->
 
 
 #### Metadata Settings
