@@ -557,14 +557,7 @@ type RunConfig struct {
 	// ]
 	// ```
 	//
-	//   - `host_resource_group_arn` (string) - The ARN of the host resource
-	//     group in which to launch the instances. If you specify a host
-	//     resource group ARN, omit the Tenancy parameter or set it to `host`.
-	//   - `tenancy` (string) - The tenancy of the instance (if the instance is
-	//     running in a VPC). An instance with a tenancy of `dedicated` runs on
-	//     single-tenant hardware. The default is `default`, meaning shared
-	//     tenancy. Allowed values are `default`, `dedicated` and `host`.
-	//
+	// Refer to the [Placement docs](#placement-configuration) for more information on the supported attributes for placement configuration.
 	Placement Placement `mapstructure:"placement" required:"false"`
 	// Deprecated: Use Placement Tenancy instead.
 	Tenancy string `mapstructure:"tenancy" required:"false"`
