@@ -74,6 +74,14 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 		go func(region, ami string) {
 			defer wg.Done()
 
+			// Immediately return if we don't want fast-launch for a
+			// particular region
+			templateIDsByRegion, ok := state.GetOk("launch_template_version")
+			if ok && !templateIDsByRegion.(map[string]TemplateSpec)[region].Enabled {
+				log.Printf("skipping fast launch for region %q", region)
+				return
+			}
+
 			// Casting is somewhat unsafe, but since the retryer below only
 			// accepts this type, and not ec2iface.EC2API, we can safely
 			// do this here, unless the `GetRegionConn` function evolves

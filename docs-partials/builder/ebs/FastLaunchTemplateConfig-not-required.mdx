@@ -1,5 +1,17 @@
 <!-- Code generated from the comments of the FastLaunchTemplateConfig struct in builder/ebs/fast_launch_setup.go; DO NOT EDIT MANUALLY -->
 
+- `enable_fast_launch` (boolean) - Enable fast launch allows you to disable fast launch settings on the region level.
+  
+  If unset, the default region behavior will be assumed - i.e. either use
+  the globally specified template ID/name (if specified), or AWS will set
+  it for you.
+  
+  Using other fast launch options, while unset, will imply enable_fast_launch to be true.
+  
+  If this is explicitly set to `false` fast-launch will be
+  disabled for the specified region and all other options besides region
+  will be ignored.
+
 - `template_id` (string) - The ID of the launch template to use for the fast launch
   
   This cannot be specified in conjunction with the template name.

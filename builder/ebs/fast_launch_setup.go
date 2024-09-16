@@ -9,6 +9,8 @@ package ebs
 import (
 	"fmt"
 	"log"
+
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 // FastLaunchTemplateConfig is the launch template configuration for a region.
@@ -17,6 +19,18 @@ import (
 // in the template, as each fast-launch enablement step occurs after the
 // copy, and each region may pick their own launch template.
 type FastLaunchTemplateConfig struct {
+	// Enable fast launch allows you to disable fast launch settings on the region level.
+	//
+	// If unset, the default region behavior will be assumed - i.e. either use
+	// the globally specified template ID/name (if specified), or AWS will set
+	// it for you.
+	//
+	// Using other fast launch options, while unset, will imply enable_fast_launch to be true.
+	//
+	// If this is explicitly set to `false` fast-launch will be
+	// disabled for the specified region and all other options besides region
+	// will be ignored.
+	EnableFalseLaunch config.Trilean `mapstructure:"enable_fast_launch"`
 	// The region in which to find the launch template to use
 	Region string `mapstructure:"region" required:"true"`
 	// The ID of the launch template to use for the fast launch
@@ -45,6 +59,12 @@ func (tc *FastLaunchTemplateConfig) Prepare() []error {
 
 	if tc.Region == "" {
 		return append(errs, fmt.Errorf("region cannot be empty for a regional fast template config"))
+	}
+
+	// If we disabled fast-launch, we can immediately exit without validating
+	// the other options.
+	if tc.EnableFalseLaunch == config.TriFalse {
+		return errs
 	}
 
 	if tc.LaunchTemplateID != "" && tc.LaunchTemplateName != "" {

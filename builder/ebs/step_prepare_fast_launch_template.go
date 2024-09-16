@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 type stepPrepareFastLaunchTemplate struct {
@@ -25,6 +26,10 @@ type stepPrepareFastLaunchTemplate struct {
 type TemplateSpec struct {
 	TemplateID string
 	Version    int
+	// Since this is what gets forwarded to the step that enables fast launch
+	// for each region, we have to also forward if the option should be disabled
+	// for a particular region
+	Enabled bool
 }
 
 func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -49,6 +54,14 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 	for _, templateSpec := range s.RegionTemplates {
 		region := templateSpec.Region
 
+		if templateSpec.EnableFalseLaunch == config.TriFalse {
+			log.Printf("[INFO] fast-launch explicitly disabled for region %q", region)
+			templateIDsByRegion[region] = TemplateSpec{
+				Enabled: false,
+			}
+			continue
+		}
+
 		if templateSpec.LaunchTemplateID == "" && templateSpec.LaunchTemplateName == "" {
 			log.Printf("[INFO] No fast-launch template specified for region %q", region)
 			continue
@@ -70,6 +83,7 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 		ts := TemplateSpec{
 			TemplateID: *tmpl.LaunchTemplateId,
 			Version:    templateSpec.LaunchTemplateVersion,
+			Enabled:    true,
 		}
 
 		log.Printf("found template in region %q: ID %q, name %q", region, *tmpl.LaunchTemplateId, *tmpl.LaunchTemplateName)
