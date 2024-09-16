@@ -1146,6 +1146,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 	amiNameWithoutLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-%d", time.Now().Unix())
 	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
+	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
 
 	flWithCopiesAMIs := []amazon_acc.AMIHelper{
 		{
@@ -1166,6 +1167,12 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 		{
 			Region: "us-east-2",
 			Name:   amiNameWithLT,
+		},
+	}
+	flWithCopiesAMIOneSkipped := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLTOneSkipped,
 		},
 	}
 
@@ -1197,17 +1204,31 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			},
 			testWindowsFastBootWithAMICopiesAndLTs,
 		},
+		{
+			"ebs-windows-fast-launch-with-copies-one-region-disabled",
+			amiNameWithLTOneSkipped,
+			flWithCopiesAMIOneSkipped,
+			[]string{
+				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
+				"fast-launch explicitly disabled for region \"us-east-2\"",
+			},
+			testWindowsFastBootWithAMICopiesAndLTsOneDisabled,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			t.Parallel()
+
 			testcase := &acctest.PluginTestCase{
-				Name:     tt.name,
-				Template: fmt.Sprintf(tt.template, tt.amiName),
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
 				Teardown: func() error {
 					var errs error
 
-					for _, ami := range tt.amiSpec {
+					for _, ami := range currtest.amiSpec {
 						err := ami.CleanUpAmi()
 						if err != nil {
 							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
@@ -1222,7 +1243,7 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 					}
 
-					for _, ami := range tt.amiSpec {
+					for _, ami := range currtest.amiSpec {
 						amis, err := ami.GetAmi()
 						if err != nil {
 							return fmt.Errorf("failed to get AMI: %s", err)
@@ -1270,7 +1291,7 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						t.Fatalf("failed to read logs from logifle: %s", err)
 					}
 					logStr := string(logs)
-					for _, str := range tt.stringsToFindInLog {
+					for _, str := range currtest.stringsToFindInLog {
 						if !strings.Contains(logStr, str) {
 							t.Errorf("exptected to find %q in logs, but did not", str)
 						}
@@ -2049,6 +2070,55 @@ source "amazon-ebs" "windows-fastboot" {
 		region_launch_templates {
 			region = "us-east-2"
 			template_id = "lt-0083091b6614b118c"
+		}
+	}
+}
+
+build {
+	sources = ["amazon-ebs.windows-fastboot"]
+
+	provisioner "powershell" {
+		inline = [
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/InitializeInstance.ps1 -Schedule",
+			"C:/ProgramData/Amazon/EC2-Windows/Launch/Scripts/SysprepInstance.ps1 -NoShutdown"
+		]
+	}
+}
+`
+
+const testWindowsFastBootWithAMICopiesAndLTsOneDisabled = `
+data "amazon-ami" "windows-ami" {
+	filters = {
+		name = "Windows_Server-2016-English-Core-Base-*"
+	}
+	owners = ["801119661308"]
+	most_recent = true
+	region = "us-east-1"
+}
+
+source "amazon-ebs" "windows-fastboot" {
+	ami_name             = "%s"
+	source_ami           = data.amazon-ami.windows-ami.id
+	instance_type        = "m3.medium"
+	region               = "us-east-1"
+	ami_regions          = ["us-east-2", "us-east-1"]
+	communicator         = "winrm"
+	winrm_username       = "Administrator"
+	winrm_password       = "e4sypa55!"
+	user_data_file       = "test-fixtures/ps_enable.ps"
+
+	fast_launch {
+		enable_fast_launch    = true
+		target_resource_count = 1
+
+		region_launch_templates {
+			region      = "us-east-1"
+			template_id = "lt-0c82d8943c032fc0b"
+		}
+
+		region_launch_templates {
+			region             = "us-east-2"
+			enable_fast_launch = false
 		}
 	}
 }
