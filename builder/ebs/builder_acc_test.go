@@ -1218,13 +1218,17 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			t.Parallel()
+
 			testcase := &acctest.PluginTestCase{
-				Name:     tt.name,
-				Template: fmt.Sprintf(tt.template, tt.amiName),
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
 				Teardown: func() error {
 					var errs error
 
-					for _, ami := range tt.amiSpec {
+					for _, ami := range currtest.amiSpec {
 						err := ami.CleanUpAmi()
 						if err != nil {
 							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
@@ -1239,7 +1243,7 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 					}
 
-					for _, ami := range tt.amiSpec {
+					for _, ami := range currtest.amiSpec {
 						amis, err := ami.GetAmi()
 						if err != nil {
 							return fmt.Errorf("failed to get AMI: %s", err)
@@ -1287,7 +1291,7 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						t.Fatalf("failed to read logs from logifle: %s", err)
 					}
 					logStr := string(logs)
-					for _, str := range tt.stringsToFindInLog {
+					for _, str := range currtest.stringsToFindInLog {
 						if !strings.Contains(logStr, str) {
 							t.Errorf("exptected to find %q in logs, but did not", str)
 						}
