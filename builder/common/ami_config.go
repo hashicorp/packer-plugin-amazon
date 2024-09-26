@@ -16,6 +16,12 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
+// OrgARNRegexp validates organisation ARNs
+var OrgARNRegexp = regexp.MustCompile(`^arn:aws:organizations::\d{12}:organization\/o-[a-z0-9]{10,32}`)
+
+// ARNRegexp validates organisation unit (OU) ARNs
+var OUARNRegexp = regexp.MustCompile(`^arn:aws:organizations::\d{12}:ou\/o-[a-z0-9]{10,32}\/ou-[0-9a-z]{4,32}-[0-9a-z]{8,32}`)
+
 // AMIConfig is for common configuration related to creating AMIs.
 type AMIConfig struct {
 	// The name of the resulting AMI that will appear when managing AMIs in the
@@ -194,6 +200,34 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 	}
 
 	errs = append(errs, c.prepareRegions(accessConfig)...)
+
+	for _, orgARN := range c.AMIOrgArns {
+		if !OrgARNRegexp.MatchString(orgARN) {
+			if OUARNRegexp.MatchString(orgARN) {
+				errs = append(errs,
+					fmt.Errorf("Organisation ARN %q looks like a OU ARN, "+
+						"it should be part of the `ami_ou_arns` collection instead", orgARN))
+				continue
+			}
+
+			errs = append(errs, fmt.Errorf("Invalid Organisation ARN %q, expect something that looks like the "+
+				"following: arn:aws:organizations::123456789012:organization/o-00000aaaaa", orgARN))
+		}
+	}
+
+	for _, ouARN := range c.AMIOuArns {
+		if !OUARNRegexp.MatchString(ouARN) {
+			if OrgARNRegexp.MatchString(ouARN) {
+				errs = append(errs,
+					fmt.Errorf("Organisation Unit ARN %q looks like a Organisation ARN, "+
+						"it should be part of the `ami_org_arns` collection instead", ouARN))
+				continue
+			}
+
+			errs = append(errs, fmt.Errorf("Invalid Organisation Unit ARN %q, expect something that looks like the "+
+				"following: arn:aws:organizations::123456789012:ou/o-12345abcdef/ou-5678a-0000aaaa", ouARN))
+		}
+	}
 
 	// Prevent sharing of default KMS key encrypted volumes with other aws users
 	if len(c.AMIUsers) > 0 || len(c.AMIOrgArns) > 0 || len(c.AMIOuArns) > 0 {

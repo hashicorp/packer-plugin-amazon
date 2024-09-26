@@ -283,3 +283,78 @@ func TestAMINameValidation(t *testing.T) {
 	}
 
 }
+
+// Make sure only valid ARNs are accepted
+func TestAMIARNValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		OrgARN    []string
+		OUARN     []string
+		expectErr bool
+	}{
+		{
+			"Nothing defined, should succeed",
+			nil,
+			nil,
+			false,
+		},
+		{
+			"Invalid OrgARN defined, should fail",
+			[]string{"arn:aws:organizations::1234"},
+			nil,
+			true,
+		},
+		{
+			"Invalid OUARN defined, should fail",
+			nil,
+			[]string{"arn:aws:organizations::1234:ou/o-1234567890/ou-aced"},
+			true,
+		},
+		{
+			"Valid OrgARN, invalid OUARN defined, should fail",
+			[]string{"arn:aws:organizations::123456789012:organization/o-1234567890000"},
+			[]string{"arn:aws:organizations::1234:ou/o-1234567890/ou-aced"},
+			true,
+		},
+		{
+			"Invalid OrgARN, valid OUARN defined, should fail",
+			[]string{"arn:aws:organizations::1234:organization"},
+			[]string{"arn:aws:organizations::123456789012:ou/o-12345abcdef/ou-ab12-12345678"},
+			true,
+		},
+		{
+			"Valid OrgARN, valid OUARN defined, should succeed",
+			[]string{"arn:aws:organizations::123456789012:organization/o-1234567890000"},
+			[]string{"arn:aws:organizations::123456789012:ou/o-12345abcdef/ou-ab12-12345678"},
+			false,
+		},
+		{
+			"Valid OrgARN as OU ARN, should fail",
+			[]string{"arn:aws:organizations::123456789012:ou/o-12345abcdef/ou-ab12-12345678"},
+			nil,
+			true,
+		},
+		{
+			"Valid OU ARN as Org ARN, should fail",
+			nil,
+			[]string{"arn:aws:organizations::123456789012:organization/o-1234567890000"},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testAMIConfig()
+			c.AMIOrgArns = tt.OrgARN
+			c.AMIOuArns = tt.OUARN
+
+			errs := c.Prepare(FakeAccessConfig(), nil)
+			if len(errs) != 0 && !tt.expectErr {
+				t.Errorf("Unexpected error %v; expected none.", errs)
+			}
+			if len(errs) == 0 && tt.expectErr {
+				t.Errorf("Expected error, got none.")
+			}
+		})
+	}
+}
