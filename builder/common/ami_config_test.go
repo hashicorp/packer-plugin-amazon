@@ -283,3 +283,34 @@ func TestAMINameValidation(t *testing.T) {
 	}
 
 }
+
+func TestEnableDeregistrationProtection(t *testing.T) {
+	c := testAMIConfig()
+
+	accessConf := FakeAccessConfig()
+
+	c.DeregistrationProtection = DeregistrationProtectionOptions{
+		Enabled: true,
+	}
+	if err := c.Prepare(accessConf, nil); err != nil {
+		t.Fatal("expected simple enabled case to pass validation")
+	}
+
+	c.DeregistrationProtection = DeregistrationProtectionOptions{
+		Enabled:      true,
+		WithCooldown: true,
+	}
+	if err := c.Prepare(accessConf, nil); err != nil {
+		t.Fatal("expected with cooldown case to pass validation")
+	}
+
+	c.DeregistrationProtection = DeregistrationProtectionOptions{
+		WithCooldown: true,
+	}
+	if err := c.Prepare(accessConf, nil); err != nil {
+		t.Fatal("expected forgot enabled but have cooldown case to pass validation")
+	}
+	if !c.DeregistrationProtection.Enabled {
+		t.Fatal("expected setting cooldown must also enabled")
+	}
+}

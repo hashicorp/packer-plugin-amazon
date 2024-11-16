@@ -385,3 +385,70 @@ func TestBuilderPrepare_FastLaunch(t *testing.T) {
 		})
 	}
 }
+
+func TestBuilderPrepare_DeregistrationProtection(t *testing.T) {
+	tests := []struct {
+		name                           string
+		deregistrationProtectionConfig map[string]interface{}
+	}{
+		{
+			"OK - empty config",
+			map[string]interface{}{},
+		},
+		{
+			"OK - all specified",
+			map[string]interface{}{
+				"deregistration_protection": map[string]interface{}{
+					"enabled":       true,
+					"with_cooldown": true,
+				},
+			},
+		},
+		{
+			"OK - only enabled specified",
+			map[string]interface{}{
+				"deregistration_protection": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+		{
+			"OK - only with_cooldown specified",
+			map[string]interface{}{
+				"deregistration_protection": map[string]interface{}{
+					"with_cooldown": true,
+				},
+			},
+		},
+		{
+			"OK - enabled but no cooldown",
+			map[string]interface{}{
+				"deregistration_protection": map[string]interface{}{
+					"enabled":       true,
+					"with_cooldown": false,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b Builder
+			config := testConfig()
+
+			for k, v := range tt.deregistrationProtectionConfig {
+				config[k] = v
+			}
+
+			_, warnings, err := b.Prepare(config)
+
+			if len(warnings) > 0 {
+				t.Errorf("got unexpected warnings: %#v", warnings)
+			}
+
+			if err != nil {
+				t.Logf("got error: %s", err)
+			}
+		})
+	}
+}

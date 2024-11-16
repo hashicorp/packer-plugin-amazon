@@ -16,6 +16,11 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
+type DeregistrationProtectionOptions struct {
+	Enabled      bool `mapstructure:"enabled"`
+	WithCooldown bool `mapstructure:"with_cooldown" required:"false"`
+}
+
 // AMIConfig is for common configuration related to creating AMIs.
 type AMIConfig struct {
 	// The name of the resulting AMI that will appear when managing AMIs in the
@@ -162,6 +167,39 @@ type AMIConfig struct {
 	DeprecationTime string `mapstructure:"deprecate_at"`
 
 	SnapshotConfig `mapstructure:",squash"`
+
+	// Protect AMI from deregistration
+	//
+	// HCL2 example:
+	//
+	// ```hcl
+	// source "amazon-ebs" "basic-example" {
+	//   deregistration_protection {
+	//     enabled = true
+	//     with_cooldown = true
+	//   }
+	// }
+	// ```
+	//
+	// JSON Example:
+	//
+	// ```json
+	// "builders" [
+	//   {
+	//     "type": "amazon-ebs",
+	//     "deregistration_protection": {
+	//       "enabled": true,
+	//       "with_cooldown": true
+	//     }
+	//   }
+	// ]
+	// ```
+	//
+	// [Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
+	// When deregistration protection is enabled, the AMI cannot be deregistered.
+	// To allow the AMI to be deregistered, you must first disable deregistration protection.
+	//   -   `cooldown` (boolean) - enforces deregistration protection for 24 hours after deregistration protection is disabled. Default: false
+	DeregistrationProtection DeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false"`
 }
 
 func stringInSlice(s []string, searchstr string) bool {
@@ -271,6 +309,10 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 				"deprecate_at is not a valid time: %q. Expect time format: YYYY-MM-DDTHH:MM:SSZ",
 				c.DeprecationTime))
 		}
+	}
+
+	if c.DeregistrationProtection.WithCooldown {
+		c.DeregistrationProtection.Enabled = true
 	}
 
 	if len(errs) > 0 {

@@ -440,6 +440,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			DeprecationTime:    b.config.DeprecationTime,
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 		},
+		&awscommon.StepEnableDeregistrationProtection{
+			AccessConfig:             &b.config.AccessConfig,
+			DeregistrationProtection: &b.config.DeregistrationProtection,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			Description:        b.config.AMIDescription,
