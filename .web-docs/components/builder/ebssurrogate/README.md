@@ -255,6 +255,9 @@ necessary for this build to succeed and can be found further down the page.
   If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
   You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
 
+- `deregistration_protection` (DeregistrationProtectionOptions) - See [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
+  details on all of the options available, and for a usage example.
+
 <!-- End of code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; -->
 
 
