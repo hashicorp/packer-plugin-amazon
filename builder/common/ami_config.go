@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 //go:generate packer-sdc struct-markdown
+//go:generate packer-sdc mapstructure-to-hcl2 -type DeregistrationProtectionOptions
 
 package common
 
@@ -16,6 +17,41 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
 
+// DeregistrationProtectionOptions lets users set AMI deregistration protection
+//
+// HCL2 example:
+//
+// ```hcl
+//
+//	source "amazon-ebs" "basic-example" {
+//	  deregistration_protection {
+//	    enabled = true
+//	    with_cooldown = true
+//	  }
+//	}
+//
+// ```
+//
+// JSON Example:
+//
+// ```json
+// "builders" [
+//
+//	{
+//	  "type": "amazon-ebs",
+//	  "deregistration_protection": {
+//	    "enabled": true,
+//	    "with_cooldown": true
+//	  }
+//	}
+//
+// ]
+// ```
+//
+// [Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
+// When deregistration protection is enabled, the AMI cannot be deregistered.
+// To allow the AMI to be deregistered, you must first disable deregistration protection.
+//   - `cooldown` (boolean) - enforces deregistration protection for 24 hours after deregistration protection is disabled. Default: false
 type DeregistrationProtectionOptions struct {
 	Enabled      bool `mapstructure:"enabled"`
 	WithCooldown bool `mapstructure:"with_cooldown" required:"false"`
@@ -168,37 +204,8 @@ type AMIConfig struct {
 
 	SnapshotConfig `mapstructure:",squash"`
 
-	// Protect AMI from deregistration
-	//
-	// HCL2 example:
-	//
-	// ```hcl
-	// source "amazon-ebs" "basic-example" {
-	//   deregistration_protection {
-	//     enabled = true
-	//     with_cooldown = true
-	//   }
-	// }
-	// ```
-	//
-	// JSON Example:
-	//
-	// ```json
-	// "builders" [
-	//   {
-	//     "type": "amazon-ebs",
-	//     "deregistration_protection": {
-	//       "enabled": true,
-	//       "with_cooldown": true
-	//     }
-	//   }
-	// ]
-	// ```
-	//
-	// [Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
-	// When deregistration protection is enabled, the AMI cannot be deregistered.
-	// To allow the AMI to be deregistered, you must first disable deregistration protection.
-	//   -   `cooldown` (boolean) - enforces deregistration protection for 24 hours after deregistration protection is disabled. Default: false
+	// See [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
+	// details on all of the options available, and for a usage example.
 	DeregistrationProtection DeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false"`
 }
 
