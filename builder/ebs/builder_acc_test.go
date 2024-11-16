@@ -1545,6 +1545,59 @@ func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+func TestAccBuilder_DeregistrationProtection(t *testing.T) {
+	ami := amazon_acc.AMIHelper{
+		Name: fmt.Sprintf("packer-ebs-deregistration-protection-%d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name:     "ebs-deregistration-protection-test",
+		Template: fmt.Sprintf(testDeregistrationProtection, ami.Name),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState.ExitCode() != 0 {
+				return fmt.Errorf("Bad exit code, got %d. Logfile: %s",
+					buildCommand.ProcessState.ExitCode(),
+					logfile)
+			}
+
+			logs, err := os.ReadFile(logfile)
+			if err != nil {
+				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
+			}
+
+			if ok := strings.Contains(string(logs), "Enabling deregistration protection on AMI"); !ok {
+				return fmt.Errorf("did not enable deregistration protection on AMI")
+			}
+
+			return checkDeregistrationProtectionEnabled(ami)
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+func checkDeregistrationProtectionEnabled(ami amazon_acc.AMIHelper) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) == 0 {
+		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	ec2conn, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: []*string{images[0].ImageId},
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error Describe Image for AMI (%s): %s", ami.Name, err)
+	}
+
+	image := imageResp.Images[0]
+	if image.DeregistrationProtection == nil {
+		return fmt.Errorf("Failed to enable deregistration protection for AMI (%s), expected Deregistration Protection (%t), got empty", ami.Name, true)
+	}
+
+	return nil
+}
+
 const testBuilderAccBasic = `
 {
 	"builders": [{
@@ -2175,6 +2228,25 @@ source "amazon-ebs" "test-subnet-filter" {
 
 build {
 	sources = ["amazon-ebs.test-subnet-filter"]
+}
+`
+
+const testDeregistrationProtection = `
+source "amazon-ebs" "test-deregistration-protection" {
+	region                      = "us-east-1"
+	ami_name                    = "%s"
+	source_ami                  = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
+	instance_type               = "t2.micro"
+	communicator                = "ssh"
+	ssh_username                = "ec2-user"
+
+  	deregistration_protection {
+		enabled       = true
+	}
+}
+
+build {
+	sources = ["amazon-ebs.test-deregistration-protection"]
 }
 `
 

@@ -3,7 +3,7 @@ module github.com/hashicorp/packer-plugin-amazon
 go 1.21.0
 
 require (
-	github.com/aws/aws-sdk-go v1.45.6
+	github.com/aws/aws-sdk-go v1.51.32
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/aws-sdk-go-base v0.7.1
 	github.com/hashicorp/go-cleanhttp v0.5.2

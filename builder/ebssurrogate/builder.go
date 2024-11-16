@@ -501,6 +501,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			AccessConfig:    &b.config.AccessConfig,
 			DeprecationTime: b.config.DeprecationTime,
 		},
+		&awscommon.StepEnableDeregistrationProtection{
+			AccessConfig:             &b.config.AccessConfig,
+			DeregistrationProtection: &b.config.DeregistrationProtection,
+		},
 		&awscommon.StepModifyAMIAttributes{
 			Description:    b.config.AMIDescription,
 			Users:          b.config.AMIUsers,
