@@ -442,6 +442,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		&awscommon.StepEnableDeregistrationProtection{
 			AccessConfig:             &b.config.AccessConfig,
+			AMISkipCreateImage:       b.config.AMISkipCreateImage,
 			DeregistrationProtection: &b.config.DeregistrationProtection,
 		},
 		&awscommon.StepModifyAMIAttributes{

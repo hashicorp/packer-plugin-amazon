@@ -1581,7 +1581,11 @@ func checkDeregistrationProtectionEnabled(ami amazon_acc.AMIHelper) error {
 		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
 
-	ec2conn, _ := testEC2Conn(ami.Region)
+	ec2conn, err := testEC2Conn(ami.Region)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
+	}
+
 	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
 		ImageIds: []*string{images[0].ImageId},
 	})
