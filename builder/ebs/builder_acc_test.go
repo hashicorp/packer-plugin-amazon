@@ -1561,6 +1561,18 @@ func TestAccBuilder_DeregistrationProtection(t *testing.T) {
 					logfile)
 			}
 
+			defer func() {
+				err := removeDeregistrationProtection(ami)
+				if err != nil {
+					t.Logf("failed to remove deregistration protection for ami %q, will need to be manually cleaned-up", ami.Name)
+					return
+				}
+				err = ami.CleanUpAmi()
+				if err != nil {
+					t.Logf("failed to remove ami %q: %s, will need to be manually cleaned-up", ami.Name, err)
+				}
+			}()
+
 			logs, err := os.ReadFile(logfile)
 			if err != nil {
 				return fmt.Errorf("couldn't read logs from logfile %s: %s", logfile, err)
@@ -1574,6 +1586,27 @@ func TestAccBuilder_DeregistrationProtection(t *testing.T) {
 		},
 	}
 	acctest.TestPlugin(t, testcase)
+}
+
+func removeDeregistrationProtection(ami amazon_acc.AMIHelper) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) != 1 {
+		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	ec2Conn, err := testEC2Conn(ami.Region)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
+	}
+
+	_, err = ec2Conn.DisableImageDeregistrationProtection(&ec2.DisableImageDeregistrationProtectionInput{
+		ImageId: images[0].ImageId,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func checkDeregistrationProtectionEnabled(ami amazon_acc.AMIHelper) error {
