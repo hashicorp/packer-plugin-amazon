@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -14,6 +15,7 @@ import (
 
 type StepEnableDeregistrationProtection struct {
 	AccessConfig             *AccessConfig
+	AMISkipCreateImage       bool
 	DeregistrationProtection *DeregistrationProtectionOptions
 }
 
@@ -21,6 +23,11 @@ func (s *StepEnableDeregistrationProtection) Run(ctx context.Context, state mult
 	ui := state.Get("ui").(packersdk.Ui)
 	if !s.DeregistrationProtection.Enabled {
 		ui.Say("Skipping Enable AMI deregistration protection...")
+		return multistep.ActionContinue
+	}
+
+	if s.AMISkipCreateImage {
+		ui.Say("skip_create_ami was set. Skipping AMI deregistration protection...")
 		return multistep.ActionContinue
 	}
 
@@ -33,7 +40,7 @@ func (s *StepEnableDeregistrationProtection) Run(ctx context.Context, state mult
 	}
 
 	for region, ami := range amis {
-		ui.Say(fmt.Sprintf("Enabling deregistration protection on AMI (%s) in region %q ...", ami, region))
+		log.Printf("Enabling deregistration protection on AMI (%s) in region %q ...", ami, region)
 
 		conn, err := GetRegionConn(s.AccessConfig, region)
 		if err != nil {
@@ -48,7 +55,7 @@ func (s *StepEnableDeregistrationProtection) Run(ctx context.Context, state mult
 			WithCooldown: &s.DeregistrationProtection.WithCooldown,
 		})
 		if err != nil {
-			err := fmt.Errorf("Error enable AMI deregistration protection: %s", err)
+			err := fmt.Errorf("failed to enable AMI deregistration protection: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt

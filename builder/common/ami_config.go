@@ -51,9 +51,14 @@ import (
 // [Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
 // When deregistration protection is enabled, the AMI cannot be deregistered.
 // To allow the AMI to be deregistered, you must first disable deregistration protection.
-//   - `cooldown` (boolean) - enforces deregistration protection for 24 hours after deregistration protection is disabled. Default: false
 type DeregistrationProtectionOptions struct {
-	Enabled      bool `mapstructure:"enabled"`
+	// Enable AMI deregistration protection.
+	// To allow the AMI to be deregistered, you must first disable deregistration protection.
+	Enabled bool `mapstructure:"enabled"`
+	// When you turn on deregistration protection on an AMI, you have the option to include a 24-hour cooldown period.
+	// This cooldown period is the time during which deregistration protection remains in effect after you turn it off.
+	// During this cooldown period, the AMI can’t be deregistered.
+	// When the cooldown period ends, the AMI can be deregistered.
 	WithCooldown bool `mapstructure:"with_cooldown" required:"false"`
 }
 
@@ -204,7 +209,8 @@ type AMIConfig struct {
 
 	SnapshotConfig `mapstructure:",squash"`
 
-	// See [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
+	// Enable AMI deregistration protection. See
+	// [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
 	// details on all of the options available, and for a usage example.
 	DeregistrationProtection DeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false"`
 }

@@ -391,7 +391,8 @@ builders.
   If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
   You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
 
-- `deregistration_protection` (DeregistrationProtectionOptions) - See [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
+- `deregistration_protection` (DeregistrationProtectionOptions) - Enable AMI deregistration protection. See
+  [DeregistrationProtectionOptions](#deregistration-protection-options) below for more
   details on all of the options available, and for a usage example.
 
 <!-- End of code generated from the comments of the AMIConfig struct in builder/common/ami_config.go; -->
@@ -759,6 +760,61 @@ JSON example:
   If none is set, defaults to AWS waiter default which is 15 seconds.
 
 <!-- End of code generated from the comments of the AWSPollingConfig struct in builder/common/state.go; -->
+
+
+### Deregistration Protection Options
+
+<!-- Code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; DO NOT EDIT MANUALLY -->
+
+DeregistrationProtectionOptions lets users set AMI deregistration protection
+
+HCL2 example:
+
+```hcl
+
+	source "amazon-ebs" "basic-example" {
+	  deregistration_protection {
+	    enabled = true
+	    with_cooldown = true
+	  }
+	}
+
+```
+
+JSON Example:
+
+```json
+"builders" [
+
+	{
+	  "type": "amazon-ebs",
+	  "deregistration_protection": {
+	    "enabled": true,
+	    "with_cooldown": true
+	  }
+	}
+
+]
+```
+
+[Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
+When deregistration protection is enabled, the AMI cannot be deregistered.
+To allow the AMI to be deregistered, you must first disable deregistration protection.
+
+<!-- End of code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; -->
+
+
+<!-- Code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; DO NOT EDIT MANUALLY -->
+
+- `enabled` (bool) - Enable AMI deregistration protection.
+  To allow the AMI to be deregistered, you must first disable deregistration protection.
+
+- `with_cooldown` (bool) - When you turn on deregistration protection on an AMI, you have the option to include a 24-hour cooldown period.
+  This cooldown period is the time during which deregistration protection remains in effect after you turn it off.
+  During this cooldown period, the AMI can’t be deregistered.
+  When the cooldown period ends, the AMI can be deregistered.
+
+<!-- End of code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; -->
 
 
 ## Basic Example

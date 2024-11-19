@@ -1,7 +1,11 @@
 <!-- Code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; DO NOT EDIT MANUALLY -->
 
-- `enabled` (bool) - Enabled
+- `enabled` (bool) - Enable AMI deregistration protection.
+  To allow the AMI to be deregistered, you must first disable deregistration protection.
 
-- `with_cooldown` (bool) - With Cooldown
+- `with_cooldown` (bool) - When you turn on deregistration protection on an AMI, you have the option to include a 24-hour cooldown period.
+  This cooldown period is the time during which deregistration protection remains in effect after you turn it off.
+  During this cooldown period, the AMI can’t be deregistered.
+  When the cooldown period ends, the AMI can be deregistered.
 
 <!-- End of code generated from the comments of the DeregistrationProtectionOptions struct in builder/common/ami_config.go; -->
