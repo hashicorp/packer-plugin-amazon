@@ -1547,7 +1547,8 @@ func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
 
 func TestAccBuilder_DeregistrationProtection(t *testing.T) {
 	ami := amazon_acc.AMIHelper{
-		Name: fmt.Sprintf("packer-ebs-deregistration-protection-%d", time.Now().Unix()),
+		Name:   fmt.Sprintf("packer-ebs-deregistration-protection-%d", time.Now().Unix()),
+		Region: "us-east-1",
 	}
 
 	testcase := &acctest.PluginTestCase{
