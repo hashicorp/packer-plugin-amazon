@@ -673,6 +673,34 @@ build {
 }
 ```
 
+## Windows 2022 Sysprep Commands - For Amazon Windows AMIs Only
+
+For Amazon Windows 2022 AMIs it is necessary to run Sysprep commands which can
+be easily added to the provisioner section.
+
+**HCL2**
+
+```hcl
+provisioner "powershell" {
+  inline = [
+    "& 'C:/Program Files/Amazon/EC2Launch/ec2launch' reset --block",
+    "& 'C:/Program Files/Amazon/EC2Launch/ec2launch' sysprep --shutdown --block"
+  ]
+}
+```
+
+**JSON**
+
+```json
+{
+  "type": "powershell",
+  "inline": [
+    "& 'C:/Program Files/Amazon/EC2Launch/ec2launch' reset --block",
+    "& 'C:/Program Files/Amazon/EC2Launch/ec2launch' sysprep --shutdown --block"
+  ]
+}
+```
+
 
 ## Windows 2016 Sysprep Commands - For Amazon Windows AMIs Only
 
