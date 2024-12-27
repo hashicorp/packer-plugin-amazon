@@ -30,6 +30,7 @@ type StepSecurityGroup struct {
 	Ctx                       interpolate.Context
 	IsRestricted              bool
 	Tags                      map[string]string
+	RunConfig                 *RunConfig
 
 	createdGroupId string
 }
@@ -194,16 +195,51 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	port := s.CommConfig.Port()
 	// Authorize access for the provided port within the security group
+	// Create the base permission
+	permission := &ec2.IpPermission{
+		FromPort:   aws.Int64(int64(port)),
+		ToPort:     aws.Int64(int64(port)),
+		IpProtocol: aws.String("tcp"),
+	}
+
+	// Add IPv4 ranges
+	if len(groupIpRanges) > 0 {
+		permission.IpRanges = groupIpRanges
+	}
+
+	// Add IPv6 ranges if SSHInterface is private_ipv6
+	if s.RunConfig != nil && s.RunConfig.SSHInterface == "private_ipv6" {
+		ui.Say("Adding IPv6 rules for private_ipv6 interface...")
+		groupIpv6Ranges := []*ec2.Ipv6Range{}
+		for _, cidr := range temporarySGSourceCidrs {
+			if strings.Contains(cidr, ":") {
+				// If it's already an IPv6 CIDR, use it as is
+				ipv6Range := &ec2.Ipv6Range{
+					CidrIpv6: aws.String(cidr),
+				}
+				groupIpv6Ranges = append(groupIpv6Ranges, ipv6Range)
+			} else {
+				// For IPv4 addresses, add ::/0 to ensure IPv6 access
+				ipv6Range := &ec2.Ipv6Range{
+					CidrIpv6: aws.String("::/0"),
+				}
+				groupIpv6Ranges = append(groupIpv6Ranges, ipv6Range)
+			}
+		}
+		// Ensure we have at least one IPv6 rule
+		if len(groupIpv6Ranges) == 0 {
+			ipv6Range := &ec2.Ipv6Range{
+				CidrIpv6: aws.String("::/0"),
+			}
+			groupIpv6Ranges = append(groupIpv6Ranges, ipv6Range)
+		}
+		permission.Ipv6Ranges = groupIpv6Ranges
+		log.Printf("[DEBUG] Added IPv6 ranges to security group: %v", groupIpv6Ranges)
+	}
+
 	groupRules := &ec2.AuthorizeSecurityGroupIngressInput{
-		GroupId: groupResp.GroupId,
-		IpPermissions: []*ec2.IpPermission{
-			{
-				FromPort:   aws.Int64(int64(port)),
-				ToPort:     aws.Int64(int64(port)),
-				IpRanges:   groupIpRanges,
-				IpProtocol: aws.String("tcp"),
-			},
-		},
+		GroupId:       groupResp.GroupId,
+		IpPermissions: []*ec2.IpPermission{permission},
 	}
 
 	ui.Say(fmt.Sprintf(

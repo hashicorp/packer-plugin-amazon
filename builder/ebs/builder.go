@@ -342,6 +342,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IsRestricted:              b.config.IsChinaCloud(),
 			Tags:                      b.config.RunTags,
 			Ctx:                       b.config.ctx,
+			RunConfig:                 &b.config.RunConfig,
 		},
 		&awscommon.StepIamInstanceProfile{
 			PollingConfig:                             b.config.PollingConfig,

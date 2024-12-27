@@ -18,6 +18,7 @@ const (
 	publicDNS       = "public.dns.test"
 	localhost       = "localhost"
 	sshHostTemplate = "custom.host.value"
+	privateIPv6     = "2001:db8::1"
 )
 
 func TestSSHHost(t *testing.T) {
@@ -43,6 +44,7 @@ func TestSSHHost(t *testing.T) {
 		{1, "vpc-id", "public_dns", true, publicDNS, ""},
 		{1, "vpc-id", "public_ip", true, publicIP, ""},
 		{1, "vpc-id", "session_manager", true, localhost, ""},
+		{1, "vpc-id", "private_ipv6", true, privateIPv6, ""},
 		{2, "", "", true, publicDNS, ""},
 		{2, "", "private_ip", true, privateIP, ""},
 		{2, "vpc-id", "", true, publicIP, ""},
@@ -74,12 +76,13 @@ func testSSHHost(t *testing.T, allowTries int, vpcId string, sshInterface string
 		allowTries, vpcId, sshInterface, ok, wantHost, sshHostOverride)
 
 	e := &fakeEC2Describer{
-		allowTries: allowTries,
-		vpcId:      vpcId,
-		privateIP:  privateIP,
-		publicIP:   publicIP,
-		privateDNS: privateDNS,
-		publicDNS:  publicDNS,
+		allowTries:  allowTries,
+		vpcId:       vpcId,
+		privateIP:   privateIP,
+		publicIP:    publicIP,
+		privateDNS:  privateDNS,
+		publicDNS:   publicDNS,
+		privateIPv6: privateIPv6,
 	}
 
 	f := SSHHost(e, sshInterface, sshHostOverride)
@@ -112,6 +115,7 @@ type fakeEC2Describer struct {
 
 	vpcId                                      string
 	privateIP, publicIP, privateDNS, publicDNS string
+	privateIPv6                                string
 }
 
 func (d *fakeEC2Describer) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
@@ -130,6 +134,7 @@ func (d *fakeEC2Describer) DescribeInstances(in *ec2.DescribeInstancesInput) (*e
 		instance.PrivateIpAddress = aws.String(d.privateIP)
 		instance.PublicDnsName = aws.String(d.publicDNS)
 		instance.PrivateDnsName = aws.String(d.privateDNS)
+		instance.Ipv6Address = aws.String(d.privateIPv6)
 	}
 
 	out := &ec2.DescribeInstancesOutput{

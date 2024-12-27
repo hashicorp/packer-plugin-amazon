@@ -57,6 +57,10 @@ func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.St
 					if i.PrivateDnsName != nil {
 						host = *i.PrivateDnsName
 					}
+				case "private_ipv6":
+					if i.Ipv6Address != nil {
+						host = *i.Ipv6Address
+					}
 				default:
 					panic(fmt.Sprintf("Unknown interface type: %s", sshInterface))
 				}
