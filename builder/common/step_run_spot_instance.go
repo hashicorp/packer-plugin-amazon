@@ -412,6 +412,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 				// we can wait on those operations, this can be removed.
 				return true
 			}
+			if err.Error() == "InsufficientInstanceCapacity" {
+				return true
+			}
 			return false
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
@@ -431,6 +434,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		}
 		if err != nil {
 			log.Printf("create request failed %v", err)
+		}
+		// We can end up unavailable Spot capacity, we keep retrying
+		for _, err := range createOutput.Errors {
+			if err.ErrorCode != nil && *err.ErrorCode == "InsufficientInstanceCapacity" {
+				return fmt.Errorf(*err.ErrorCode)
+			}
 		}
 		return err
 	})
@@ -512,10 +521,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 
 	// Retry creating tags for about 2.5 minutes
 	err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
-		if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
-			return true
-		}
-		return false
+		return awserrors.Matches(err, "InvalidInstanceID.NotFound", "")
 	},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
