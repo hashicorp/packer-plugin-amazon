@@ -698,6 +698,7 @@ func TestAccBuilder_EbsRunTags(t *testing.T) {
 var testJSONInterpolatedRunTagsSource string
 
 func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-west-2",
 		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
@@ -725,6 +726,7 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 var testSSHKeyPairRSA string
 
 func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_rsa",
 		Template: testSSHKeyPairRSA,
@@ -986,6 +988,7 @@ func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
 }
 
 func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		amiName  string
@@ -1009,7 +1012,6 @@ func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			amis := []amazon_acc.AMIHelper{
 				{
 					Region: "us-east-1",

@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
+// This is required to make acceptance tests pass reliably, we create many snapshots in quick succession which hits this limit, the guidance from AWS is to set it to JENNATODO
 func RetryCreateSnapshot(ctx context.Context, ec2conn *ec2.EC2, input *ec2.CreateSnapshotInput) (*ec2.Snapshot, error) {
 	retryConfig := retry.Config{
 		Tries: 10,
