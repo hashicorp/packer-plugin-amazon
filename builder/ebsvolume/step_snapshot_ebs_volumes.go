@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
@@ -72,7 +73,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				}
 
 				ui.Message(fmt.Sprintf("Requesting snapshot of volume: %s...", *instanceBlockDevice.Ebs.VolumeId))
-				snapshot, err := ec2conn.CreateSnapshot(input)
+				snapshot, err := common.RetryCreateSnapshot(ctx, ec2conn.(*ec2.EC2), input)
 				if err != nil || snapshot == nil {
 					err := fmt.Errorf("Error generating snapsot for volume %s: %s", *instanceBlockDevice.Ebs.VolumeId, err)
 					state.Put("error", err)

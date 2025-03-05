@@ -30,6 +30,7 @@ import (
 )
 
 func TestAccBuilder_EbsBasic(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-plugin-amazon-ebs-basic-acc-test %d", time.Now().Unix()),
@@ -53,6 +54,7 @@ func TestAccBuilder_EbsBasic(t *testing.T) {
 }
 
 func TestAccBuilder_EbsRegionCopy(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-acc-test-%d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_region_copy_test",
@@ -83,6 +85,7 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 }
 
 func TestAccBuilder_EbsRegionsCopyWithDeprecation(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-deprecate-acc-test-%d", time.Now().Unix())
 
 	amis := []amazon_acc.AMIHelper{
@@ -168,6 +171,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 }
 
 func TestAccBuilder_EbsForceDeregister(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("dereg %d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_deregister_part1_test",
@@ -210,6 +214,7 @@ func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 }
 
 func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-dereg %d", time.Now().Unix())
 
 	testCase := &acctest.PluginTestCase{
@@ -286,6 +291,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 }
 
 func TestAccBuilder_EbsAmiSharing(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-sharing-acc-test %d", time.Now().Unix()),
@@ -369,6 +375,7 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 }
 
 func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
@@ -393,6 +400,7 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 }
 
 func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
@@ -423,6 +431,7 @@ func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
 }
 
 func TestAccBuilder_EbsCopyRegionEncryptedBootWithDeprecation(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf(
 		"packer-test-builder-region-copy-encrypt-deprecate-acc-test-%d",
 		time.Now().Unix())
@@ -527,6 +536,7 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 }
 
 func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ssm-acc-test %d", time.Now().Unix()),
@@ -563,6 +573,7 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 }
 
 func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ssm-reboot-acc-test %d", time.Now().Unix()),
@@ -595,6 +606,7 @@ func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
 }
 
 func TestAccBuilder_EbsEnableDeprecation(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-deprecation-acc-test %d", time.Now().Unix()),
@@ -658,6 +670,7 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 var testHCLInterpolatedRunTagsSource string
 
 func TestAccBuilder_EbsRunTags(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-west-2",
 		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
@@ -749,6 +762,7 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 var testSSHKeyPairED25519 string
 
 func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_ed25519",
 		Template: testSSHKeyPairED25519,
@@ -786,6 +800,7 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 var testRSASHA2OnlyServer string
 
 func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_rsa_sha2_srv_test",
 		Template: testRSASHA2OnlyServer,
@@ -819,6 +834,7 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFile(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-pkey-file-acc-test-%d", time.Now().Unix()),
@@ -846,6 +862,7 @@ func TestAccBuilder_PrivateKeyFile(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-pkey-file-reboot-acc-test-%d", time.Now().Unix()),
@@ -885,6 +902,7 @@ func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
 var testBurstableInstanceTypes string
 
 func TestAccBuilder_EnableUnlimitedCredits(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_unlimited_credits_test",
 		Template: testBurstableInstanceTypes,
@@ -902,6 +920,7 @@ func TestAccBuilder_EnableUnlimitedCredits(t *testing.T) {
 var testBurstableSpotInstanceTypes string
 
 func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_unlimited_credits_spot_instance_test",
 		Template: testBurstableSpotInstanceTypes,
@@ -927,6 +946,7 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 }
 
 func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-imds-acc-test-%d", time.Now().Unix()),
@@ -989,6 +1009,7 @@ func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			amis := []amazon_acc.AMIHelper{
 				{
 					Region: "us-east-1",
@@ -1083,6 +1104,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
 				Template: tt.template,
@@ -1373,6 +1395,7 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 			return nil
 		},
 	}
+	t.Parallel()
 	acctest.TestPlugin(t, testcase)
 }
 
@@ -1425,6 +1448,7 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
 				Template: fmt.Sprintf(tt.template, tt.amiSetup.Name, tt.IPVal),
@@ -1460,6 +1484,7 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 }
 
 func TestAccBuilder_AssociatePublicIPWithSubnetFilter(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-with-subnet-filter-%d", time.Now().Unix()),
@@ -1507,6 +1532,7 @@ func TestAccBuilder_AssociatePublicIPWithSubnetFilter(t *testing.T) {
 }
 
 func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-basic-subnet-filter-%d", time.Now().Unix()),
@@ -1546,6 +1572,7 @@ func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
 }
 
 func TestAccBuilder_DeregistrationProtection(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Name:   fmt.Sprintf("packer-ebs-deregistration-protection-%d", time.Now().Unix()),
 		Region: "us-east-1",

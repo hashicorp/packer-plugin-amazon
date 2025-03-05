@@ -32,7 +32,7 @@ func (s *StepSnapshot) Run(ctx context.Context, state multistep.StateBag) multis
 	ui.Say("Creating snapshot...")
 	description := fmt.Sprintf("Packer: %s", time.Now().String())
 
-	createSnapResp, err := ec2conn.CreateSnapshot(&ec2.CreateSnapshotInput{
+	createSnapResp, err := awscommon.RetryCreateSnapshot(ctx, ec2conn, &ec2.CreateSnapshotInput{
 		VolumeId:    &volumeId,
 		Description: &description,
 	})
