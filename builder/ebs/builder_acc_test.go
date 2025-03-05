@@ -1170,8 +1170,6 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 	t.Parallel()
 	amiNameWithoutLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-%d", time.Now().Unix())
-	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
-	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
 
 	flWithCopiesAMIs := []amazon_acc.AMIHelper{
 		{
@@ -1181,23 +1179,6 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 		{
 			Region: "us-east-2",
 			Name:   amiNameWithoutLT,
-		},
-	}
-
-	flWithCopiesAMIsAndLTs := []amazon_acc.AMIHelper{
-		{
-			Region: "us-east-1",
-			Name:   amiNameWithLT,
-		},
-		{
-			Region: "us-east-2",
-			Name:   amiNameWithLT,
-		},
-	}
-	flWithCopiesAMIOneSkipped := []amazon_acc.AMIHelper{
-		{
-			Region: "us-east-1",
-			Name:   amiNameWithLTOneSkipped,
 		},
 	}
 
@@ -1219,6 +1200,80 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			},
 			testWindowsFastBootWithAMICopies,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			testcase := &acctest.PluginTestCase{
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
+				Teardown: func() error {
+					var errs error
+
+					for _, ami := range currtest.amiSpec {
+						err := ami.CleanUpAmi()
+						if err != nil {
+							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
+							errs = packersdk.MultiErrorAppend(errs, err)
+						}
+					}
+
+					return errs
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						t.Fatalf("failed to read logs from logifle: %s", err)
+					}
+					logStr := string(logs)
+					for _, str := range currtest.stringsToFindInLog {
+						if !strings.Contains(logStr, str) {
+							t.Errorf("exptected to find %q in logs, but did not", str)
+						}
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
+func TestAccBuilder_EbsWindowsFastLaunchWithAMICopiesAndLaunchTemplates(t *testing.T) {
+	t.Parallel()
+	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
+
+	flWithCopiesAMIsAndLTs := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLT,
+		},
+		{
+			Region: "us-east-2",
+			Name:   amiNameWithLT,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		amiName            string
+		amiSpec            []amazon_acc.AMIHelper
+		stringsToFindInLog []string
+		template           string
+	}{
 		{
 			"ebs-windows-fast-launch-with-copies-and-launch-templates",
 			amiNameWithLT,
@@ -1229,6 +1284,76 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			},
 			testWindowsFastBootWithAMICopiesAndLTs,
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			testcase := &acctest.PluginTestCase{
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
+				Teardown: func() error {
+					var errs error
+
+					for _, ami := range currtest.amiSpec {
+						err := ami.CleanUpAmi()
+						if err != nil {
+							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
+							errs = packersdk.MultiErrorAppend(errs, err)
+						}
+					}
+
+					return errs
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						t.Fatalf("failed to read logs from logifle: %s", err)
+					}
+					logStr := string(logs)
+					for _, str := range currtest.stringsToFindInLog {
+						if !strings.Contains(logStr, str) {
+							t.Errorf("exptected to find %q in logs, but did not", str)
+						}
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
+func TestAccBuilder_EbsWindowsFastLaunchWithAMICopiesOneRegionDisabled(t *testing.T) {
+	t.Parallel()
+	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
+
+	flWithCopiesAMIOneSkipped := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLTOneSkipped,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		amiName            string
+		amiSpec            []amazon_acc.AMIHelper
+		stringsToFindInLog []string
+		template           string
+	}{
 		{
 			"ebs-windows-fast-launch-with-copies-one-region-disabled",
 			amiNameWithLTOneSkipped,
@@ -1266,49 +1391,12 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 					}
 
-					for _, ami := range currtest.amiSpec {
-						amis, err := ami.GetAmi()
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
 						if err != nil {
-							return fmt.Errorf("failed to get AMI: %s", err)
-						}
-						if len(amis) != 1 {
-							return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
-						}
-
-						accessConfig := &common.AccessConfig{}
-						session, err := accessConfig.Session()
-						if err != nil {
-							return fmt.Errorf("Unable to create aws session %s", err.Error())
-						}
-
-						regionconn := ec2.New(session.Copy(&aws.Config{
-							Region: aws.String(ami.Region),
-						}))
-
-						ami := amis[0]
-
-						fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-							ImageIds: []*string{ami.ImageId},
-						})
-
-						if err != nil {
-							return fmt.Errorf("failed to get fast-launch images: %s", err)
-						}
-
-						if len(fastLaunchImages.FastLaunchImages) != 1 {
-							return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
-						}
-
-						img := fastLaunchImages.FastLaunchImages[0]
-						if img.State == nil {
-							return fmt.Errorf("unexpected null fast-launch state")
-						}
-
-						if *img.State != "enabled" {
-							return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+							t.Fatal(err)
 						}
 					}
-
 					logs, err := os.ReadFile(logfile)
 					if err != nil {
 						t.Fatalf("failed to read logs from logifle: %s", err)
@@ -1326,6 +1414,49 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			acctest.TestPlugin(t, testcase)
 		})
 	}
+}
+func checkFastLaunch(amiHelper amazon_acc.AMIHelper) error {
+	amis, err := amiHelper.GetAmi()
+	if err != nil {
+		return fmt.Errorf("failed to get AMI: %s", err)
+	}
+	if len(amis) != 1 {
+		return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
+	}
+
+	accessConfig := &common.AccessConfig{}
+	session, err := accessConfig.Session()
+	if err != nil {
+		return fmt.Errorf("Unable to create aws session %s", err.Error())
+	}
+
+	regionconn := ec2.New(session.Copy(&aws.Config{
+		Region: aws.String(amiHelper.Region),
+	}))
+
+	ami := amis[0]
+
+	fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+		ImageIds: []*string{ami.ImageId},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get fast-launch images: %s", err)
+	}
+
+	if len(fastLaunchImages.FastLaunchImages) != 1 {
+		return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
+	}
+
+	img := fastLaunchImages.FastLaunchImages[0]
+	if img.State == nil {
+		return fmt.Errorf("unexpected null fast-launch state")
+	}
+
+	if *img.State != "enabled" {
+		return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+	}
+	return nil
 }
 
 func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
