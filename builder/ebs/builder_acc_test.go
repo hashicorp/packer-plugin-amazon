@@ -1401,6 +1401,7 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 }
 
 func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
+	t.Parallel()
 	nonSpotInstance := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-explicit-public-ip-%d", time.Now().Unix()),
@@ -1450,7 +1451,6 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 	for _, test := range tests {
 		tt := test
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
 				Template: fmt.Sprintf(tt.template, tt.amiSetup.Name, tt.IPVal),
