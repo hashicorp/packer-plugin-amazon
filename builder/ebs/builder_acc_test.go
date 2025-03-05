@@ -11,7 +11,7 @@ package ebs
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,7 +23,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -740,7 +739,7 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -778,7 +777,7 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -816,7 +815,7 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -1077,6 +1076,7 @@ func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
 }
 
 func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
+	t.Parallel()
 	fastlaunchami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-windows-fastlaunch-%d", time.Now().Unix()),
@@ -1104,9 +1104,9 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, test := range tests {
+		tt := test
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
 				Template: tt.template,
@@ -1126,7 +1126,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 						return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
 					}
 
-					accessConfig := &awscommon.AccessConfig{}
+					accessConfig := &common.AccessConfig{}
 					session, err := accessConfig.Session()
 					if err != nil {
 						return fmt.Errorf("Unable to create aws session %s", err.Error())
@@ -1168,6 +1168,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 }
 
 func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
+	t.Parallel()
 	amiNameWithoutLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-%d", time.Now().Unix())
 	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
 	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
@@ -1244,8 +1245,6 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			currtest := tt
 
-			t.Parallel()
-
 			testcase := &acctest.PluginTestCase{
 				Name:     currtest.name,
 				Template: fmt.Sprintf(currtest.template, currtest.amiName),
@@ -1276,7 +1275,7 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 							return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
 						}
 
-						accessConfig := &awscommon.AccessConfig{}
+						accessConfig := &common.AccessConfig{}
 						session, err := accessConfig.Session()
 						if err != nil {
 							return fmt.Errorf("Unable to create aws session %s", err.Error())
@@ -1448,7 +1447,8 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, test := range tests {
+		tt := test
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			testcase := &acctest.PluginTestCase{

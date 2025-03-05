@@ -29,6 +29,7 @@ type stepSnapshotEBSVolumes struct {
 
 func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	ec2Client := state.Get("ec2").(*ec2.EC2)
 	instance := state.Get("instance").(*ec2.Instance)
 	ui := state.Get("ui").(packer.Ui)
 
@@ -73,7 +74,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				}
 
 				ui.Message(fmt.Sprintf("Requesting snapshot of volume: %s...", *instanceBlockDevice.Ebs.VolumeId))
-				snapshot, err := common.RetryCreateSnapshot(ctx, ec2conn.(*ec2.EC2), input)
+				snapshot, err := common.RetryCreateSnapshot(ctx, ec2Client, input)
 				if err != nil || snapshot == nil {
 					err := fmt.Errorf("Error generating snapsot for volume %s: %s", *instanceBlockDevice.Ebs.VolumeId, err)
 					state.Put("error", err)
