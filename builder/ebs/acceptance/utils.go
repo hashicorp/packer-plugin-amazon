@@ -13,7 +13,8 @@ import (
 )
 
 func GenerateSSHPrivateKeyFile() (string, error) {
-	outFile := fmt.Sprintf("%s/temp_key", os.TempDir())
+	// TODO something with this variable causes flakes
+	outFile := fmt.Sprintf("%stemp_key", os.TempDir())
 
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
