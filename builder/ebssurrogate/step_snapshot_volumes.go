@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -74,7 +75,7 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	if description == "" {
 		description = fmt.Sprintf("Packer: %s", time.Now().String())
 	}
-	createSnapResp, err := ec2conn.CreateSnapshot(&ec2.CreateSnapshotInput{
+	createSnapResp, err := common.RetryCreateSnapshot(ctx, ec2conn, &ec2.CreateSnapshotInput{
 		VolumeId:          &volumeId,
 		Description:       aws.String(description),
 		TagSpecifications: tagSpecs,

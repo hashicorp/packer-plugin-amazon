@@ -11,7 +11,7 @@ package ebs
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -23,13 +23,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 func TestAccBuilder_EbsBasic(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-plugin-amazon-ebs-basic-acc-test %d", time.Now().Unix()),
@@ -53,6 +53,7 @@ func TestAccBuilder_EbsBasic(t *testing.T) {
 }
 
 func TestAccBuilder_EbsRegionCopy(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-acc-test-%d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_region_copy_test",
@@ -83,6 +84,7 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 }
 
 func TestAccBuilder_EbsRegionsCopyWithDeprecation(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-deprecate-acc-test-%d", time.Now().Unix())
 
 	amis := []amazon_acc.AMIHelper{
@@ -168,6 +170,7 @@ func checkRegionCopy(amiName string, regions []string) error {
 }
 
 func TestAccBuilder_EbsForceDeregister(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("dereg %d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_deregister_part1_test",
@@ -210,6 +213,7 @@ func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 }
 
 func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-dereg %d", time.Now().Unix())
 
 	testCase := &acctest.PluginTestCase{
@@ -286,6 +290,7 @@ func checkSnapshotsDeleted(snapshotIds []*string) error {
 }
 
 func TestAccBuilder_EbsAmiSharing(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-sharing-acc-test %d", time.Now().Unix()),
@@ -369,6 +374,7 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 }
 
 func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
@@ -393,6 +399,7 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 }
 
 func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
@@ -423,6 +430,7 @@ func TestAccBuilder_EbsEncryptedBootWithDeprecation(t *testing.T) {
 }
 
 func TestAccBuilder_EbsCopyRegionEncryptedBootWithDeprecation(t *testing.T) {
+	t.Parallel()
 	amiName := fmt.Sprintf(
 		"packer-test-builder-region-copy-encrypt-deprecate-acc-test-%d",
 		time.Now().Unix())
@@ -527,6 +535,7 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 }
 
 func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ssm-acc-test %d", time.Now().Unix()),
@@ -563,6 +572,7 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 }
 
 func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ssm-reboot-acc-test %d", time.Now().Unix()),
@@ -595,6 +605,7 @@ func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
 }
 
 func TestAccBuilder_EbsEnableDeprecation(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-deprecation-acc-test %d", time.Now().Unix()),
@@ -658,6 +669,7 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 var testHCLInterpolatedRunTagsSource string
 
 func TestAccBuilder_EbsRunTags(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-west-2",
 		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
@@ -685,6 +697,7 @@ func TestAccBuilder_EbsRunTags(t *testing.T) {
 var testJSONInterpolatedRunTagsSource string
 
 func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-west-2",
 		Name:   fmt.Sprintf("packer-amazon-run-tags-test %d", time.Now().Unix()),
@@ -712,6 +725,7 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 var testSSHKeyPairRSA string
 
 func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_rsa",
 		Template: testSSHKeyPairRSA,
@@ -725,7 +739,7 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -749,6 +763,7 @@ func TestAccBuilder_EbsKeyPair_rsa(t *testing.T) {
 var testSSHKeyPairED25519 string
 
 func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_ed25519",
 		Template: testSSHKeyPairED25519,
@@ -762,7 +777,7 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -786,6 +801,7 @@ func TestAccBuilder_EbsKeyPair_ed25519(t *testing.T) {
 var testRSASHA2OnlyServer string
 
 func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_rsa_sha2_srv_test",
 		Template: testRSASHA2OnlyServer,
@@ -799,7 +815,7 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
@@ -819,6 +835,7 @@ func TestAccBuilder_EbsKeyPair_rsaSHA2OnlyServer(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFile(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-pkey-file-acc-test-%d", time.Now().Unix()),
@@ -846,6 +863,7 @@ func TestAccBuilder_PrivateKeyFile(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-pkey-file-reboot-acc-test-%d", time.Now().Unix()),
@@ -885,6 +903,7 @@ func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
 var testBurstableInstanceTypes string
 
 func TestAccBuilder_EnableUnlimitedCredits(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_unlimited_credits_test",
 		Template: testBurstableInstanceTypes,
@@ -902,6 +921,7 @@ func TestAccBuilder_EnableUnlimitedCredits(t *testing.T) {
 var testBurstableSpotInstanceTypes string
 
 func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
+	t.Parallel()
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_unlimited_credits_spot_instance_test",
 		Template: testBurstableSpotInstanceTypes,
@@ -927,6 +947,7 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 }
 
 func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-imds-acc-test-%d", time.Now().Unix()),
@@ -966,6 +987,7 @@ func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
 }
 
 func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		amiName  string
@@ -1054,6 +1076,7 @@ func TestAccBuilder_EbsCopyRegionKeepTagsInAllAMI(t *testing.T) {
 }
 
 func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
+	t.Parallel()
 	fastlaunchami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-windows-fastlaunch-%d", time.Now().Unix()),
@@ -1081,7 +1104,8 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, test := range tests {
+		tt := test
 		t.Run(tt.name, func(t *testing.T) {
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
@@ -1102,7 +1126,7 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 						return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
 					}
 
-					accessConfig := &awscommon.AccessConfig{}
+					accessConfig := &common.AccessConfig{}
 					session, err := accessConfig.Session()
 					if err != nil {
 						return fmt.Errorf("Unable to create aws session %s", err.Error())
@@ -1144,9 +1168,8 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 }
 
 func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
+	t.Parallel()
 	amiNameWithoutLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-%d", time.Now().Unix())
-	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
-	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
 
 	flWithCopiesAMIs := []amazon_acc.AMIHelper{
 		{
@@ -1156,23 +1179,6 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 		{
 			Region: "us-east-2",
 			Name:   amiNameWithoutLT,
-		},
-	}
-
-	flWithCopiesAMIsAndLTs := []amazon_acc.AMIHelper{
-		{
-			Region: "us-east-1",
-			Name:   amiNameWithLT,
-		},
-		{
-			Region: "us-east-2",
-			Name:   amiNameWithLT,
-		},
-	}
-	flWithCopiesAMIOneSkipped := []amazon_acc.AMIHelper{
-		{
-			Region: "us-east-1",
-			Name:   amiNameWithLTOneSkipped,
 		},
 	}
 
@@ -1194,33 +1200,11 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			},
 			testWindowsFastBootWithAMICopies,
 		},
-		{
-			"ebs-windows-fast-launch-with-copies-and-launch-templates",
-			amiNameWithLT,
-			flWithCopiesAMIsAndLTs,
-			[]string{
-				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
-				"found template in region \"us-east-2\": ID \"lt-0083091b6614b118c\"",
-			},
-			testWindowsFastBootWithAMICopiesAndLTs,
-		},
-		{
-			"ebs-windows-fast-launch-with-copies-one-region-disabled",
-			amiNameWithLTOneSkipped,
-			flWithCopiesAMIOneSkipped,
-			[]string{
-				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
-				"fast-launch explicitly disabled for region \"us-east-2\"",
-			},
-			testWindowsFastBootWithAMICopiesAndLTsOneDisabled,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			currtest := tt
-
-			t.Parallel()
 
 			testcase := &acctest.PluginTestCase{
 				Name:     currtest.name,
@@ -1243,49 +1227,12 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 					}
 
-					for _, ami := range currtest.amiSpec {
-						amis, err := ami.GetAmi()
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
 						if err != nil {
-							return fmt.Errorf("failed to get AMI: %s", err)
-						}
-						if len(amis) != 1 {
-							return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
-						}
-
-						accessConfig := &awscommon.AccessConfig{}
-						session, err := accessConfig.Session()
-						if err != nil {
-							return fmt.Errorf("Unable to create aws session %s", err.Error())
-						}
-
-						regionconn := ec2.New(session.Copy(&aws.Config{
-							Region: aws.String(ami.Region),
-						}))
-
-						ami := amis[0]
-
-						fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-							ImageIds: []*string{ami.ImageId},
-						})
-
-						if err != nil {
-							return fmt.Errorf("failed to get fast-launch images: %s", err)
-						}
-
-						if len(fastLaunchImages.FastLaunchImages) != 1 {
-							return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
-						}
-
-						img := fastLaunchImages.FastLaunchImages[0]
-						if img.State == nil {
-							return fmt.Errorf("unexpected null fast-launch state")
-						}
-
-						if *img.State != "enabled" {
-							return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+							t.Fatal(err)
 						}
 					}
-
 					logs, err := os.ReadFile(logfile)
 					if err != nil {
 						t.Fatalf("failed to read logs from logifle: %s", err)
@@ -1303,6 +1250,213 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 			acctest.TestPlugin(t, testcase)
 		})
 	}
+}
+
+func TestAccBuilder_EbsWindowsFastLaunchWithAMICopiesAndLaunchTemplates(t *testing.T) {
+	t.Parallel()
+	amiNameWithLT := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-copies-and-launch-templates-%d", time.Now().Unix())
+
+	flWithCopiesAMIsAndLTs := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLT,
+		},
+		{
+			Region: "us-east-2",
+			Name:   amiNameWithLT,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		amiName            string
+		amiSpec            []amazon_acc.AMIHelper
+		stringsToFindInLog []string
+		template           string
+	}{
+		{
+			"ebs-windows-fast-launch-with-copies-and-launch-templates",
+			amiNameWithLT,
+			flWithCopiesAMIsAndLTs,
+			[]string{
+				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
+				"found template in region \"us-east-2\": ID \"lt-0083091b6614b118c\"",
+			},
+			testWindowsFastBootWithAMICopiesAndLTs,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			testcase := &acctest.PluginTestCase{
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
+				Teardown: func() error {
+					var errs error
+
+					for _, ami := range currtest.amiSpec {
+						err := ami.CleanUpAmi()
+						if err != nil {
+							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
+							errs = packersdk.MultiErrorAppend(errs, err)
+						}
+					}
+
+					return errs
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						t.Fatalf("failed to read logs from logifle: %s", err)
+					}
+					logStr := string(logs)
+					for _, str := range currtest.stringsToFindInLog {
+						if !strings.Contains(logStr, str) {
+							t.Errorf("exptected to find %q in logs, but did not", str)
+						}
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+
+func TestAccBuilder_EbsWindowsFastLaunchWithAMICopiesOneRegionDisabled(t *testing.T) {
+	t.Parallel()
+	amiNameWithLTOneSkipped := fmt.Sprintf("packer-ebs-windows-fastlaunch-with-one-copy-disabled-%d", time.Now().Unix())
+
+	flWithCopiesAMIOneSkipped := []amazon_acc.AMIHelper{
+		{
+			Region: "us-east-1",
+			Name:   amiNameWithLTOneSkipped,
+		},
+	}
+
+	tests := []struct {
+		name               string
+		amiName            string
+		amiSpec            []amazon_acc.AMIHelper
+		stringsToFindInLog []string
+		template           string
+	}{
+		{
+			"ebs-windows-fast-launch-with-copies-one-region-disabled",
+			amiNameWithLTOneSkipped,
+			flWithCopiesAMIOneSkipped,
+			[]string{
+				"found template in region \"us-east-1\": ID \"lt-0c82d8943c032fc0b\"",
+				"fast-launch explicitly disabled for region \"us-east-2\"",
+			},
+			testWindowsFastBootWithAMICopiesAndLTsOneDisabled,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currtest := tt
+
+			testcase := &acctest.PluginTestCase{
+				Name:     currtest.name,
+				Template: fmt.Sprintf(currtest.template, currtest.amiName),
+				Teardown: func() error {
+					var errs error
+
+					for _, ami := range currtest.amiSpec {
+						err := ami.CleanUpAmi()
+						if err != nil {
+							t.Logf("cleaning up AMI %q in region %q failed: %s. It will need to be manually removed", ami.Name, ami.Region, err)
+							errs = packersdk.MultiErrorAppend(errs, err)
+						}
+					}
+
+					return errs
+				},
+				Check: func(buildCommand *exec.Cmd, logfile string) error {
+					if buildCommand.ProcessState.ExitCode() != 0 {
+						return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+					}
+
+					for _, amiSpec := range currtest.amiSpec {
+						err := checkFastLaunch(amiSpec)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					logs, err := os.ReadFile(logfile)
+					if err != nil {
+						t.Fatalf("failed to read logs from logifle: %s", err)
+					}
+					logStr := string(logs)
+					for _, str := range currtest.stringsToFindInLog {
+						if !strings.Contains(logStr, str) {
+							t.Errorf("exptected to find %q in logs, but did not", str)
+						}
+					}
+
+					return nil
+				},
+			}
+			acctest.TestPlugin(t, testcase)
+		})
+	}
+}
+func checkFastLaunch(amiHelper amazon_acc.AMIHelper) error {
+	amis, err := amiHelper.GetAmi()
+	if err != nil {
+		return fmt.Errorf("failed to get AMI: %s", err)
+	}
+	if len(amis) != 1 {
+		return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
+	}
+
+	accessConfig := &common.AccessConfig{}
+	session, err := accessConfig.Session()
+	if err != nil {
+		return fmt.Errorf("Unable to create aws session %s", err.Error())
+	}
+
+	regionconn := ec2.New(session.Copy(&aws.Config{
+		Region: aws.String(amiHelper.Region),
+	}))
+
+	ami := amis[0]
+
+	fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
+		ImageIds: []*string{ami.ImageId},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to get fast-launch images: %s", err)
+	}
+
+	if len(fastLaunchImages.FastLaunchImages) != 1 {
+		return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
+	}
+
+	img := fastLaunchImages.FastLaunchImages[0]
+	if img.State == nil {
+		return fmt.Errorf("unexpected null fast-launch state")
+	}
+
+	if *img.State != "enabled" {
+		return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+	}
+	return nil
 }
 
 func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
@@ -1373,10 +1527,12 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 			return nil
 		},
 	}
+	t.Parallel()
 	acctest.TestPlugin(t, testcase)
 }
 
 func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
+	t.Parallel()
 	nonSpotInstance := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-explicit-public-ip-%d", time.Now().Unix()),
@@ -1423,7 +1579,8 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, test := range tests {
+		tt := test
 		t.Run(tt.name, func(t *testing.T) {
 			testcase := &acctest.PluginTestCase{
 				Name:     tt.name,
@@ -1460,6 +1617,7 @@ func TestAccBuilder_AssociatePublicIPWithoutSubnet(t *testing.T) {
 }
 
 func TestAccBuilder_AssociatePublicIPWithSubnetFilter(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-with-subnet-filter-%d", time.Now().Unix()),
@@ -1507,6 +1665,7 @@ func TestAccBuilder_AssociatePublicIPWithSubnetFilter(t *testing.T) {
 }
 
 func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-basic-subnet-filter-%d", time.Now().Unix()),
@@ -1546,6 +1705,7 @@ func TestAccBuilder_BasicSubnetFilter(t *testing.T) {
 }
 
 func TestAccBuilder_DeregistrationProtection(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Name:   fmt.Sprintf("packer-ebs-deregistration-protection-%d", time.Now().Unix()),
 		Region: "us-east-1",
