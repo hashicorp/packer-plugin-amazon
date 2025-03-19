@@ -28,9 +28,10 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 }
 
 func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "ebs-basic-acc-test",
+		Name:   "ebssurrogate-basic-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_basic_test",
@@ -51,9 +52,10 @@ func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
 }
 
 func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "ebs-basic-acc-test-imdsv2",
+		Name:   "ebssurrogate-basic-acc-test-imdsv2",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_basic_test_imdsv2",
@@ -90,6 +92,7 @@ func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
 }
 
 func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(acctest.TestEnvVar) == "" {
 		t.Skipf("Acceptance tests skipped unless env '%s' set",
 			acctest.TestEnvVar)
@@ -123,9 +126,10 @@ func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
 }
 
 func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "ebs-image-method-create-acc-test",
+		Name:   "ebssurrogate-image-method-create-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_create_test",
@@ -146,9 +150,10 @@ func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 }
 
 func TestAccBuilder_EbssurrogateUseCreateImageFalse(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "ebs-image-method-register-acc-test",
+		Name:   "ebssurrogate-image-method-register-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_register_test",
@@ -169,9 +174,10 @@ func TestAccBuilder_EbssurrogateUseCreateImageFalse(t *testing.T) {
 }
 
 func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   "ebs-image-method-empty-acc-test",
+		Name:   "ebssurrogate-image-method-empty-acc-test",
 	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_empty_test",
@@ -192,6 +198,7 @@ func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
 }
 
 func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("ebssurrogate-deprecate-at-acctest-%d", time.Now().Unix()),
