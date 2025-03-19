@@ -18,6 +18,7 @@ import (
 var testDatasourceBasic string
 
 func TestAccDatasource_AmazonAmi(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-west-2",
 		Name:   fmt.Sprintf("packer-amazon-ami-test %d", time.Now().Unix()),
