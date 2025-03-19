@@ -27,6 +27,7 @@ import (
 var testDatasourceBasic string
 
 func TestAccAmazonParameterStore(t *testing.T) {
+	t.Parallel()
 	param := &AmazonParameter{
 		Name:        "packer_datasource_parameterstore_test_parameter",
 		Type:        "String",
