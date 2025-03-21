@@ -7,7 +7,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -26,6 +26,7 @@ import (
 var testDatasourceBasic string
 
 func TestAccAmazonSecretsManager(t *testing.T) {
+	t.Parallel()
 	secret := &AmazonSecret{
 		Name:        "packer_datasource_secretsmanager_test_secret",
 		Key:         "packer_test_key",
@@ -55,7 +56,7 @@ func TestAccAmazonSecretsManager(t *testing.T) {
 			}
 			defer logs.Close()
 
-			logsBytes, err := ioutil.ReadAll(logs)
+			logsBytes, err := io.ReadAll(logs)
 			if err != nil {
 				return fmt.Errorf("Unable to read %s", logfile)
 			}
