@@ -3,6 +3,12 @@
 
 name: "AWS Acceptance Tests"
 
+env:
+  GOMAXPROCS: 32
+  AWS_POLL_DELAY_SECONDS: 10
+  AWS_TIMEOUT_SECONDS: 3600
+  PACKER_ACC: 1
+
 on:
   schedule:
     - cron: '0 4 * * SUN'
@@ -61,7 +67,7 @@ jobs:
           role-duration-seconds: 21600 # 6h
       - run: |
           echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
-          PACKER_ACC=1 go test \
+          go test \
             -timeout 5h \
             -count 1 \
             -run "${{ github.event.inputs.run_pattern }}" \
@@ -103,7 +109,7 @@ jobs:
           role-duration-seconds: 14400 # 4h
       - run: |
           echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
-          PACKER_ACC=1 go test \
+          go test \
             -timeout 1h \
             -count 1 \
             -run "${{ github.event.inputs.run_pattern }}" \
