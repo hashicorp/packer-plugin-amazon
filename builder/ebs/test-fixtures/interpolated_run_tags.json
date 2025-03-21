@@ -21,7 +21,7 @@
             "instance_type": "t2.micro",
             "ssh_username": "ubuntu",
             "communicator": "ssh",
-            "ami_name": "packer-tags-regression-{{timestamp}}",
+            "ami_name": "%s",
             "tags": {
                 "Team": "myteamtag",
                 "OS_Version": "Ubuntu",

@@ -31,6 +31,7 @@ type TFConfig struct {
 }
 
 func TestAccBuilder_EbsTagsBasic(t *testing.T) {
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-tags-acc-testing %d", time.Now().Unix()),

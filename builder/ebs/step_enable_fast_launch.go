@@ -67,7 +67,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 	for region, ami := range amis {
 		ec2connif, err := common.GetRegionConn(s.AccessConfig, region)
 		if err != nil {
-			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %s", region, err))
+			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %w", region, err))
 			return multistep.ActionHalt
 		}
 
@@ -97,7 +97,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			defer cancel()
 
 			err = retry.Config{
-				Tries: 5,
+				Tries: 20,
 				ShouldRetry: func(err error) bool {
 					log.Printf("Enabling fast launch failed: %s", err)
 					return true
@@ -109,7 +109,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 				return err
 			})
 			if err != nil {
-				errCh <- fmt.Errorf("Error enabling fast boot for AMI in region %s: %s", region, err)
+				errCh <- fmt.Errorf("Error enabling fast boot for AMI in region %s: %w", region, err)
 				return
 			}
 
@@ -117,7 +117,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			ui.Say(fmt.Sprintf("Waiting for fast launch to become ready on AMI %q in region %s...", ami, region))
 			waitErr := s.PollingConfig.WaitUntilFastLaunchEnabled(ctx, ec2conn, ami)
 			if waitErr != nil {
-				errCh <- fmt.Errorf("Failed to enable fast launch: %s", err)
+				errCh <- fmt.Errorf("Failed to enable fast launch: %w", waitErr)
 				return
 			}
 
@@ -127,7 +127,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 				},
 			})
 			if err != nil {
-				errCh <- fmt.Errorf("Failed to get fast-launch status for AMI %q: %s", ami, err)
+				errCh <- fmt.Errorf("Failed to get fast-launch status for AMI %q: %w", ami, err)
 				return
 			}
 
