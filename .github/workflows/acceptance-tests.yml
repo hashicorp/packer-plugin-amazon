@@ -122,3 +122,48 @@ jobs:
           name: "ebssurrogate_failure_logs.zip"
           path: "ebssurrogate_failure_logs.zip"
           retention-days: 5
+
+  datasource-acc-tests:
+    needs:
+      - get-go-version
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    name: AWS Datasource Acceptance tests
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version: ${{ needs.get-go-version.outputs.go-version }}
+      - name: "Compile/install the plugin on the current branch"
+        run: |
+          make dev
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACC_TEST_KEY_ID }}"
+          aws-secret-access-key: "${{ secrets.AWS_ACC_TEST_KEY_SECRET }}"
+          aws-region: "${{ secrets.AWS_ACC_TEST_REGION }}"
+          role-to-assume: "${{ secrets.AWS_ACC_TEST_ROLE }}"
+          role-session-name: "packer-aws-acceptance-tests"
+          role-duration-seconds: 14400 # 4h
+      - run: |
+          echo "Testing with Go ${{ needs.get-go-version.outputs.go-version }}"
+          go test \
+            -timeout 1h \
+            -count 1 \
+            -run "${{ github.event.inputs.run_pattern }}" \
+            ./builder/ebssurrogate
+      - run: zip datasource_failure_logs.zip \ 
+          datasource/ami/*txt \
+          datasource/parameterstore/*txt \
+          datasource/secretsmanager/*txt
+        if: ${{ failure() }}
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: ${{ failure() }}
+        with:
+          name: "datasource_failure_logs.zip"
+          path: "datasource_failure_logs.zip"
+          retention-days: 5
