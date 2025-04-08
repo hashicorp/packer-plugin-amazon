@@ -155,7 +155,7 @@ jobs:
             -timeout 1h \
             -count 1 \
             -run "${{ github.event.inputs.run_pattern }}" \
-            ./builder/ebssurrogate
+            ./datasource/**
       - run: zip datasource_failure_logs.zip \ 
           datasource/ami/*txt \
           datasource/parameterstore/*txt \
