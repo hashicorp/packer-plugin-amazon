@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -444,7 +445,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			for _, outErr := range createOutput.Errors {
 				errString = errString + aws.StringValue(outErr.ErrorMessage)
 			}
-			err = fmt.Errorf(errString)
+			err = errors.New(errString)
 		}
 		state.Put("error", err)
 		ui.Error(err.Error())
