@@ -49,13 +49,13 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	// Determine if there is any work to do.
 	valid := false
 	valid = valid || s.Description != ""
-	valid = valid || (s.Users != nil && len(s.Users) > 0)
-	valid = valid || (s.Groups != nil && len(s.Groups) > 0)
-	valid = valid || (s.OrgArns != nil && len(s.OrgArns) > 0)
-	valid = valid || (s.OuArns != nil && len(s.OuArns) > 0)
-	valid = valid || (s.ProductCodes != nil && len(s.ProductCodes) > 0)
-	valid = valid || (s.SnapshotUsers != nil && len(s.SnapshotUsers) > 0)
-	valid = valid || (s.SnapshotGroups != nil && len(s.SnapshotGroups) > 0)
+	valid = valid || len(s.Users) > 0
+	valid = valid || len(s.Groups) > 0
+	valid = valid || len(s.OrgArns) > 0
+	valid = valid || len(s.OuArns) > 0
+	valid = valid || len(s.ProductCodes) > 0
+	valid = valid || len(s.SnapshotUsers) > 0
+	valid = valid || len(s.SnapshotGroups) > 0
 	valid = valid || s.IMDSSupport != ""
 
 	if !valid {
