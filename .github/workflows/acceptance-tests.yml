@@ -156,14 +156,26 @@ jobs:
             -count 1 \
             -run "${{ github.event.inputs.run_pattern }}" \
             ./datasource/**
-      - run: zip datasource_failure_logs.zip \ 
-          datasource/ami/*txt \
-          datasource/parameterstore/*txt \
-          datasource/secretsmanager/*txt
+      - run: | 
+          zip datasource_ami_failure_logs.zip ./datasource/ami/*txt || true
+          zip datasource_parameterstore_failure_logs.zip ./datasource/parameterstore/*txt || true
+          zip datasource_secretsmanager_failure_logs.zip ./datasource/secretsmanager/*txt || true
         if: ${{ failure() }}
       - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         if: ${{ failure() }}
         with:
-          name: "datasource_failure_logs.zip"
-          path: "datasource_failure_logs.zip"
+          name: "datasource_ami_failure_logs.zip"
+          path: "datasource_ami_failure_logs.zip"
+          retention-days: 5
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: ${{ failure() }}
+        with:
+          name: "datasource_parameterstore_failure_logs.zip"
+          path: "datasource_parameterstore_failure_logs.zip"
+          retention-days: 5
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        if: ${{ failure() }}
+        with:
+          name: "datasource_secretsmanager_failure_logs.zip"
+          path: "datasource_secretsmanager_failure_logs.zip"
           retention-days: 5
