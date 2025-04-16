@@ -378,7 +378,7 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
+		Name:   fmt.Sprintf("packer-enc-acc-test-ebs-encrypted-boot %d", time.Now().Unix()),
 	}
 
 	testCase := &acctest.PluginTestCase{
@@ -1383,6 +1383,34 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 
 func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 	t.Parallel()
+
+	// We need to provision a ssh password enabled AMI to do the actual test
+	sshPasswordEnabledAmi := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-ssh-password-enabled-%d", time.Now().Unix()),
+	}
+	sshPasswordEnabledCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs-password-enabled-ami",
+		Template: fmt.Sprintf(sshPasswordEnabledAMI, sshPasswordEnabledAmi.Name),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, sshPasswordEnabledCase)
+
+	sshPasswordEnabledAMIs, err := sshPasswordEnabledAmi.GetAmi()
+	if err != nil {
+		if err := sshPasswordEnabledAmi.CleanUpAmi(); err != nil {
+			t.Log(err)
+		}
+		t.Fatal(err)
+	}
+	if len(sshPasswordEnabledAMIs) != 1 {
+		if err := sshPasswordEnabledAmi.CleanUpAmi(); err != nil {
+			t.Log(err)
+		}
+		t.Fatalf("should return exactly one instance, got %d", len(sshPasswordEnabledAMIs))
+	}
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-ssh-password-auth-test-%d", time.Now().Unix()),
@@ -1390,9 +1418,14 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs-with-ssh-pass-auth",
-		Template: fmt.Sprintf(testBuildWithSSHPassword, ami.Name),
+		Template: fmt.Sprintf(testBuildWithSSHPassword, *sshPasswordEnabledAMIs[0].ImageId, ami.Name),
 		Teardown: func() error {
-			return ami.CleanUpAmi()
+			amiErr := ami.CleanUpAmi()
+			sshPasswordEnabledAmiErr := sshPasswordEnabledAmi.CleanUpAmi()
+			if amiErr != nil {
+				return amiErr
+			}
+			return sshPasswordEnabledAmiErr
 		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState.ExitCode() != 0 {
@@ -1992,7 +2025,7 @@ build {
 const testBuildWithSSHPassword = `
 source "amazon-ebs" "test" {
 	region               = "us-east-1"
-	source_ami           = "ami-089158c0576f477a7" # Ubuntu Server 22.04 LTS custom with ssh user/password auth setup
+	source_ami           = "%s"
 	instance_type        = "t3.micro"
 	ami_name             = "%s"
 	communicator         = "ssh"
@@ -2006,7 +2039,38 @@ build {
 	sources = ["amazon-ebs.test"]
 }
 `
+const sshPasswordEnabledAMI = `
+source "amazon-ebs" "test" {
+	region        = "us-east-1"
+	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type = "m3.medium"
+	ami_name      = "%s"
+	communicator  = "ssh"
+	ssh_username  = "ubuntu"
+	ami_regions   = ["us-east-1"]
+}
 
+build {
+	sources = [
+		"source.amazon-ebs.test"
+	]
+	# We need to create a new user as the ubuntu & root user's password gets deactivated
+	# by AWS when an AMI is generated
+	provisioner "shell" {
+		inline = [
+				"set -e",
+				"sudo su",
+				"echo 'Enabling SSH password authentication...'",
+				"sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+				"sudo useradd -m -s /bin/bash user",
+				"echo 'Setting up password for user'",
+				"echo 'user:password' | sudo chpasswd ubuntu",
+				"sudo usermod -aG sudo user",
+				"sudo systemctl restart sshd",
+		]
+	}
+}
+`
 const testSetupPublicIPWithoutVPCOrSubnet = `
 source "amazon-ebs" "test_build" {
   region                      = "us-east-1"
