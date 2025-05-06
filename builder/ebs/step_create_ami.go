@@ -76,10 +76,10 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		}
 
 		if !s.AMISkipRunTags {
-			ui.Say(fmt.Sprintf("Attaching run tags to AMI..."))
+			ui.Say("Attaching run tags to AMI...")
 			createOpts.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeImage, ec2.ResourceTypeSnapshot)
 		} else {
-			ui.Say(fmt.Sprintf("Skipping attaching run tags to AMI..."))
+			ui.Say("Skipping attaching run tags to AMI...")
 		}
 	}
 

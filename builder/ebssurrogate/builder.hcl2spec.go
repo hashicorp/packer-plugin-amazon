@@ -205,6 +205,7 @@ type FlatConfig struct {
 	DeregistrationProtection                  *common.FlatDeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false" cty:"deregistration_protection" hcl:"deregistration_protection"`
 	SnapshotDescription                       *string                                     `mapstructure:"snapshot_description" required:"false" cty:"snapshot_description" hcl:"snapshot_description"`
 	AMIMappings                               []common.FlatBlockDevice                    `mapstructure:"ami_block_device_mappings" required:"false" cty:"ami_block_device_mappings" hcl:"ami_block_device_mappings"`
+	AMISkipRunTags                            *bool                                       `mapstructure:"skip_ami_run_tags" required:"false" cty:"skip_ami_run_tags" hcl:"skip_ami_run_tags"`
 	LaunchMappings                            []FlatBlockDevice                           `mapstructure:"launch_block_device_mappings" required:"false" cty:"launch_block_device_mappings" hcl:"launch_block_device_mappings"`
 	RootDevice                                *FlatRootBlockDevice                        `mapstructure:"ami_root_device" required:"true" cty:"ami_root_device" hcl:"ami_root_device"`
 	VolumeRunTags                             map[string]string                           `mapstructure:"run_volume_tags" cty:"run_volume_tags" hcl:"run_volume_tags"`
@@ -376,6 +377,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"deregistration_protection":    &hcldec.BlockSpec{TypeName: "deregistration_protection", Nested: hcldec.ObjectSpec((*common.FlatDeregistrationProtectionOptions)(nil).HCL2Spec())},
 		"snapshot_description":         &hcldec.AttrSpec{Name: "snapshot_description", Type: cty.String, Required: false},
 		"ami_block_device_mappings":    &hcldec.BlockListSpec{TypeName: "ami_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
+		"skip_ami_run_tags":            &hcldec.AttrSpec{Name: "skip_ami_run_tags", Type: cty.Bool, Required: false},
 		"launch_block_device_mappings": &hcldec.BlockListSpec{TypeName: "launch_block_device_mappings", Nested: hcldec.ObjectSpec((*FlatBlockDevice)(nil).HCL2Spec())},
 		"ami_root_device":              &hcldec.BlockSpec{TypeName: "ami_root_device", Nested: hcldec.ObjectSpec((*FlatRootBlockDevice)(nil).HCL2Spec())},
 		"run_volume_tags":              &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},

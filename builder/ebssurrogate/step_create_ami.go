@@ -28,6 +28,7 @@ type StepCreateAMI struct {
 	LaunchOmitMap      map[string]bool
 	image              *ec2.Image
 	AMISkipBuildRegion bool
+	AMISkipRunTags     bool
 	IsRestricted       bool
 	Ctx                interpolate.Context
 	Tags               map[string]string
@@ -72,6 +73,12 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
+		}
+		if !s.AMISkipRunTags {
+			ui.Say("Attaching run tags to AMI...")
+			createOpts.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeImage, ec2.ResourceTypeSnapshot)
+		} else {
+			ui.Say("Skipping attaching run tags to AMI...")
 		}
 
 		createOpts.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeImage, ec2.ResourceTypeSnapshot)
