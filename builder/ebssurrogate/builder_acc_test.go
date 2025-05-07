@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
@@ -25,6 +26,51 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 	}
 
 	return ec2.New(session), nil
+}
+
+func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) == 0 {
+		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
+
+	// describe the image, get block devices with a snapshot
+	ec2conn, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: []*string{images[0].ImageId},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
+	}
+
+	var errs error
+	image := imageResp.Images[0] // Only requested a single AMI ID
+	if len(tagList) == 0 {
+		if len(image.Tags) != 0 {
+			return fmt.Errorf("expected no tags for AMI %q, got %d", amiNameRegion, len(image.Tags))
+		}
+	}
+	for tagKey, tagVal := range tagList {
+		found := false
+		for _, imgTag := range image.Tags {
+			if *imgTag.Key != tagKey {
+				continue
+			}
+			found = true
+			if *imgTag.Value != tagVal {
+				errs = multierror.Append(errs, fmt.Errorf("wrong value for tag %q, expected %q, got %q",
+					tagKey, tagVal, *imgTag.Value))
+			}
+			break
+		}
+		if !found {
+			errs = multierror.Append(errs, fmt.Errorf("tag %q not found in image tags", tagKey))
+		}
+	}
+
+	return errs
 }
 
 func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
@@ -46,6 +92,37 @@ func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
 				}
 			}
 			return nil
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+func TestAccBuilder_EbssurrogateBasicSkipAmiRunTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   "ebssurrogate-basic-skip-ami-run-tags-acc-test",
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebssurrogate_basic_skip_ami_run_tags_test",
+		Template: fmt.Sprintf(testBuilderAccBasicSkipAmiRunTags, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+
+			expectedTags := map[string]string{}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+			return result
 		},
 	}
 	acctest.TestPlugin(t, testCase)
@@ -275,6 +352,38 @@ source "amazon-ebssurrogate" "test" {
 		volume_size = 8
 		volume_type = "gp2"
 	}
+}
+
+build {
+	sources = ["amazon-ebssurrogate.test"]
+}
+`
+
+const testBuilderAccBasicSkipAmiRunTags = `
+source "amazon-ebssurrogate" "test" {
+	ami_name = "%s"
+	region = "us-east-1"
+	instance_type = "m3.medium"
+	source_ami = "ami-76b2a71e"
+	ssh_username = "ubuntu"
+	launch_block_device_mappings {
+		device_name = "/dev/xvda"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	ami_virtualization_type = "hvm"
+	ami_root_device {
+		source_device_name = "/dev/xvda"
+		device_name = "/dev/sda1"
+		delete_on_termination = true
+		volume_size = 8
+		volume_type = "gp2"
+	}
+	run_tags = {
+    	"simple" = "Simple String"
+  }
+
 }
 
 build {
