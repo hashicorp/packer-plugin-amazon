@@ -4,6 +4,7 @@
 package ebssurrogate
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
@@ -26,6 +28,54 @@ func testEC2Conn(region string) (*ec2.EC2, error) {
 
 	return ec2.New(session), nil
 }
+
+func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
+	images, err := ami.GetAmi()
+	if err != nil || len(images) == 0 {
+		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
+	}
+
+	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
+
+	// describe the image, get block devices with a snapshot
+	ec2conn, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		ImageIds: []*string{images[0].ImageId},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
+	}
+
+	var errs error
+	image := imageResp.Images[0] // Only requested a single AMI ID
+	if len(tagList) == 0 {
+		if len(image.Tags) != 0 {
+			return fmt.Errorf("expected no tags for AMI %q, got %d", amiNameRegion, len(image.Tags))
+		}
+	}
+	for tagKey, tagVal := range tagList {
+		found := false
+		for _, imgTag := range image.Tags {
+			if *imgTag.Key != tagKey {
+				continue
+			}
+			found = true
+			if *imgTag.Value != tagVal {
+				errs = multierror.Append(errs, fmt.Errorf("wrong value for tag %q, expected %q, got %q",
+					tagKey, tagVal, *imgTag.Value))
+			}
+			break
+		}
+		if !found {
+			errs = multierror.Append(errs, fmt.Errorf("tag %q not found in image tags", tagKey))
+		}
+	}
+
+	return errs
+}
+
+//go:embed test-fixtures/interpolated_ebs_surrogate_basic.pkr.hcl
+var testBuilderAccBasic string
 
 func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
 	t.Parallel()
@@ -50,6 +100,43 @@ func TestAccBuilder_EbssurrogateBasic(t *testing.T) {
 	}
 	acctest.TestPlugin(t, testCase)
 }
+
+//go:embed test-fixtures/interpolated_skip_run_tags.pkr.hcl
+var testBuilderAccBasicSkipAmiRunTags string
+
+func TestAccBuilder_EbssurrogateBasicSkipAmiRunTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   "ebssurrogate-basic-skip-ami-run-tags-acc-test",
+	}
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebssurrogate_basic_skip_ami_run_tags_test",
+		Template: fmt.Sprintf(testBuilderAccBasicSkipAmiRunTags, ami.Name),
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+
+			expectedTags := map[string]string{}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+			return result
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
+//go:embed test-fixtures/interpolated_ebs_surrogate_basic_imdsv2.pkr.hcl
+var testBuilderAccBasicIMDSv2 string
 
 func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
 	t.Parallel()
@@ -91,6 +178,9 @@ func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+//go:embed test-fixtures/interpolated_ebs_surrogate_private_key_file.pkr.hcl
+var testPrivateKeyFile string
+
 func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
 	t.Parallel()
 	if os.Getenv(acctest.TestEnvVar) == "" {
@@ -128,6 +218,9 @@ func TestAccBuilder_Ebssurrogate_SSHPrivateKeyFile_SSM(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+//go:embed test-fixtures/interpolated_ebs_surrogate_create_image.pkr.hcl
+var testBuilderAccUseCreateImageTrue string
+
 func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
@@ -151,6 +244,9 @@ func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 	}
 	acctest.TestPlugin(t, testCase)
 }
+
+//go:embed test-fixtures/interpolated_ebs_surrogate_create_image_false.pkr.hcl
+var testBuilderAccUseCreateImageFalse string
 
 func TestAccBuilder_EbssurrogateUseCreateImageFalse(t *testing.T) {
 	t.Parallel()
@@ -176,6 +272,9 @@ func TestAccBuilder_EbssurrogateUseCreateImageFalse(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+//go:embed test-fixtures/interpolated_ebs_surrogate_create_image_optional.pkr.hcl
+var testBuilderAccUseCreateImageOptional string
+
 func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
@@ -199,6 +298,9 @@ func TestAccBuilder_EbssurrogateUseCreateImageOptional(t *testing.T) {
 	}
 	acctest.TestPlugin(t, testCase)
 }
+
+//go:embed test-fixtures/interpolated_ebs_surrogate_with_deprecate_at.pkr.hcl
+var testBuilderAcc_WithDeprecateAt string
 
 func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
 	t.Parallel()
@@ -253,207 +355,3 @@ func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
 	}
 	acctest.TestPlugin(t, testCase)
 }
-
-const testBuilderAccBasic = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testBuilderAccBasicIMDSv2 = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	imds_support = "v2.0"
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testPrivateKeyFile = `
-source "amazon-ebssurrogate" "test" {
-	ami_name             = "%s"
-	source_ami           = "ami-0b5eea76982371e91" # Amazon Linux 2 AMI - kernel 5.10
-	instance_type        = "m3.medium"
-	region               = "us-east-1"
-	ssh_username         = "ec2-user"
-	ssh_interface        = "session_manager"
-	iam_instance_profile = "SSMInstanceProfile"
-	communicator         = "ssh"
-	ssh_private_key_file = "%s"
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testBuilderAccUseCreateImageTrue = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	use_create_image = true
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testBuilderAccUseCreateImageFalse = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	use_create_image = false
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testBuilderAccUseCreateImageOptional = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`
-
-const testBuilderAcc_WithDeprecateAt = `
-source "amazon-ebssurrogate" "test" {
-	ami_name = "%s"
-	region = "us-east-1"
-	instance_type = "m3.medium"
-	source_ami = "ami-76b2a71e"
-	ssh_username = "ubuntu"
-	launch_block_device_mappings {
-		device_name = "/dev/xvda"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	ami_virtualization_type = "hvm"
-	ami_root_device {
-		source_device_name = "/dev/xvda"
-		device_name = "/dev/sda1"
-		delete_on_termination = true
-		volume_size = 8
-		volume_type = "gp2"
-	}
-	deprecate_at = "%s"
-}
-
-build {
-	sources = ["amazon-ebssurrogate.test"]
-}
-`

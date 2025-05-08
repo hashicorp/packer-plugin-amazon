@@ -722,6 +722,80 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
+//go:embed test-fixtures/interpolated_skip_run_tags.pkr.hcl
+var testInterpolatedSkipRunTagsSource string
+
+func TestAccBuilder_EbsSkipAmiRunTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-amazon-skip-ami-run-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_skip_ami_run_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: fmt.Sprintf(testInterpolatedSkipRunTagsSource, ami.Name),
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			// empty tag map since we should not attach any tags if skip_ami_run_tags is set
+			expectedTags := map[string]string{}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+
+			return result
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/interpolated_skip_run_tags_create_ami_tags.pkr.hcl
+var testInterpolatedSkipRunTagsCreateAmiTagsSource string
+
+func TestAccBuilder_EbsSkipAmiRunTagsCreateAmiTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-amazon-skip-ami-run-tags-create-ami-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_skip_ami_run_tags_create_ami_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: fmt.Sprintf(testInterpolatedSkipRunTagsCreateAmiTagsSource, ami.Name),
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			// ami_tags should be attached even if we skip run tags
+			expectedTags := map[string]string{
+				"ami_tag": "yes",
+			}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+
+			return result
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
 //go:embed test-fixtures/ssh-keys/rsa_ssh_keypair.pkr.hcl
 var testSSHKeyPairRSA string
 
@@ -1360,6 +1434,11 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 
 	var errs error
 	image := imageResp.Images[0] // Only requested a single AMI ID
+	if len(tagList) == 0 {
+		if len(image.Tags) != 0 {
+			return fmt.Errorf("expected no tags for AMI %q, got %d", amiNameRegion, len(image.Tags))
+		}
+	}
 	for tagKey, tagVal := range tagList {
 		found := false
 		for _, imgTag := range image.Tags {
