@@ -80,8 +80,6 @@ func (s *StepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		} else {
 			ui.Say("Skipping attaching run tags to AMI...")
 		}
-
-		createOpts.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeImage, ec2.ResourceTypeSnapshot)
 	}
 
 	var createResp *ec2.CreateImageOutput
