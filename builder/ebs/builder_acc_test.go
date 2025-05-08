@@ -726,7 +726,7 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 var testInterpolatedSkipRunTagsSource string
 
 func TestAccBuilder_EbsSkipAmiRunTags(t *testing.T) {
-	//t.Parallel()
+	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-amazon-skip-ami-run-tags-test %d", time.Now().Unix()),
