@@ -6,12 +6,13 @@
 package ami
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -33,7 +34,7 @@ func (d *Datasource) ConfigSpec() hcldec.ObjectSpec {
 	return d.config.FlatMapstructure().HCL2Spec()
 }
 
-func (d *Datasource) Configure(raws ...interface{}) error {
+func (d *Datasource) Configure(raws ...any) error {
 	err := config.Decode(&d.config, nil, raws...)
 	if err != nil {
 		return err
@@ -75,27 +76,28 @@ func (d *Datasource) OutputSpec() hcldec.ObjectSpec {
 }
 
 func (d *Datasource) Execute() (cty.Value, error) {
-	session, err := d.config.Session()
+	ctx := context.TODO()
+	client, err := d.config.NewEC2Client(ctx)
 	if err != nil {
 		return cty.NullVal(cty.EmptyObject), err
 	}
 
-	image, err := d.config.AmiFilterOptions.GetFilteredImage(&ec2.DescribeImagesInput{}, ec2.New(session))
+	image, err := d.config.AmiFilterOptions.GetFilteredImage(ctx, &ec2.DescribeImagesInput{}, client)
 	if err != nil {
 		return cty.NullVal(cty.EmptyObject), err
 	}
 
 	imageTags := make(map[string]string, len(image.Tags))
 	for _, tag := range image.Tags {
-		imageTags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
+		imageTags[aws.ToString(tag.Key)] = aws.ToString(tag.Value)
 	}
 
 	output := DatasourceOutput{
-		ID:           aws.StringValue(image.ImageId),
-		Name:         aws.StringValue(image.Name),
-		CreationDate: aws.StringValue(image.CreationDate),
-		Owner:        aws.StringValue(image.OwnerId),
-		OwnerName:    aws.StringValue(image.ImageOwnerAlias),
+		ID:           aws.ToString(image.ImageId),
+		Name:         aws.ToString(image.Name),
+		CreationDate: aws.ToString(image.CreationDate),
+		Owner:        aws.ToString(image.OwnerId),
+		OwnerName:    aws.ToString(image.ImageOwnerAlias),
 		Tags:         imageTags,
 	}
 	return hcl2helper.HCL2ValueFromConfig(output, d.OutputSpec()), nil
