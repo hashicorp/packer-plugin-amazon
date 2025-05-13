@@ -243,21 +243,6 @@ func (c *AccessConfig) LoadOptionsFromConfig() []func(*config.LoadOptions) error
 		opts = append(opts, config.WithRegion(c.RawRegion))
 	}
 
-	//if c.CustomEndpointEc2 != "" {
-	//	opts = append(opts, config.WithBaseEndpoint(c.CustomEndpointEc2), ec2_v2.NewDefaultEndpointResolverV2())
-	//}
-
-	//	customResolver := aws_v2.EndpointResolverWithOptionsFunc(func(service, region string,
-	//		options ...interface{}) (aws_v2.Endpoint, error) {
-	//		if service == ec2.ServiceID {
-	//			return aws_v2.Endpoint{
-	//				URL: c.CustomEndpointEc2,
-	//			}, nil
-	//		}
-	//		return aws_v2.Endpoint{}, &aws_v2.EndpointNotFoundError{}
-	//	})
-	//	opts = append(opts, config.WithEndpointResolverWithOptions(customResolver))
-	//}
 	httpClient := cleanhttp.DefaultClient()
 	transport := httpClient.Transport.(*http.Transport)
 	if c.InsecureSkipTLSVerify {
