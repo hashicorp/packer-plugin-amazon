@@ -286,6 +286,20 @@ func (c *AccessConfig) LoadOptionsFromConfig() []func(*config.LoadOptions) error
 		opts = append(opts, config.WithSharedCredentialsFiles([]string{c.CredsFilename}))
 	}
 
+	if c.CustomEndpointEc2 != "" {
+		//(todo) support custom endpoint here in the AWS SDK V2
+	}
+
+	if c.MFACode != "" {
+		//(todo) support MFA code here in the AWS SDK V2
+	}
+
+	if c.DecodeAuthZMessages {
+		//(todo) support decode authz messages here in the AWS SDK V2
+	}
+
+	//(todo) user agent products support for AWS SDK V2
+
 	return opts
 
 }
