@@ -7,7 +7,6 @@
 package common
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -17,6 +16,7 @@ import (
 
 	aws_v2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	aws_v2_credentials "github.com/aws/aws-sdk-go-v2/credentials"
 	//"github.com/aws/aws-sdk-go-v2/credentials"
 	//"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	//"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -224,93 +224,8 @@ type AccessConfig struct {
 	packerConfig *common.PackerConfig
 }
 
-//func GetAWSV2Config(ctx context.Context, c *Config) (aws.Config, error) {
-//	// this function will be useful to ovveride any values that have been provided by the packer template.
-//	var optFns []func(*config.LoadOptions) error
-//
-//	if c.Profile != "" {
-//		optFns = append(optFns, config.WithSharedConfigProfile(c.Profile))
-//	}
-//
-//	if c.CredsFilename != "" {
-//		optFns = append(optFns, config.WithSharedCredentialsFiles([]string{c.CredsFilename}))
-//	}
-//
-//	if c.Region != "" {
-//		optFns = append(optFns, config.WithRegion(c.Region))
-//	}
-//
-//	// Handle static credentials (will override env/shared if valid)
-//	if c.AccessKey != "" && c.SecretKey != "" {
-//		staticCreds := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
-//			c.AccessKey,
-//			c.SecretKey,
-//			c.Token,
-//		))
-//		optFns = append(optFns, config.WithCredentialsProvider(staticCreds))
-//	}
-//
-//	// Load base config
-//	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
-//	if err != nil {
-//		return cfg, fmt.Errorf("error loading AWS config: %w", err)
-//	}
-//
-//	// If no role to assume, return base config
-//	if c.AssumeRoleARN == "" {
-//		return cfg, nil
-//	}
-//
-//	// Validate ARN
-//	if _, err := arn.Parse(c.AssumeRoleARN); err != nil {
-//		return cfg, fmt.Errorf("invalid AssumeRoleARN: %w", err)
-//	}
-//
-//	stsClient := sts.NewFromConfig(cfg)
-//
-//	assumeRoleOptions := func(o *stscreds.AssumeRoleOptions) {
-//		if c.AssumeRoleSessionName != "" {
-//			o.RoleSessionName = c.AssumeRoleSessionName
-//		}
-//		if c.AssumeRoleExternalID != "" {
-//			o.ExternalID = &c.AssumeRoleExternalID
-//		}
-//		if c.AssumeRolePolicy != "" {
-//			o.Policy = &c.AssumeRolePolicy
-//		}
-//		if len(c.AssumeRolePolicyARNs) > 0 {
-//			for _, arn := range c.AssumeRolePolicyARNs {
-//				o.PolicyARNs = append(o.PolicyARNs, sts.types.PolicyDescriptorType{Arn: aws.String(arn)})
-//			}
-//		}
-//		if len(c.AssumeRoleTags) > 0 {
-//			var tags []sts.types.Tag
-//			for k, v := range c.AssumeRoleTags {
-//				tags = append(tags, sts.types.Tag{
-//				Key:   aws.String(k),
-//					Value: aws.String(v),
-//				})
-//			}
-//			o.Tags = tags
-//		}
-//		if len(c.AssumeRoleTransitiveTagKeys) > 0 {
-//			o.TransitiveTagKeys = c.AssumeRoleTransitiveTagKeys
-//		}
-//		if c.AssumeRoleDurationSeconds > 0 {
-//			o.Duration = time.Duration(c.AssumeRoleDurationSeconds) * time.Second
-//		}
-//	}
-//
-//	assumeCreds := aws.NewCredentialsCache(stscreds.NewAssumeRoleProvider(stsClient, c.AssumeRoleARN, assumeRoleOptions))
-//	cfg.Credentials = assumeCreds
-//
-//	return cfg, nil
-//}
-
-func (c *AccessConfig) LoadConfig(ctx context.Context) (aws_v2.Config, error) {
-	if c.cfg != nil {
-		return *c.cfg, nil
-	}
+func (c *AccessConfig) LoadOptionsFromConfig() []func(*config.LoadOptions) error {
+	log.Printf("INSIDE THE LOAD CONFIG METHOD")
 
 	var opts []func(*config.LoadOptions) error
 
@@ -354,13 +269,25 @@ func (c *AccessConfig) LoadConfig(ctx context.Context) (aws_v2.Config, error) {
 
 	opts = append(opts, config.WithHTTPClient(httpClient))
 
-	cfg, err := config.LoadDefaultConfig(ctx, opts...)
-	if err != nil {
-		return aws_v2.Config{}, err
+	// set credentials option here
+
+	if c.AccessKey != "" && c.SecretKey != "" {
+		log.Printf("SETTING  STATIC CREDENTIALS")
+		staticCreds := aws_v2_credentials.NewStaticCredentialsProvider(c.AccessKey, c.SecretKey, c.Token)
+		opts = append(opts, config.WithCredentialsProvider(staticCreds))
 	}
 
-	c.cfg = &cfg
-	return cfg, nil
+	if c.ProfileName != "" {
+		log.Printf("SETTING  PROFILE CREDENTIALS")
+		opts = append(opts, config.WithSharedConfigProfile(c.ProfileName))
+	}
+	if c.CredsFilename != "" {
+		log.Printf("SETTING  CRED FILE CREDENTIALS")
+		opts = append(opts, config.WithSharedCredentialsFiles([]string{c.CredsFilename}))
+	}
+
+	return opts
+
 }
 
 // Config returns a valid aws.Config object for access to AWS services, or

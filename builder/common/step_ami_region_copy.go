@@ -6,7 +6,9 @@ package common
 import (
 	"context"
 	"fmt"
+	"time"
 
+	config_v2 "github.com/aws/aws-sdk-go-v2/config"
 	ec2_v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -27,10 +29,11 @@ type StepAMIRegionCopy struct {
 	Name              string
 	OriginalRegion    string
 
-	toDelete           string
-	getRegionConn      func(*AccessConfig, string) (*ec2_v2.Client, error)
-	AMISkipCreateImage bool
-	AMISkipBuildRegion bool
+	toDelete                                 string
+	getRegionConn                            func(*AccessConfig, string) (ec2iface.EC2API, error)
+	AMISkipCreateImage                       bool
+	AMISkipBuildRegion                       bool
+	AMISnapshotCopyCompletionDurationMinutes int64
 }
 
 func (s *StepAMIRegionCopy) DeduplicateRegions(intermediary bool) {
@@ -195,16 +198,21 @@ func GetRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error)
 
 func GetRegionConnV2(c *AccessConfig, target string) (*ec2_v2.Client, error) {
 
-	fmt.Printf("INSIDE THE GET REGION CONN V2 FUNC")
-	cfg, err := c.LoadConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
+	log.Printf("INSIDE THE GET REGION CONN V2 FUNC")
+	options := c.LoadOptionsFromConfig()
 
-	svc := ec2_v2.NewFromConfig(cfg, func(options *ec2_v2.Options) {
-		options.Region = target
-	})
-	fmt.Printf("GOT THE SERVICE USING V2 LIBRARY: %v", svc)
+	// overriding target region here
+	options = append(options, config_v2.WithRegion(target))
+
+	cfg, err := config_v2.LoadDefaultConfig(context.TODO(), options...)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load SDK config, %v", err)
+	}
+	log.Printf("LOADED DEFAULT CONFIG")
+	c.cfg = &cfg
+
+	svc := ec2_v2.NewFromConfig(cfg)
+	log.Printf("GOT THE SERVICE USING V2 LIBRARY: %v", svc)
 
 	return svc, nil
 }
@@ -214,48 +222,99 @@ func GetRegionConnV2(c *AccessConfig, target string) (*ec2_v2.Client, error) {
 func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.StateBag, config *AccessConfig, name, imageId,
 	target, source, keyId string, encrypt *bool) (string, []string, error) {
 	snapshotIds := []string{}
-	fmt.Print("INSDE AMI REGION COPY STEP")
+	log.Printf("INSDE AMI REGION COPY STEP")
 	if s.getRegionConn == nil {
 		s.getRegionConn = GetRegionConn
 	}
+	//(todo): harcoding for now, remove it
+	s.AMISnapshotCopyCompletionDurationMinutes = 15
 
-	regionconn, err := s.getRegionConn(config, target)
-	if err != nil {
-		return "", snapshotIds, err
-	}
-	t := true
-	resp, err := regionconn.CopyImage(ctx, &ec2_v2.CopyImageInput{
-		SourceRegion:  &source,
-		SourceImageId: &imageId,
-		Name:          &name,
-		Encrypted:     encrypt,
-		KmsKeyId:      aws.String(keyId),
-		CopyImageTags: &t,
-	})
-	fmt.Printf("COPIED THE IMAGE USING V2 INPUT")
-	if err != nil {
-		return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
-			imageId, target, err)
-	}
-
-	// Wait for the image to become ready
-	//if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, *resp.ImageId); err != nil {
-	//	return "", snapshotIds, fmt.Errorf("Error waiting for AMI (%s) in region (%s): %s",
-	//		*resp.ImageId, target, err)
-	//}
-
-	// Getting snapshot IDs out of the copied AMI
-	describeImageResp, err := regionconn.DescribeImages(ctx, &ec2_v2.DescribeImagesInput{ImageIds: []string{*resp.ImageId}})
-	if err != nil {
-		return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
-			imageId, target, err)
-	}
-
-	for _, blockDeviceMapping := range describeImageResp.Images[0].BlockDeviceMappings {
-		if blockDeviceMapping.Ebs != nil && blockDeviceMapping.Ebs.SnapshotId != nil {
-			snapshotIds = append(snapshotIds, *blockDeviceMapping.Ebs.SnapshotId)
+	if s.AMISnapshotCopyCompletionDurationMinutes == 0 {
+		regionconn, err := s.getRegionConn(config, target)
+		if err != nil {
+			return "", snapshotIds, err
 		}
+		t := true
+		resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
+			SourceRegion:  &source,
+			SourceImageId: &imageId,
+			Name:          &name,
+			Encrypted:     encrypt,
+			KmsKeyId:      aws.String(keyId),
+			CopyImageTags: &t,
+		})
+
+		if err != nil {
+			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
+				imageId, target, err)
+		}
+
+		// Wait for the image to become ready
+		if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, *resp.ImageId); err != nil {
+			return "", snapshotIds, fmt.Errorf("Error waiting for AMI (%s) in region (%s): %s",
+				*resp.ImageId, target, err)
+		}
+
+		// Getting snapshot IDs out of the copied AMI
+		describeImageResp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{resp.ImageId}})
+		if err != nil {
+			return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
+				imageId, target, err)
+		}
+
+		for _, blockDeviceMapping := range describeImageResp.Images[0].BlockDeviceMappings {
+			if blockDeviceMapping.Ebs != nil && blockDeviceMapping.Ebs.SnapshotId != nil {
+				snapshotIds = append(snapshotIds, *blockDeviceMapping.Ebs.SnapshotId)
+			}
+		}
+		return *resp.ImageId, snapshotIds, nil
+
+	} else {
+		log.Printf("INSIDE THE ELSE CONDITION")
+		// time based AMI copy operations are supported by AWS SDK V2 library. At the moment
+		// Amazon plugin uses AWS SDK V1 Go library. So if user provides us time base AMI copy config,
+		// we will use the AWS SDK V2 library to perform the copy operation.
+		regionConn, err := GetRegionConnV2(config, target)
+		if err != nil {
+			return "", snapshotIds, err
+		}
+		t := true
+		params := &ec2_v2.CopyImageInput{
+			SourceRegion:                          &source,
+			SourceImageId:                         &imageId,
+			Name:                                  &name,
+			Encrypted:                             encrypt,
+			KmsKeyId:                              aws.String(keyId),
+			CopyImageTags:                         &t,
+			SnapshotCopyCompletionDurationMinutes: &s.AMISnapshotCopyCompletionDurationMinutes,
+		}
+		resp, err := regionConn.CopyImage(context.TODO(), params)
+		if err != nil {
+			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
+				imageId, target, err)
+		}
+
+		//(todo) wait until image is available
+		log.Printf("AT THE WAIT LINE!")
+		time.Sleep(10 * time.Second)
+
+		imagesInput := &ec2_v2.DescribeImagesInput{
+			ImageIds: []string{*resp.ImageId},
+		}
+		describeImageResp, err := regionConn.DescribeImages(context.TODO(), imagesInput)
+		if err != nil {
+			return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
+				imageId, target, err)
+		}
+
+		for _, blockDeviceMapping := range describeImageResp.Images[0].BlockDeviceMappings {
+			if blockDeviceMapping.Ebs != nil && blockDeviceMapping.Ebs.SnapshotId != nil {
+				snapshotIds = append(snapshotIds, *blockDeviceMapping.Ebs.SnapshotId)
+			}
+		}
+
+		return *resp.ImageId, snapshotIds, nil
+
 	}
 
-	return *resp.ImageId, snapshotIds, nil
 }
