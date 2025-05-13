@@ -6,14 +6,16 @@ package common
 import (
 	"context"
 	"fmt"
-	"sync"
 
+	ec2_v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
+	"log"
+	"sync"
 )
 
 type StepAMIRegionCopy struct {
@@ -26,7 +28,7 @@ type StepAMIRegionCopy struct {
 	OriginalRegion    string
 
 	toDelete           string
-	getRegionConn      func(*AccessConfig, string) (ec2iface.EC2API, error)
+	getRegionConn      func(*AccessConfig, string) (*ec2_v2.Client, error)
 	AMISkipCreateImage bool
 	AMISkipBuildRegion bool
 }
@@ -35,7 +37,6 @@ func (s *StepAMIRegionCopy) DeduplicateRegions(intermediary bool) {
 	// Deduplicates regions by looping over the list of regions and storing
 	// the regions as keys in a map. This saves users from accidentally copying
 	// regions twice if they've added a region to a map twice.
-
 	RegionMap := map[string]bool{}
 	RegionSlice := []string{}
 
@@ -73,6 +74,7 @@ func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) m
 		return multistep.ActionContinue
 	}
 
+	ui.Say("INSIDE AMI REGION COPY STEP")
 	amis := state.Get("amis").(map[string]string)
 	snapshots := state.Get("snapshots").(map[string][]string)
 	intermediary, _ := state.Get("intermediary_image").(bool)
@@ -191,12 +193,28 @@ func GetRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error)
 	return regionconn, nil
 }
 
+func GetRegionConnV2(c *AccessConfig, target string) (*ec2_v2.Client, error) {
+
+	fmt.Printf("INSIDE THE GET REGION CONN V2 FUNC")
+	cfg, err := c.LoadConfig(context.TODO())
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+
+	svc := ec2_v2.NewFromConfig(cfg, func(options *ec2_v2.Options) {
+		options.Region = target
+	})
+	fmt.Printf("GOT THE SERVICE USING V2 LIBRARY: %v", svc)
+
+	return svc, nil
+}
+
 // amiRegionCopy does a copy for the given AMI to the target region and
 // returns the resulting ID and snapshot IDs, or error.
 func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.StateBag, config *AccessConfig, name, imageId,
 	target, source, keyId string, encrypt *bool) (string, []string, error) {
 	snapshotIds := []string{}
-
+	fmt.Print("INSDE AMI REGION COPY STEP")
 	if s.getRegionConn == nil {
 		s.getRegionConn = GetRegionConn
 	}
@@ -206,7 +224,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 		return "", snapshotIds, err
 	}
 	t := true
-	resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
+	resp, err := regionconn.CopyImage(ctx, &ec2_v2.CopyImageInput{
 		SourceRegion:  &source,
 		SourceImageId: &imageId,
 		Name:          &name,
@@ -214,20 +232,20 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 		KmsKeyId:      aws.String(keyId),
 		CopyImageTags: &t,
 	})
-
+	fmt.Printf("COPIED THE IMAGE USING V2 INPUT")
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
 			imageId, target, err)
 	}
 
 	// Wait for the image to become ready
-	if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, *resp.ImageId); err != nil {
-		return "", snapshotIds, fmt.Errorf("Error waiting for AMI (%s) in region (%s): %s",
-			*resp.ImageId, target, err)
-	}
+	//if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, *resp.ImageId); err != nil {
+	//	return "", snapshotIds, fmt.Errorf("Error waiting for AMI (%s) in region (%s): %s",
+	//		*resp.ImageId, target, err)
+	//}
 
 	// Getting snapshot IDs out of the copied AMI
-	describeImageResp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{resp.ImageId}})
+	describeImageResp, err := regionconn.DescribeImages(ctx, &ec2_v2.DescribeImagesInput{ImageIds: []string{*resp.ImageId}})
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
 			imageId, target, err)
