@@ -73,10 +73,6 @@ func (s *StepAMIRegionCopy) DeduplicateRegions(intermediary bool) {
 func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
 
-	log.Printf("ACCESS KEY ID: %s", s.AccessConfig.AccessKey)
-	log.Printf("SECRET KEY ID: %s", s.AccessConfig.SecretKey)
-	log.Printf("TOKEN %s", s.AccessConfig.Token)
-
 	if s.AMISkipCreateImage {
 		ui.Say("Skipping AMI region copy...")
 		return multistep.ActionContinue
@@ -254,7 +250,6 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 			return "", snapshotIds, err
 		}
 		t := true
-		//(todo) will add the duration param here
 		resp, err := regionconnV2.CopyImage(ctx, &ec2_v2.CopyImageInput{
 			SourceRegion:                          &source,
 			SourceImageId:                         &imageId,
