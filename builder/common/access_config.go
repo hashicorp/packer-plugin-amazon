@@ -7,12 +7,15 @@
 package common
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	aws_v2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	awsCredentials "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -20,6 +23,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	awsbase "github.com/hashicorp/aws-sdk-go-base"
+	awsbase_v2 "github.com/hashicorp/aws-sdk-go-base/v2"
+	basediag "github.com/hashicorp/aws-sdk-go-base/v2/diag"
+
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
@@ -214,6 +220,53 @@ type AccessConfig struct {
 	// packerConfig is set by Prepare() containing information about Packer,
 	// including the CorePackerVersionString
 	packerConfig *common.PackerConfig
+}
+
+func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error) {
+
+	log.Printf("INSIDE THE GET AWS CONFIG FN")
+	// Reload values into the config used by the Packer-Terraform shared SDK
+	assumeRoles := []awsbase_v2.AssumeRole{}
+	if c.AssumeRole.AssumeRoleARN != "" {
+		awsbaseAssumeRole := awsbase_v2.AssumeRole{
+			RoleARN:           c.AssumeRole.AssumeRoleARN,
+			Duration:          time.Duration(c.AssumeRole.AssumeRoleDurationSeconds) * time.Second,
+			ExternalID:        c.AssumeRole.AssumeRoleExternalID,
+			Policy:            c.AssumeRole.AssumeRolePolicy,
+			PolicyARNs:        c.AssumeRole.AssumeRolePolicyARNs,
+			SessionName:       c.AssumeRole.AssumeRoleSessionName,
+			Tags:              c.AssumeRole.AssumeRoleTags,
+			TransitiveTagKeys: c.AssumeRole.AssumeRoleTransitiveTagKeys,
+		}
+		assumeRoles = append(assumeRoles, awsbaseAssumeRole)
+	}
+	log.Printf("assume roles: %v", assumeRoles)
+	awsbaseConfig := awsbase_v2.Config{
+		AccessKey:           c.AccessKey,
+		AssumeRole:          assumeRoles,
+		Insecure:            c.InsecureSkipTLSVerify,
+		MaxRetries:          c.MaxRetries,
+		Profile:             c.ProfileName,
+		Region:              c.RawRegion,
+		SecretKey:           c.SecretKey,
+		SkipCredsValidation: c.SkipCredsValidation,
+		Token:               c.Token,
+	}
+	log.Printf("awsbaseConfig: %v", awsbaseConfig)
+	_, awsConfig, awsDiags := awsbase_v2.GetAwsConfig(ctx, &awsbaseConfig)
+
+	for _, d := range awsDiags {
+		switch d.Severity() {
+		case basediag.SeverityWarning:
+			log.Printf("[WARN] Detail: %s, Summary: %s", d.Detail(), d.Summary())
+		case basediag.SeverityError:
+
+			return nil, fmt.Errorf("Error: %s, Detail: %s", d.Summary(), d.Detail())
+
+		}
+	}
+	log.Printf("RETURNING THE GET AWS CONFIG FN")
+	return &awsConfig, nil
 }
 
 // Config returns a valid aws.Config object for access to AWS services, or

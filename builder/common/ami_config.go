@@ -197,6 +197,9 @@ type AMIConfig struct {
 	// the intermediary AMI into any regions provided in `ami_regions`, then
 	// delete the intermediary AMI. Default `false`.
 	AMISkipBuildRegion bool `mapstructure:"skip_save_build_region"`
+	// (todo) write explanation
+	AMISnapshotCopyCompletionDurationMinutes int64 `mapstructure:"snapshot_copy_completion_duration_minutes" required:"false"`
+
 	// Enforce version of the Instance Metadata Service on the built AMI.
 	// Valid options are unset (legacy) and `v2.0`. See the documentation on
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)

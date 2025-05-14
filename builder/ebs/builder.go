@@ -14,6 +14,7 @@ package ebs
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -188,6 +189,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		return nil, warns, errs
 	}
 
+	log.Printf("AWS ACCESS KEY %s", b.config.AccessKey)
+	log.Printf("AWS SECRET KEY %s", b.config.SecretKey)
+	log.Printf("AWS TOKEN %s", b.config.Token)
 	packersdk.LogSecretFilter.Set(b.config.AccessKey, b.config.SecretKey, b.config.Token)
 
 	generatedData := awscommon.GetGeneratedDataList()
@@ -416,15 +420,16 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                b.config.ctx,
 		},
 		&awscommon.StepAMIRegionCopy{
-			AccessConfig:       &b.config.AccessConfig,
-			Regions:            b.config.AMIRegions,
-			AMIKmsKeyId:        b.config.AMIKmsKeyId,
-			RegionKeyIds:       b.config.AMIRegionKMSKeyIDs,
-			EncryptBootVolume:  b.config.AMIEncryptBootVolume,
-			Name:               b.config.AMIName,
-			OriginalRegion:     *ec2conn.Config.Region,
-			AMISkipCreateImage: b.config.AMISkipCreateImage,
-			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AccessConfig:                             &b.config.AccessConfig,
+			Regions:                                  b.config.AMIRegions,
+			AMIKmsKeyId:                              b.config.AMIKmsKeyId,
+			RegionKeyIds:                             b.config.AMIRegionKMSKeyIDs,
+			EncryptBootVolume:                        b.config.AMIEncryptBootVolume,
+			Name:                                     b.config.AMIName,
+			OriginalRegion:                           *ec2conn.Config.Region,
+			AMISkipCreateImage:                       b.config.AMISkipCreateImage,
+			AMISkipBuildRegion:                       b.config.AMISkipBuildRegion,
+			AMISnapshotCopyCompletionDurationMinutes: b.config.AMISnapshotCopyCompletionDurationMinutes,
 		},
 		&stepPrepareFastLaunchTemplate{
 			AccessConfig:       &b.config.AccessConfig,
