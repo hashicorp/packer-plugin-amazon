@@ -224,7 +224,6 @@ type AccessConfig struct {
 
 func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error) {
 
-	log.Printf("INSIDE THE GET AWS CONFIG FN")
 	// Reload values into the config used by the Packer-Terraform shared SDK
 	assumeRoles := []awsbase_v2.AssumeRole{}
 	if c.AssumeRole.AssumeRoleARN != "" {
@@ -240,7 +239,7 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error)
 		}
 		assumeRoles = append(assumeRoles, awsbaseAssumeRole)
 	}
-	log.Printf("assume roles: %v", assumeRoles)
+
 	awsbaseConfig := awsbase_v2.Config{
 		AccessKey:           c.AccessKey,
 		AssumeRole:          assumeRoles,
@@ -252,7 +251,7 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error)
 		SkipCredsValidation: c.SkipCredsValidation,
 		Token:               c.Token,
 	}
-	log.Printf("awsbaseConfig: %v", awsbaseConfig)
+
 	_, awsConfig, awsDiags := awsbase_v2.GetAwsConfig(ctx, &awsbaseConfig)
 
 	for _, d := range awsDiags {
@@ -265,7 +264,7 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error)
 
 		}
 	}
-	log.Printf("RETURNING THE GET AWS CONFIG FN")
+
 	return &awsConfig, nil
 }
 

@@ -243,9 +243,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 		AmiImageId = *resp.ImageId
 
 	} else {
-		log.Printf("USING THE V2 METHOD")
 		regionconnV2, err := GetEc2Client(ctx, config, target)
-		log.Printf("RECEIVED CLIENT FROM V2!")
 		if err != nil {
 			return "", snapshotIds, err
 		}
@@ -265,7 +263,6 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 				imageId, target, err)
 		}
 		AmiImageId = *resp.ImageId
-		log.Printf("IMAGE ID RECIEVED FROM V2: %s", AmiImageId)
 
 	}
 
