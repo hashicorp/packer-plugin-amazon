@@ -207,6 +207,52 @@ func GetRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error)
 	return regionconn, nil
 }
 
+func (s *StepAMIRegionCopy) copyImageV1(regionconn ec2iface.EC2API, name, imageId, target, source, keyId string,
+	encrypt *bool) (string, error) {
+
+	var amiImageId string
+	t := true
+	resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
+		SourceRegion:  &source,
+		SourceImageId: &imageId,
+		Name:          &name,
+		Encrypted:     encrypt,
+		KmsKeyId:      aws.String(keyId),
+		CopyImageTags: &t,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
+			imageId, target, err)
+	}
+	amiImageId = *resp.ImageId
+	return amiImageId, nil
+}
+
+func (s *StepAMIRegionCopy) copyImageV2(ctx context.Context, regionconn *ec2_v2.Client, name, imageId, target, source,
+	keyId string,
+	encrypt *bool, amiSnapshotCopyCompletionDurationMinutes int64) (string, error) {
+	var amiImageId string
+	t := true
+	resp, err := regionconn.CopyImage(ctx, &ec2_v2.CopyImageInput{
+		SourceRegion:                          &source,
+		SourceImageId:                         &imageId,
+		Name:                                  &name,
+		Encrypted:                             encrypt,
+		KmsKeyId:                              aws_v2.String(keyId),
+		CopyImageTags:                         &t,
+		SnapshotCopyCompletionDurationMinutes: &amiSnapshotCopyCompletionDurationMinutes,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
+			imageId, target, err)
+	}
+	amiImageId = *resp.ImageId
+	return amiImageId, nil
+
+}
+
 // amiRegionCopy does a copy for the given AMI to the target region and
 // returns the resulting ID and snapshot IDs, or error.
 func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.StateBag, config *AccessConfig, name, imageId,
@@ -220,57 +266,38 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	if err != nil {
 		return "", snapshotIds, err
 	}
-	var AmiImageId string
+
+	var amiImageId string
 	if s.AMISnapshotCopyCompletionDurationMinutes == 0 {
-
-		t := true
-		resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
-			SourceRegion:  &source,
-			SourceImageId: &imageId,
-			Name:          &name,
-			Encrypted:     encrypt,
-			KmsKeyId:      aws.String(keyId),
-			CopyImageTags: &t,
-		})
-
+		amiImageId, err = s.copyImageV1(regionconn, name, imageId, target, source, keyId, encrypt)
 		if err != nil {
 			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
 				imageId, target, err)
 		}
-		AmiImageId = *resp.ImageId
-
 	} else {
 		regionconnV2, err := GetEc2Client(ctx, config, target)
 		if err != nil {
 			return "", snapshotIds, err
 		}
-		t := true
-		resp, err := regionconnV2.CopyImage(ctx, &ec2_v2.CopyImageInput{
-			SourceRegion:                          &source,
-			SourceImageId:                         &imageId,
-			Name:                                  &name,
-			Encrypted:                             encrypt,
-			KmsKeyId:                              aws_v2.String(keyId),
-			CopyImageTags:                         &t,
-			SnapshotCopyCompletionDurationMinutes: &s.AMISnapshotCopyCompletionDurationMinutes,
-		})
+		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source,
+			keyId, encrypt,
+			s.AMISnapshotCopyCompletionDurationMinutes)
 
 		if err != nil {
 			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
 				imageId, target, err)
 		}
-		AmiImageId = *resp.ImageId
 
 	}
 
 	// Wait for the image to become ready
-	if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, AmiImageId); err != nil {
+	if err := s.AccessConfig.PollingConfig.WaitUntilAMIAvailable(ctx, regionconn, amiImageId); err != nil {
 		return "", snapshotIds, fmt.Errorf("Error waiting for AMI (%s) in region (%s): %s",
 			imageId, target, err)
 	}
 
 	// Getting snapshot IDs out of the copied AMI
-	describeImageResp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&AmiImageId}})
+	describeImageResp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&amiImageId}})
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
 			imageId, target, err)
@@ -282,5 +309,5 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 		}
 	}
 
-	return AmiImageId, snapshotIds, nil
+	return amiImageId, snapshotIds, nil
 }

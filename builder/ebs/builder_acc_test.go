@@ -84,6 +84,37 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+func TestAccBuilder_EbsRegionTimeBasedCopy(t *testing.T) {
+	t.Parallel()
+	amiName := fmt.Sprintf("packer-test-builder-region-time-based-copy-acc-test-%d", time.Now().Unix())
+	testCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs_region_time_based_copy_test",
+		Template: fmt.Sprintf(testBuilderAccRegionTimeBasedAmiCopy, amiName),
+		Teardown: func() error {
+			ami := amazon_acc.AMIHelper{
+				Region: "us-east-1",
+				Name:   amiName,
+			}
+			_ = ami.CleanUpAmi()
+			ami = amazon_acc.AMIHelper{
+				Region: "us-west-2",
+				Name:   amiName,
+			}
+			_ = ami.CleanUpAmi()
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return checkRegionCopy(amiName, []string{"us-east-1", "us-west-2"})
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
 func TestAccBuilder_EbsRegionsCopyWithDeprecation(t *testing.T) {
 	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-deprecate-acc-test-%d", time.Now().Unix())
@@ -2476,6 +2507,9 @@ build {
 	sources = ["amazon-ebs.test-deregistration-protection"]
 }
 `
+
+//go:embed test-fixtures/interpolated_time_based_ami_copy.pkr.hcl
+var testBuilderAccRegionTimeBasedAmiCopy string
 
 func buildForceDeregisterConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeregister, val, name)

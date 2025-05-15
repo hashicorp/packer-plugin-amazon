@@ -82,7 +82,7 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, conn ec2iface.
 	imageInput := ec2.DescribeImagesInput{
 		ImageIds: []*string{&imageId},
 	}
-
+	log.Printf("Waiting for AMI (%s) to be available...", imageId)
 	waitOpts := w.getWaiterOptions()
 	if len(waitOpts) == 0 {
 		// Bump this default to 30 minutes because the aws default
