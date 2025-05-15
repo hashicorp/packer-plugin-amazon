@@ -268,26 +268,22 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	}
 
 	var amiImageId string
-	if s.AMISnapshotCopyCompletionDurationMinutes == 0 {
+	switch {
+	case s.AMISnapshotCopyCompletionDurationMinutes == 0:
 		amiImageId, err = s.copyImageV1(regionconn, name, imageId, target, source, keyId, encrypt)
 		if err != nil {
-			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
-				imageId, target, err)
+			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
 		}
-	} else {
+	default:
 		regionconnV2, err := GetEc2Client(ctx, config, target)
 		if err != nil {
-			return "", snapshotIds, err
+			return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
 		}
-		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source,
-			keyId, encrypt,
-			s.AMISnapshotCopyCompletionDurationMinutes)
 
+		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyCompletionDurationMinutes)
 		if err != nil {
-			return "", snapshotIds, fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
-				imageId, target, err)
+			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
 		}
-
 	}
 
 	// Wait for the image to become ready
