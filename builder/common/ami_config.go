@@ -197,7 +197,17 @@ type AMIConfig struct {
 	// the intermediary AMI into any regions provided in `ami_regions`, then
 	// delete the intermediary AMI. Default `false`.
 	AMISkipBuildRegion bool `mapstructure:"skip_save_build_region"`
-	// (todo) write explanation
+	// Specify a completion duration, in 15 minute increments, to initiate a
+	// time-based AMI copy. The specified completion duration applies to each of the
+	// snapshots associated with the AMI. Each snapshot associated with the AMI will be
+	// completed within the specified completion duration, regardless of their size.
+	//
+	// If you do not specify a value, the AMI copy operation is completed on a
+	// best-effort basis.
+	//
+	// For more information, see [Time-based copies].
+	//
+	// [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
 	AMISnapshotCopyCompletionDurationMinutes int64 `mapstructure:"snapshot_copy_completion_duration_minutes" required:"false"`
 
 	// Enforce version of the Instance Metadata Service on the built AMI.

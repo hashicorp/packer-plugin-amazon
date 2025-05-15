@@ -6,7 +6,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	aws_v2 "github.com/aws/aws-sdk-go-v2/aws"
@@ -184,7 +183,6 @@ func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
 
 func GetEc2Client(ctx context.Context, config *AccessConfig, target string) (*ec2_v2.Client, error) {
 	// Connect to the region where the AMI will be copied to
-	log.Printf("INSIDE THE GET EC2 CLIENT FN")
 	cfg, err := config.GetAWSConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting region connection for copy: %s", err)
@@ -192,7 +190,6 @@ func GetEc2Client(ctx context.Context, config *AccessConfig, target string) (*ec
 	//override region to the target region
 	cfg.Region = target
 	client := ec2_v2.NewFromConfig(*cfg)
-	log.Printf("RECEIVED EC2 V2 CLIENT")
 	return client, nil
 }
 
