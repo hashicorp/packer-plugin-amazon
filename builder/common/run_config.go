@@ -854,7 +854,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	}
 
 	if len(c.TemporarySGSourceCidrs) == 0 && !c.TemporarySGSourcePublicIp {
-		if c.SSHInterface == "private_ipv6" {
+		if c.SSHInterface == "ipv6" {
 			c.TemporarySGSourceCidrs = []string{"::/0"}
 		} else {
 			c.TemporarySGSourceCidrs = []string{"0.0.0.0/0"}
