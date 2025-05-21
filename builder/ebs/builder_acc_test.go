@@ -88,8 +88,11 @@ func TestAccBuilder_EbsRegionTimeBasedCopy(t *testing.T) {
 	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-time-based-copy-acc-test-%d", time.Now().Unix())
 	testCase := &acctest.PluginTestCase{
-		Name:     "amazon-ebs_region_time_based_copy_test",
-		Template: fmt.Sprintf(testBuilderAccRegionTimeBasedAmiCopy, amiName),
+		Name: "amazon-ebs_region_time_based_copy_test",
+		BuildExtraArgs: []string{
+			"-var", fmt.Sprintf("ami_name=%s", amiName),
+		},
+		Template: testBuilderAccRegionTimeBasedAmiCopy,
 		Teardown: func() error {
 			ami := amazon_acc.AMIHelper{
 				Region: "us-east-1",

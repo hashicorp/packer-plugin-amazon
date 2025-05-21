@@ -208,7 +208,7 @@ type AMIConfig struct {
 	// For more information, see [Time-based copies].
 	//
 	// [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
-	AMISnapshotCopyCompletionDurationMinutes int64 `mapstructure:"snapshot_copy_completion_duration_minutes" required:"false"`
+	AMISnapshotCopyDurationMinutes int64 `mapstructure:"snapshot_copy_duration_minutes" required:"false"`
 	// Enforce version of the Instance Metadata Service on the built AMI.
 	// Valid options are unset (legacy) and `v2.0`. See the documentation on
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)

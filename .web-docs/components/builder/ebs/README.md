@@ -235,7 +235,7 @@ necessary for this build to succeed and can be found further down the page.
   the intermediary AMI into any regions provided in `ami_regions`, then
   delete the intermediary AMI. Default `false`.
 
-- `snapshot_copy_completion_duration_minutes` (int64) - Specify a completion duration, in 15 minute increments, to initiate a
+- `snapshot_copy_duration_minutes` (int64) - Specify a completion duration, in 15 minute increments, to initiate a
   time-based AMI copy. The specified completion duration applies to each of the
   snapshots associated with the AMI. Each snapshot associated with the AMI will be
   completed within the specified completion duration, regardless of their size.

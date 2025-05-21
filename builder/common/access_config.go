@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	aws_v2 "github.com/aws/aws-sdk-go-v2/aws"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	awsCredentials "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -222,7 +222,7 @@ type AccessConfig struct {
 	packerConfig *common.PackerConfig
 }
 
-func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws_v2.Config, error) {
+func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*awsv2.Config, error) {
 
 	// Reload values into the config used by the Packer-Terraform shared SDK
 	assumeRoles := []awsbase_v2.AssumeRole{}

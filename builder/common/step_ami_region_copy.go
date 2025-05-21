@@ -28,11 +28,11 @@ type StepAMIRegionCopy struct {
 	Name              string
 	OriginalRegion    string
 
-	toDelete                                 string
-	getRegionConn                            func(*AccessConfig, string) (ec2iface.EC2API, error)
-	AMISkipCreateImage                       bool
-	AMISkipBuildRegion                       bool
-	AMISnapshotCopyCompletionDurationMinutes int64
+	toDelete                       string
+	getRegionConn                  func(*AccessConfig, string) (ec2iface.EC2API, error)
+	AMISkipCreateImage             bool
+	AMISkipBuildRegion             bool
+	AMISnapshotCopyDurationMinutes int64
 }
 
 func (s *StepAMIRegionCopy) DeduplicateRegions(intermediary bool) {
@@ -231,7 +231,7 @@ func (s *StepAMIRegionCopy) copyImageV1(regionconn ec2iface.EC2API, name, imageI
 
 func (s *StepAMIRegionCopy) copyImageV2(ctx context.Context, regionconn *ec2_v2.Client, name, imageId, target, source,
 	keyId string,
-	encrypt *bool, amiSnapshotCopyCompletionDurationMinutes int64) (string, error) {
+	encrypt *bool, amiSnapshotCopyDurationMinutes int64) (string, error) {
 	var amiImageId string
 	t := true
 	resp, err := regionconn.CopyImage(ctx, &ec2_v2.CopyImageInput{
@@ -241,7 +241,7 @@ func (s *StepAMIRegionCopy) copyImageV2(ctx context.Context, regionconn *ec2_v2.
 		Encrypted:                             encrypt,
 		KmsKeyId:                              aws_v2.String(keyId),
 		CopyImageTags:                         &t,
-		SnapshotCopyCompletionDurationMinutes: &amiSnapshotCopyCompletionDurationMinutes,
+		SnapshotCopyCompletionDurationMinutes: &amiSnapshotCopyDurationMinutes,
 	})
 
 	if err != nil {
@@ -269,7 +269,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 
 	var amiImageId string
 	switch {
-	case s.AMISnapshotCopyCompletionDurationMinutes == 0:
+	case s.AMISnapshotCopyDurationMinutes == 0:
 		amiImageId, err = s.copyImageV1(regionconn, name, imageId, target, source, keyId, encrypt)
 		if err != nil {
 			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
@@ -280,7 +280,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 			return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
 		}
 
-		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyCompletionDurationMinutes)
+		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyDurationMinutes)
 		if err != nil {
 			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
 		}
