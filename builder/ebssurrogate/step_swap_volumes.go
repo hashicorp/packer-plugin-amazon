@@ -45,16 +45,17 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	deviceToVolumeMap := make(map[string]string)
+	deviceToDeleteMap := make(map[string]*bool)
 
 	// Iterate through block device mappings and populate the map
 	for _, reservation := range result.Reservations {
 		for _, instance := range reservation.Instances {
 			for _, blockDevice := range instance.BlockDeviceMappings {
 				deviceToVolumeMap[*blockDevice.DeviceName] = *blockDevice.Ebs.VolumeId
+				deviceToDeleteMap[*blockDevice.Ebs.VolumeId] = blockDevice.Ebs.DeleteOnTermination
 			}
 		}
 	}
-
 	for deviceName, volumeID := range deviceToVolumeMap {
 		omit, ok := s.LaunchOmitMap[deviceName]
 		if ok && omit {
@@ -88,6 +89,27 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 
 	if err != nil {
 		err := fmt.Errorf("error attaching volume: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+
+	// Restore the DeleteOnTermination attribute for the root volume
+	// When detaching and reattaching volumes, the original BlockDeviceMapping attributes are lost
+	// This explicitly sets the DeleteOnTermination flag back to its original value
+	_, err = ec2conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
+		InstanceId: instance.InstanceId,
+		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMappingSpecification{
+			{
+				DeviceName: rootDeviceName,
+				Ebs: &ec2.EbsInstanceBlockDeviceSpecification{
+					DeleteOnTermination: deviceToDeleteMap[*rootVolumeId],
+				},
+			},
+		},
+	})
+	if err != nil {
+		err := fmt.Errorf("error setting the delete_on_termination attribute block device mapping: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
