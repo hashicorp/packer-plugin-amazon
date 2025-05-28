@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 source "amazon-ebssurrogate" "test" {
   ami_name         = "%s"
   region           = "us-east-1"
