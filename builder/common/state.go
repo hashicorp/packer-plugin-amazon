@@ -463,7 +463,7 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 			warning = fmt.Sprintf("%s  Since you have not set the poll delay, "+
 				"Packer will default to a 2-second delay.", warning)
 		}
-		log.Printf(warning)
+		log.Print(warning)
 	} else if timeoutSecondsIsSet {
 		log.Printf("[WARNING] (aws): env var AWS_TIMEOUT_SECONDS is " +
 			"deprecated in favor of AWS_MAX_ATTEMPTS env or aws_polling_max_attempts config option. " +
