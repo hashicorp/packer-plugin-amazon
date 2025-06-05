@@ -5,6 +5,7 @@ package amazon_acc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -52,25 +53,45 @@ func (a *AMIHelper) CleanUpAmi() error {
 	if err != nil {
 		return fmt.Errorf("AWSAMICleanUp: Unable to find Image %s: %s", a.Name, err.Error())
 	}
+	if resp == nil {
+		return errors.New("AWSAMICleanUp: Response from describe images should not be nil")
+	}
+	if len(resp.Images) == 0 {
+		return errors.New("AWSAMICleanUp: No image was found by describes images")
+	}
 
-	if resp != nil && len(resp.Images) > 0 {
-		ctx = context.TODO()
-		err = retry.Config{
-			Tries: 11,
-			ShouldRetry: func(err error) bool {
-				return true // TODO make retry more specific to eventual consitencey
-			},
-			RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
-		}.Run(ctx, func(ctx context.Context) error {
-			_, err = regionconn.DeregisterImage(&ec2.DeregisterImageInput{
-				ImageId: resp.Images[0].ImageId,
-			})
-			return err
+	image := resp.Images[0]
+	ctx = context.TODO()
+	err = retry.Config{
+		Tries: 11,
+		ShouldRetry: func(err error) bool {
+			return true // TODO make retry more specific to eventual consitencey
+		},
+		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+	}.Run(ctx, func(ctx context.Context) error {
+		_, err = regionconn.DeregisterImage(&ec2.DeregisterImageInput{
+			ImageId: image.ImageId,
 		})
-
 		if err != nil {
-			return fmt.Errorf("AWSAMICleanUp: Unable to Deregister Image %s", err.Error())
+			return err
 		}
+		if len(image.BlockDeviceMappings) == 0 {
+			return fmt.Errorf("AWSAMICleanUp: Image should contain at least 1 BlockDeviceMapping, got %d", len(image.BlockDeviceMappings))
+		}
+		for _, bdm := range image.BlockDeviceMappings {
+			if bdm.Ebs != nil && bdm.Ebs.SnapshotId != nil {
+				_, err = regionconn.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+					SnapshotId: bdm.Ebs.SnapshotId,
+				})
+				return err
+
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("AWSAMICleanUp: Unable to Deregister Image %s", err.Error())
 	}
 
 	return nil
@@ -109,4 +130,60 @@ func (a *AMIHelper) GetAmi() ([]*ec2.Image, error) {
 		return nil, fmt.Errorf("Unable to find Image %s: %s", a.Name, err.Error())
 	}
 	return resp.Images, nil
+}
+
+type VolumeHelper struct {
+	Region string
+	Tags   []map[string]string
+}
+
+// GetVolumes retrieves all EBS volumes in the specified region that match the provided tags and are not in a deleting or deleted state.
+func (v *VolumeHelper) GetVolumes() ([]*ec2.Volume, error) {
+	accessConfig := &awscommon.AccessConfig{}
+	session, err := accessConfig.Session()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create aws session %s", err.Error())
+	}
+
+	regionconn := ec2.New(session.Copy(&aws.Config{
+		Region: aws.String(v.Region),
+	}))
+
+	var resp *ec2.DescribeVolumesOutput
+	var filters []*ec2.Filter
+	var activeVolumes []*ec2.Volume
+
+	for _, tag := range v.Tags {
+		for key, value := range tag {
+			filters = append(filters, &ec2.Filter{
+				Name:   aws.String(fmt.Sprintf("tag:%s", key)),
+				Values: []*string{aws.String(value)},
+			})
+		}
+	}
+
+	ctx := context.TODO()
+	err = retry.Config{
+		Tries: 11,
+		ShouldRetry: func(err error) bool {
+			return true // TODO make retry more specific to eventual consitencey
+		},
+		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+	}.Run(ctx, func(ctx context.Context) error {
+		resp, err = regionconn.DescribeVolumes(&ec2.DescribeVolumesInput{
+			Filters: filters,
+		})
+		return err
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("Unable to find Volumes with specified tags %s: %s", v.Tags, err.Error())
+	}
+
+	for _, volume := range resp.Volumes {
+		if volume.State != nil && *volume.State != ec2.VolumeStateDeleting && *volume.State != ec2.VolumeStateDeleted {
+			activeVolumes = append(activeVolumes, volume)
+		}
+	}
+	return activeVolumes, nil
 }

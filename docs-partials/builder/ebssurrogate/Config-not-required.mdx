@@ -8,6 +8,8 @@
   here may vary depending on the type of VM you use. See the
   [BlockDevices](#block-devices-configuration) documentation for fields.
 
+- `skip_ami_run_tags` (bool) - If true will not propagate the run tags set on Packer created instance to the AMI created.
+
 - `launch_block_device_mappings` (BlockDevices) - Add one or more block devices before the Packer build starts. If you add
   instance store volumes or EBS volumes in addition to the root device
   volume, the created AMI will contain block device mapping information

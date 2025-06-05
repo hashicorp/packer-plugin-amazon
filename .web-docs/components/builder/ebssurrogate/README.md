@@ -52,6 +52,8 @@ necessary for this build to succeed and can be found further down the page.
   here may vary depending on the type of VM you use. See the
   [BlockDevices](#block-devices-configuration) documentation for fields.
 
+- `skip_ami_run_tags` (bool) - If true will not propagate the run tags set on Packer created instance to the AMI created.
+
 - `launch_block_device_mappings` (BlockDevices) - Add one or more block devices before the Packer build starts. If you add
   instance store volumes or EBS volumes in addition to the root device
   volume, the created AMI will contain block device mapping information
@@ -245,6 +247,18 @@ necessary for this build to succeed and can be found further down the page.
   which it will not convert to an AMI in the build region. It will copy
   the intermediary AMI into any regions provided in `ami_regions`, then
   delete the intermediary AMI. Default `false`.
+
+- `snapshot_copy_duration_minutes` (int64) - Specify a completion duration, in 15 minute increments, to initiate a
+  time-based AMI copy. The specified completion duration applies to each of the
+  snapshots associated with the AMI. Each snapshot associated with the AMI will be
+  completed within the specified completion duration, regardless of their size.
+  
+  If you do not specify a value, the AMI copy operation is completed on a
+  best-effort basis.
+  
+  For more information, see [Time-based copies].
+  
+  [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
 
 - `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on

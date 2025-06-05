@@ -56,6 +56,7 @@ type FlatConfig struct {
 	AMIKmsKeyId                               *string                                     `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	AMIRegionKMSKeyIDs                        map[string]string                           `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion                        *bool                                       `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
+	AMISnapshotCopyDurationMinutes            *int64                                      `mapstructure:"snapshot_copy_duration_minutes" required:"false" cty:"snapshot_copy_duration_minutes" hcl:"snapshot_copy_duration_minutes"`
 	AMIIMDSSupport                            *string                                     `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 	DeprecationTime                           *string                                     `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	SnapshotTags                              map[string]string                           `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
@@ -159,6 +160,7 @@ type FlatConfig struct {
 	PauseBeforeSSM                            *string                                     `mapstructure:"pause_before_ssm" cty:"pause_before_ssm" hcl:"pause_before_ssm"`
 	SessionManagerPort                        *int                                        `mapstructure:"session_manager_port" cty:"session_manager_port" hcl:"session_manager_port"`
 	AMISkipCreateImage                        *bool                                       `mapstructure:"skip_create_ami" required:"false" cty:"skip_create_ami" hcl:"skip_create_ami"`
+	AMISkipRunTags                            *bool                                       `mapstructure:"skip_ami_run_tags" required:"false" cty:"skip_ami_run_tags" hcl:"skip_ami_run_tags"`
 	AMIMappings                               []common.FlatBlockDevice                    `mapstructure:"ami_block_device_mappings" required:"false" cty:"ami_block_device_mappings" hcl:"ami_block_device_mappings"`
 	LaunchMappings                            []common.FlatBlockDevice                    `mapstructure:"launch_block_device_mappings" required:"false" cty:"launch_block_device_mappings" hcl:"launch_block_device_mappings"`
 	VolumeRunTags                             map[string]string                           `mapstructure:"run_volume_tags" cty:"run_volume_tags" hcl:"run_volume_tags"`
@@ -223,6 +225,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"kms_key_id":                      &hcldec.AttrSpec{Name: "kms_key_id", Type: cty.String, Required: false},
 		"region_kms_key_ids":              &hcldec.AttrSpec{Name: "region_kms_key_ids", Type: cty.Map(cty.String), Required: false},
 		"skip_save_build_region":          &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
+		"snapshot_copy_duration_minutes":  &hcldec.AttrSpec{Name: "snapshot_copy_duration_minutes", Type: cty.Number, Required: false},
 		"imds_support":                    &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
 		"deprecate_at":                    &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"snapshot_tags":                   &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
@@ -326,6 +329,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"pause_before_ssm":             &hcldec.AttrSpec{Name: "pause_before_ssm", Type: cty.String, Required: false},
 		"session_manager_port":         &hcldec.AttrSpec{Name: "session_manager_port", Type: cty.Number, Required: false},
 		"skip_create_ami":              &hcldec.AttrSpec{Name: "skip_create_ami", Type: cty.Bool, Required: false},
+		"skip_ami_run_tags":            &hcldec.AttrSpec{Name: "skip_ami_run_tags", Type: cty.Bool, Required: false},
 		"ami_block_device_mappings":    &hcldec.BlockListSpec{TypeName: "ami_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
 		"launch_block_device_mappings": &hcldec.BlockListSpec{TypeName: "launch_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
 		"run_volume_tags":              &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},

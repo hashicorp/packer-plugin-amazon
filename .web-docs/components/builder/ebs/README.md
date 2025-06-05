@@ -40,6 +40,8 @@ necessary for this build to succeed and can be found further down the page.
 - `skip_create_ami` (bool) - If true, Packer will not create the AMI. Useful for setting to `true`
   during a build test stage. Default `false`.
 
+- `skip_ami_run_tags` (bool) - If true will not propagate the run tags set on Packer created instance to the AMI created.
+
 - `ami_block_device_mappings` (awscommon.BlockDevices) - Add one or more block device mappings to the AMI. These will be attached
   when booting a new instance from your AMI. To add a block device during
   the Packer build see `launch_block_device_mappings` below. Your options
@@ -232,6 +234,18 @@ necessary for this build to succeed and can be found further down the page.
   which it will not convert to an AMI in the build region. It will copy
   the intermediary AMI into any regions provided in `ami_regions`, then
   delete the intermediary AMI. Default `false`.
+
+- `snapshot_copy_duration_minutes` (int64) - Specify a completion duration, in 15 minute increments, to initiate a
+  time-based AMI copy. The specified completion duration applies to each of the
+  snapshots associated with the AMI. Each snapshot associated with the AMI will be
+  completed within the specified completion duration, regardless of their size.
+  
+  If you do not specify a value, the AMI copy operation is completed on a
+  best-effort basis.
+  
+  For more information, see [Time-based copies].
+  
+  [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
 
 - `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on
@@ -2132,7 +2146,7 @@ cmd.exe /c winrm set "winrm/config/client/auth" '@{Basic="true"}'
 cmd.exe /c winrm set "winrm/config/service/auth" '@{CredSSP="true"}'
 cmd.exe /c winrm set "winrm/config/listener?Address=*+Transport=HTTPS" "@{Port=`"5986`";Hostname=`"packer`";CertificateThumbprint=`"$($Cert.Thumbprint)`"}"
 cmd.exe /c netsh advfirewall firewall set rule group="remote administration" new enable=yes
-cmd.exe /c netsh firewall add portopening TCP 5986 "Port 5986"
+cmd.exe /c netsh advfirewall firewall add rule name="Port 5986" dir=in action=allow protocol=TCP localport=5986 profile=any
 cmd.exe /c net stop winrm
 cmd.exe /c sc config winrm start= auto
 cmd.exe /c net start winrm

@@ -84,6 +84,40 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
+func TestAccBuilder_EbsRegionTimeBasedCopy(t *testing.T) {
+	t.Parallel()
+	amiName := fmt.Sprintf("packer-test-builder-region-time-based-copy-acc-test-%d", time.Now().Unix())
+	testCase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_region_time_based_copy_test",
+		BuildExtraArgs: []string{
+			"-var", fmt.Sprintf("ami_name=%s", amiName),
+		},
+		Template: testBuilderAccRegionTimeBasedAmiCopy,
+		Teardown: func() error {
+			ami := amazon_acc.AMIHelper{
+				Region: "us-east-1",
+				Name:   amiName,
+			}
+			_ = ami.CleanUpAmi()
+			ami = amazon_acc.AMIHelper{
+				Region: "us-west-2",
+				Name:   amiName,
+			}
+			_ = ami.CleanUpAmi()
+			return nil
+		},
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			if buildCommand.ProcessState != nil {
+				if buildCommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
+				}
+			}
+			return checkRegionCopy(amiName, []string{"us-east-1", "us-west-2"})
+		},
+	}
+	acctest.TestPlugin(t, testCase)
+}
+
 func TestAccBuilder_EbsRegionsCopyWithDeprecation(t *testing.T) {
 	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-builder-region-copy-deprecate-acc-test-%d", time.Now().Unix())
@@ -378,7 +412,7 @@ func TestAccBuilder_EbsEncryptedBoot(t *testing.T) {
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
-		Name:   fmt.Sprintf("packer-enc-acc-test %d", time.Now().Unix()),
+		Name:   fmt.Sprintf("packer-enc-acc-test-ebs-encrypted-boot %d", time.Now().Unix()),
 	}
 
 	testCase := &acctest.PluginTestCase{
@@ -717,6 +751,80 @@ func TestAccBuilder_EbsRunTagsJSON(t *testing.T) {
 				}
 			}
 			return nil
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/interpolated_skip_run_tags.pkr.hcl
+var testInterpolatedSkipRunTagsSource string
+
+func TestAccBuilder_EbsSkipAmiRunTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-amazon-skip-ami-run-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_skip_ami_run_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: fmt.Sprintf(testInterpolatedSkipRunTagsSource, ami.Name),
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			// empty tag map since we should not attach any tags if skip_ami_run_tags is set
+			expectedTags := map[string]string{}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+
+			return result
+		},
+	}
+	acctest.TestPlugin(t, testcase)
+}
+
+//go:embed test-fixtures/interpolated_skip_run_tags_create_ami_tags.pkr.hcl
+var testInterpolatedSkipRunTagsCreateAmiTagsSource string
+
+func TestAccBuilder_EbsSkipAmiRunTagsCreateAmiTags(t *testing.T) {
+	t.Parallel()
+	ami := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-amazon-skip-ami-run-tags-create-ami-tags-test %d", time.Now().Unix()),
+	}
+
+	testcase := &acctest.PluginTestCase{
+		Name: "amazon-ebs_skip_ami_run_tags_create_ami_tags_test",
+		Teardown: func() error {
+			return ami.CleanUpAmi()
+		},
+		Template: fmt.Sprintf(testInterpolatedSkipRunTagsCreateAmiTagsSource, ami.Name),
+		Check: func(buildcommand *exec.Cmd, logfile string) error {
+			var result error
+			if buildcommand.ProcessState != nil {
+				if buildcommand.ProcessState.ExitCode() != 0 {
+					return fmt.Errorf("bad exit code. logfile: %s", logfile)
+				}
+			}
+			// ami_tags should be attached even if we skip run tags
+			expectedTags := map[string]string{
+				"ami_tag": "yes",
+			}
+			err := checkAMITags(ami, expectedTags)
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+
+			return result
 		},
 	}
 	acctest.TestPlugin(t, testcase)
@@ -1360,6 +1468,11 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 
 	var errs error
 	image := imageResp.Images[0] // Only requested a single AMI ID
+	if len(tagList) == 0 {
+		if len(image.Tags) != 0 {
+			return fmt.Errorf("expected no tags for AMI %q, got %d", amiNameRegion, len(image.Tags))
+		}
+	}
 	for tagKey, tagVal := range tagList {
 		found := false
 		for _, imgTag := range image.Tags {
@@ -1383,6 +1496,34 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 
 func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 	t.Parallel()
+
+	// We need to provision a ssh password enabled AMI to do the actual test
+	sshPasswordEnabledAmi := amazon_acc.AMIHelper{
+		Region: "us-east-1",
+		Name:   fmt.Sprintf("packer-ebs-ssh-password-enabled-%d", time.Now().Unix()),
+	}
+	sshPasswordEnabledCase := &acctest.PluginTestCase{
+		Name:     "amazon-ebs-password-enabled-ami",
+		Template: fmt.Sprintf(sshPasswordEnabledAMI, sshPasswordEnabledAmi.Name),
+		Check: func(buildCommand *exec.Cmd, logfile string) error {
+			return nil
+		},
+	}
+	acctest.TestPlugin(t, sshPasswordEnabledCase)
+
+	sshPasswordEnabledAMIs, err := sshPasswordEnabledAmi.GetAmi()
+	if err != nil {
+		if err := sshPasswordEnabledAmi.CleanUpAmi(); err != nil {
+			t.Log(err)
+		}
+		t.Fatal(err)
+	}
+	if len(sshPasswordEnabledAMIs) != 1 {
+		if err := sshPasswordEnabledAmi.CleanUpAmi(); err != nil {
+			t.Log(err)
+		}
+		t.Fatalf("should return exactly one instance, got %d", len(sshPasswordEnabledAMIs))
+	}
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("packer-ebs-ssh-password-auth-test-%d", time.Now().Unix()),
@@ -1390,9 +1531,14 @@ func TestAccBuilder_EBSWithSSHPassword_NoTempKeyCreated(t *testing.T) {
 
 	testcase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs-with-ssh-pass-auth",
-		Template: fmt.Sprintf(testBuildWithSSHPassword, ami.Name),
+		Template: fmt.Sprintf(testBuildWithSSHPassword, *sshPasswordEnabledAMIs[0].ImageId, ami.Name),
 		Teardown: func() error {
-			return ami.CleanUpAmi()
+			amiErr := ami.CleanUpAmi()
+			sshPasswordEnabledAmiErr := sshPasswordEnabledAmi.CleanUpAmi()
+			if amiErr != nil {
+				return amiErr
+			}
+			return sshPasswordEnabledAmiErr
 		},
 		Check: func(buildCommand *exec.Cmd, logfile string) error {
 			if buildCommand.ProcessState.ExitCode() != 0 {
@@ -1806,7 +1952,8 @@ const testBuilderAccRegionCopyEncryptedAndDeprecated = `
 		"deprecate_at" : "%s",
 		"ami_name": "%s",
 		"encrypt_boot": true,
-		"ami_regions": ["us-east-1", "us-west-1"]
+		"ami_regions": ["us-east-1", "us-west-1"],
+		"snapshot_copy_completion_duration_minutes": 15
 	}]
 }
 `
@@ -1992,7 +2139,7 @@ build {
 const testBuildWithSSHPassword = `
 source "amazon-ebs" "test" {
 	region               = "us-east-1"
-	source_ami           = "ami-089158c0576f477a7" # Ubuntu Server 22.04 LTS custom with ssh user/password auth setup
+	source_ami           = "%s"
 	instance_type        = "t3.micro"
 	ami_name             = "%s"
 	communicator         = "ssh"
@@ -2006,7 +2153,38 @@ build {
 	sources = ["amazon-ebs.test"]
 }
 `
+const sshPasswordEnabledAMI = `
+source "amazon-ebs" "test" {
+	region        = "us-east-1"
+	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	instance_type = "m3.medium"
+	ami_name      = "%s"
+	communicator  = "ssh"
+	ssh_username  = "ubuntu"
+	ami_regions   = ["us-east-1"]
+}
 
+build {
+	sources = [
+		"source.amazon-ebs.test"
+	]
+	# We need to create a new user as the ubuntu & root user's password gets deactivated
+	# by AWS when an AMI is generated
+	provisioner "shell" {
+		inline = [
+				"set -e",
+				"sudo su",
+				"echo 'Enabling SSH password authentication...'",
+				"sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+				"sudo useradd -m -s /bin/bash user",
+				"echo 'Setting up password for user'",
+				"echo 'user:password' | sudo chpasswd ubuntu",
+				"sudo usermod -aG sudo user",
+				"sudo systemctl restart sshd",
+		]
+	}
+}
+`
 const testSetupPublicIPWithoutVPCOrSubnet = `
 source "amazon-ebs" "test_build" {
   region                      = "us-east-1"
@@ -2332,6 +2510,9 @@ build {
 	sources = ["amazon-ebs.test-deregistration-protection"]
 }
 `
+
+//go:embed test-fixtures/interpolated_time_based_ami_copy.pkr.hcl
+var testBuilderAccRegionTimeBasedAmiCopy string
 
 func buildForceDeregisterConfig(val, name string) string {
 	return fmt.Sprintf(testBuilderAccForceDeregister, val, name)

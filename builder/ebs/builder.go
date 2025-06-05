@@ -40,6 +40,10 @@ type Config struct {
 	// If true, Packer will not create the AMI. Useful for setting to `true`
 	// during a build test stage. Default `false`.
 	AMISkipCreateImage bool `mapstructure:"skip_create_ami" required:"false"`
+
+	// If true will not propagate the run tags set on Packer created instance to the AMI created.
+	AMISkipRunTags bool `mapstructure:"skip_ami_run_tags" required:"false"`
+
 	// Add one or more block device mappings to the AMI. These will be attached
 	// when booting a new instance from your AMI. To add a block device during
 	// the Packer build see `launch_block_device_mappings` below. Your options
@@ -405,21 +409,23 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&stepCreateAMI{
 			AMISkipCreateImage: b.config.AMISkipCreateImage,
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AMISkipRunTags:     b.config.AMISkipRunTags,
 			PollingConfig:      b.config.PollingConfig,
 			IsRestricted:       b.config.IsChinaCloud() || b.config.IsGovCloud(),
 			Tags:               b.config.RunTags,
 			Ctx:                b.config.ctx,
 		},
 		&awscommon.StepAMIRegionCopy{
-			AccessConfig:       &b.config.AccessConfig,
-			Regions:            b.config.AMIRegions,
-			AMIKmsKeyId:        b.config.AMIKmsKeyId,
-			RegionKeyIds:       b.config.AMIRegionKMSKeyIDs,
-			EncryptBootVolume:  b.config.AMIEncryptBootVolume,
-			Name:               b.config.AMIName,
-			OriginalRegion:     *ec2conn.Config.Region,
-			AMISkipCreateImage: b.config.AMISkipCreateImage,
-			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AccessConfig:                   &b.config.AccessConfig,
+			Regions:                        b.config.AMIRegions,
+			AMIKmsKeyId:                    b.config.AMIKmsKeyId,
+			RegionKeyIds:                   b.config.AMIRegionKMSKeyIDs,
+			EncryptBootVolume:              b.config.AMIEncryptBootVolume,
+			Name:                           b.config.AMIName,
+			OriginalRegion:                 *ec2conn.Config.Region,
+			AMISkipCreateImage:             b.config.AMISkipCreateImage,
+			AMISkipBuildRegion:             b.config.AMISkipBuildRegion,
+			AMISnapshotCopyDurationMinutes: b.config.AMISnapshotCopyDurationMinutes,
 		},
 		&stepPrepareFastLaunchTemplate{
 			AccessConfig:       &b.config.AccessConfig,

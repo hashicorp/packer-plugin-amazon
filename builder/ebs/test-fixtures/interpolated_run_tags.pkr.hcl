@@ -26,11 +26,11 @@ source "amazon-ebs" "basic-example" {
   ssh_username  = "ubuntu"
 
   run_tags = {
-    "build_name" = "{{build_name}}"
+    "build_name"  = "{{build_name}}"
     "source_name" = source.name
-    "version"    = packer.version
-    "built_by"   = var.builder
-    "simple"     = "Simple String"
+    "version"     = packer.version
+    "built_by"    = var.builder
+    "simple"      = "Simple String"
   }
 }
 

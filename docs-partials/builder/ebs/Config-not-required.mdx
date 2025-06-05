@@ -3,6 +3,8 @@
 - `skip_create_ami` (bool) - If true, Packer will not create the AMI. Useful for setting to `true`
   during a build test stage. Default `false`.
 
+- `skip_ami_run_tags` (bool) - If true will not propagate the run tags set on Packer created instance to the AMI created.
+
 - `ami_block_device_mappings` (awscommon.BlockDevices) - Add one or more block device mappings to the AMI. These will be attached
   when booting a new instance from your AMI. To add a block device during
   the Packer build see `launch_block_device_mappings` below. Your options

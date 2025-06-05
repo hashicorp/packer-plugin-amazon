@@ -43,6 +43,9 @@ type Config struct {
 	// here may vary depending on the type of VM you use. See the
 	// [BlockDevices](#block-devices-configuration) documentation for fields.
 	AMIMappings awscommon.BlockDevices `mapstructure:"ami_block_device_mappings" required:"false"`
+	// If true will not propagate the run tags set on Packer created instance to the AMI created.
+	AMISkipRunTags bool `mapstructure:"skip_ami_run_tags" required:"false"`
+
 	// Add one or more block devices before the Packer build starts. If you add
 	// instance store volumes or EBS volumes in addition to the root device
 	// volume, the created AMI will contain block device mapping information
@@ -343,6 +346,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 		buildAmiStep = &StepCreateAMI{
 			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AMISkipRunTags:     b.config.AMISkipRunTags,
 			RootDevice:         b.config.RootDevice,
 			AMIDevices:         amiDevices,
 			LaunchDevices:      launchDevices,
@@ -488,14 +492,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		buildAmiStep,
 		&awscommon.StepAMIRegionCopy{
-			AccessConfig:       &b.config.AccessConfig,
-			Regions:            b.config.AMIRegions,
-			AMIKmsKeyId:        b.config.AMIKmsKeyId,
-			RegionKeyIds:       b.config.AMIRegionKMSKeyIDs,
-			EncryptBootVolume:  b.config.AMIEncryptBootVolume,
-			Name:               b.config.AMIName,
-			OriginalRegion:     *ec2conn.Config.Region,
-			AMISkipBuildRegion: b.config.AMISkipBuildRegion,
+			AccessConfig:                   &b.config.AccessConfig,
+			Regions:                        b.config.AMIRegions,
+			AMIKmsKeyId:                    b.config.AMIKmsKeyId,
+			RegionKeyIds:                   b.config.AMIRegionKMSKeyIDs,
+			EncryptBootVolume:              b.config.AMIEncryptBootVolume,
+			Name:                           b.config.AMIName,
+			OriginalRegion:                 *ec2conn.Config.Region,
+			AMISkipBuildRegion:             b.config.AMISkipBuildRegion,
+			AMISnapshotCopyDurationMinutes: b.config.AMISnapshotCopyDurationMinutes,
 		},
 		&awscommon.StepEnableDeprecation{
 			AccessConfig:    &b.config.AccessConfig,
