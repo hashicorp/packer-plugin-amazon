@@ -1,0 +1,38 @@
+<!-- Code generated from the comments of the DeregistrationProtectionOptions struct in common/ami_config.go; DO NOT EDIT MANUALLY -->
+
+DeregistrationProtectionOptions lets users set AMI deregistration protection
+
+HCL2 example:
+
+```hcl
+
+	source "amazon-ebs" "basic-example" {
+	  deregistration_protection {
+	    enabled = true
+	    with_cooldown = true
+	  }
+	}
+
+```
+
+JSON Example:
+
+```json
+"builders" [
+
+	{
+	  "type": "amazon-ebs",
+	  "deregistration_protection": {
+	    "enabled": true,
+	    "with_cooldown": true
+	  }
+	}
+
+]
+```
+
+[Protect an AMI from deregistration](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-deregistration-protection.html)
+When deregistration protection is enabled, the AMI cannot be deregistered.
+To allow the AMI to be deregistered, you must first disable deregistration protection.
+
+<!-- End of code generated from the comments of the DeregistrationProtectionOptions struct in common/ami_config.go; -->
