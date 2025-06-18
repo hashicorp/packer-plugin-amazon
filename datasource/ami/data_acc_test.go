@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
+	amazon_acc "github.com/hashicorp/packer-plugin-amazon/common/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
