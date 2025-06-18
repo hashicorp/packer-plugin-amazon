@@ -178,11 +178,17 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	// map the list of temporary security group CIDRs bundled with config to
 	// types expected by EC2.
 	groupIpRanges := []*ec2.IpRange{}
+	groupIpv6Ranges := []*ec2.Ipv6Range{}
 	for _, cidr := range temporarySGSourceCidrs {
-		ipRange := ec2.IpRange{
-			CidrIp: aws.String(cidr),
+		if strings.Contains(cidr, ":") {
+			groupIpv6Ranges = append(groupIpv6Ranges, &ec2.Ipv6Range{
+				CidrIpv6: aws.String(cidr),
+			})
+		} else {
+			groupIpRanges = append(groupIpRanges, &ec2.IpRange{
+				CidrIp: aws.String(cidr),
+			})
 		}
-		groupIpRanges = append(groupIpRanges, &ipRange)
 	}
 
 	// Set some state data for use in future steps
@@ -194,16 +200,31 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	port := s.CommConfig.Port()
 	// Authorize access for the provided port within the security group
-	groupRules := &ec2.AuthorizeSecurityGroupIngressInput{
-		GroupId: groupResp.GroupId,
-		IpPermissions: []*ec2.IpPermission{
-			{
-				FromPort:   aws.Int64(int64(port)),
-				ToPort:     aws.Int64(int64(port)),
-				IpRanges:   groupIpRanges,
-				IpProtocol: aws.String("tcp"),
+	var groupRules *ec2.AuthorizeSecurityGroupIngressInput
+	if len(groupIpv6Ranges) != 0 {
+		groupRules = &ec2.AuthorizeSecurityGroupIngressInput{
+			GroupId: groupResp.GroupId,
+			IpPermissions: []*ec2.IpPermission{
+				{
+					FromPort:   aws.Int64(int64(port)),
+					ToPort:     aws.Int64(int64(port)),
+					Ipv6Ranges: groupIpv6Ranges,
+					IpProtocol: aws.String("tcp"),
+				},
 			},
-		},
+		}
+	} else {
+		groupRules = &ec2.AuthorizeSecurityGroupIngressInput{
+			GroupId: groupResp.GroupId,
+			IpPermissions: []*ec2.IpPermission{
+				{
+					FromPort:   aws.Int64(int64(port)),
+					ToPort:     aws.Int64(int64(port)),
+					IpRanges:   groupIpRanges,
+					IpProtocol: aws.String("tcp"),
+				},
+			},
+		}
 	}
 
 	ui.Say(fmt.Sprintf(
