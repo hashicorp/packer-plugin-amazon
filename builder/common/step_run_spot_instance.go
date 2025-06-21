@@ -439,7 +439,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		// We can end up unavailable Spot capacity, we keep retrying
 		for _, err := range createOutput.Errors {
 			if err.ErrorCode != nil && *err.ErrorCode == "InsufficientInstanceCapacity" {
-				return fmt.Errorf(*err.ErrorCode)
+				return fmt.Errorf("%s", *err.ErrorCode)
 			}
 		}
 		return err
