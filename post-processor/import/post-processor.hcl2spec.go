@@ -55,6 +55,10 @@ type FlatConfig struct {
 	Architecture          *string                           `mapstructure:"architecture" cty:"architecture" hcl:"architecture"`
 	BootMode              *string                           `mapstructure:"boot_mode" cty:"boot_mode" hcl:"boot_mode"`
 	Platform              *string                           `mapstructure:"platform" cty:"platform" hcl:"platform"`
+	ImportType            *string                           `mapstructure:"import_type" cty:"import_type" hcl:"import_type"`
+	SnapshotDeviceName    *string                           `mapstructure:"snapshot_device_name" cty:"snapshot_device_name" hcl:"snapshot_device_name"`
+	EnaSupport            *bool                             `mapstructure:"ena_support" cty:"ena_support" hcl:"ena_support"`
+	VirtualizationType    *string                           `mapstructure:"virtualization_type" cty:"virtualization_type" hcl:"virtualization_type"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -113,6 +117,10 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"architecture":                  &hcldec.AttrSpec{Name: "architecture", Type: cty.String, Required: false},
 		"boot_mode":                     &hcldec.AttrSpec{Name: "boot_mode", Type: cty.String, Required: false},
 		"platform":                      &hcldec.AttrSpec{Name: "platform", Type: cty.String, Required: false},
+		"import_type":                   &hcldec.AttrSpec{Name: "import_type", Type: cty.String, Required: false},
+		"snapshot_device_name":          &hcldec.AttrSpec{Name: "snapshot_device_name", Type: cty.String, Required: false},
+		"ena_support":                   &hcldec.AttrSpec{Name: "ena_support", Type: cty.Bool, Required: false},
+		"virtualization_type":           &hcldec.AttrSpec{Name: "virtualization_type", Type: cty.String, Required: false},
 	}
 	return s
 }
