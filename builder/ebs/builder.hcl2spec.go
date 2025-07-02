@@ -89,6 +89,7 @@ type FlatConfig struct {
 	SecurityGroupIds                          []string                                    `mapstructure:"security_group_ids" required:"false" cty:"security_group_ids" hcl:"security_group_ids"`
 	SourceAmi                                 *string                                     `mapstructure:"source_ami" required:"true" cty:"source_ami" hcl:"source_ami"`
 	SourceAmiFilter                           *common.FlatAmiFilterOptions                `mapstructure:"source_ami_filter" required:"false" cty:"source_ami_filter" hcl:"source_ami_filter"`
+	SpotAllocationStrategy                    *string                                     `mapstructure:"spot_allocation_strategy" required:"false" cty:"spot_allocation_strategy" hcl:"spot_allocation_strategy"`
 	SpotInstanceTypes                         []string                                    `mapstructure:"spot_instance_types" required:"false" cty:"spot_instance_types" hcl:"spot_instance_types"`
 	SpotPrice                                 *string                                     `mapstructure:"spot_price" required:"false" cty:"spot_price" hcl:"spot_price"`
 	SpotPriceAutoProduct                      *string                                     `mapstructure:"spot_price_auto_product" required:"false" undocumented:"true" cty:"spot_price_auto_product" hcl:"spot_price_auto_product"`
@@ -227,7 +228,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"skip_save_build_region":          &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
 		"snapshot_copy_duration_minutes":  &hcldec.AttrSpec{Name: "snapshot_copy_duration_minutes", Type: cty.Number, Required: false},
 		"imds_support":                    &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
-		"deprecate_at":                    &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"snapshot_tags":                   &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
 		"snapshot_tag":                    &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":                  &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},
@@ -258,6 +258,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"security_group_ids":                    &hcldec.AttrSpec{Name: "security_group_ids", Type: cty.List(cty.String), Required: false},
 		"source_ami":                            &hcldec.AttrSpec{Name: "source_ami", Type: cty.String, Required: false},
 		"source_ami_filter":                     &hcldec.BlockSpec{TypeName: "source_ami_filter", Nested: hcldec.ObjectSpec((*common.FlatAmiFilterOptions)(nil).HCL2Spec())},
+		"spot_allocation_strategy":              &hcldec.AttrSpec{Name: "spot_allocation_strategy", Type: cty.String, Required: false},
 		"spot_instance_types":                   &hcldec.AttrSpec{Name: "spot_instance_types", Type: cty.List(cty.String), Required: false},
 		"spot_price":                            &hcldec.AttrSpec{Name: "spot_price", Type: cty.String, Required: false},
 		"spot_price_auto_product":               &hcldec.AttrSpec{Name: "spot_price_auto_product", Type: cty.String, Required: false},
@@ -335,6 +336,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"run_volume_tags":              &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},
 		"run_volume_tag":               &hcldec.BlockListSpec{TypeName: "run_volume_tag", Nested: hcldec.ObjectSpec((*config.FlatNameValue)(nil).HCL2Spec())},
 		"no_ephemeral":                 &hcldec.AttrSpec{Name: "no_ephemeral", Type: cty.Bool, Required: false},
+		"deprecate_at":                 &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"fast_launch":                  &hcldec.BlockSpec{TypeName: "fast_launch", Nested: hcldec.ObjectSpec((*FlatFastLaunchConfig)(nil).HCL2Spec())},
 	}
 	return s
