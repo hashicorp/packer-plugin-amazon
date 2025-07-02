@@ -278,6 +278,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Region:                            *ec2conn.Config.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotPrice:                         b.config.SpotPrice,
+			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
 			SpotTags:                          b.config.SpotTags,
 			Tags:                              b.config.RunTags,

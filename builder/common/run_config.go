@@ -843,11 +843,10 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		}
 	}
 
-	if c.SpotAllocationStrategy != "" {
-		if !slices.Contains(ec2.SpotAllocationStrategy_Values(), c.SpotAllocationStrategy) {
-			errs = append(errs, fmt.Errorf(
-				"Unknown spot_allocation_strategy: %s", c.SpotAllocationStrategy))
-		}
+	if c.SpotAllocationStrategy != "" && !slices.Contains(ec2.SpotAllocationStrategy_Values(),
+		c.SpotAllocationStrategy) {
+		errs = append(errs, fmt.Errorf(
+			"Unknown spot_allocation_strategy: %s", c.SpotAllocationStrategy))
 	}
 
 	if c.UserData != "" && c.UserDataFile != "" {
