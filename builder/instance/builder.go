@@ -330,6 +330,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:                          b.config.RunTags,
 			LicenseSpecifications:         b.config.LicenseSpecifications,
 			HostResourceGroupArn:          b.config.Placement.HostResourceGroupArn,
+			HostId:                        b.config.Placement.HostId,
 			Tenancy:                       tenancy,
 			UserData:                      b.config.UserData,
 			UserDataFile:                  b.config.UserDataFile,
