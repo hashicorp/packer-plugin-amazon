@@ -228,6 +228,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"skip_save_build_region":          &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
 		"snapshot_copy_duration_minutes":  &hcldec.AttrSpec{Name: "snapshot_copy_duration_minutes", Type: cty.Number, Required: false},
 		"imds_support":                    &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
+		"deprecate_at":                    &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"snapshot_tags":                   &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},
 		"snapshot_tag":                    &hcldec.BlockListSpec{TypeName: "snapshot_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"snapshot_users":                  &hcldec.AttrSpec{Name: "snapshot_users", Type: cty.List(cty.String), Required: false},
@@ -336,7 +337,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"run_volume_tags":              &hcldec.AttrSpec{Name: "run_volume_tags", Type: cty.Map(cty.String), Required: false},
 		"run_volume_tag":               &hcldec.BlockListSpec{TypeName: "run_volume_tag", Nested: hcldec.ObjectSpec((*config.FlatNameValue)(nil).HCL2Spec())},
 		"no_ephemeral":                 &hcldec.AttrSpec{Name: "no_ephemeral", Type: cty.Bool, Required: false},
-		"deprecate_at":                 &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"fast_launch":                  &hcldec.BlockSpec{TypeName: "fast_launch", Nested: hcldec.ObjectSpec((*FlatFastLaunchConfig)(nil).HCL2Spec())},
 	}
 	return s
