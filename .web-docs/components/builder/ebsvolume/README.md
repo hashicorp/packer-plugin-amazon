@@ -762,10 +762,10 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
     filter, but will cause Packer to fail if the `source_ami` does not exist.
 
 - `spot_allocation_strategy` (string) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
-  	 The strategy that determines how to allocate the target Spot Instance capacity
-  	 across the Spot Instance pools specified by the EC2 Fleet launch configuration.
-  	 If this option is not set/set to invalid value, Packer will use default option provided by the SDK (currently `lowest-price`).
-  	 For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
+  The strategy that determines how to allocate the target Spot Instance capacity
+  across the Spot Instance pools specified by the EC2 Fleet launch configuration.
+  If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
+  For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
 
 - `spot_instance_types` ([]string) - a list of acceptable instance
   types to run your build on. We will request a spot instance using the max
