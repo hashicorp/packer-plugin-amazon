@@ -11,6 +11,7 @@ package ebsvolume
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -200,6 +201,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	var instanceStep multistep.Step
 
 	if b.config.IsSpotInstance() {
+		log.Printf("%s", "Using Spot Instance to create EBS volumes")
 		instanceStep = &awscommon.StepRunSpotInstance{
 			PollingConfig:                     b.config.PollingConfig,
 			AssociatePublicIpAddress:          b.config.AssociatePublicIpAddress,
@@ -222,6 +224,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Region:                            *ec2conn.Config.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
+			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
 			SpotPrice:                         b.config.SpotPrice,
 			SpotTags:                          b.config.SpotTags,
 			Tags:                              b.config.RunTags,

@@ -106,6 +106,7 @@ type FlatConfig struct {
 	SecurityGroupIds                          []string                                    `mapstructure:"security_group_ids" required:"false" cty:"security_group_ids" hcl:"security_group_ids"`
 	SourceAmi                                 *string                                     `mapstructure:"source_ami" required:"true" cty:"source_ami" hcl:"source_ami"`
 	SourceAmiFilter                           *common.FlatAmiFilterOptions                `mapstructure:"source_ami_filter" required:"false" cty:"source_ami_filter" hcl:"source_ami_filter"`
+	SpotAllocationStrategy                    *string                                     `mapstructure:"spot_allocation_strategy" required:"false" cty:"spot_allocation_strategy" hcl:"spot_allocation_strategy"`
 	SpotInstanceTypes                         []string                                    `mapstructure:"spot_instance_types" required:"false" cty:"spot_instance_types" hcl:"spot_instance_types"`
 	SpotPrice                                 *string                                     `mapstructure:"spot_price" required:"false" cty:"spot_price" hcl:"spot_price"`
 	SpotPriceAutoProduct                      *string                                     `mapstructure:"spot_price_auto_product" required:"false" undocumented:"true" cty:"spot_price_auto_product" hcl:"spot_price_auto_product"`
@@ -279,6 +280,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"security_group_ids":                    &hcldec.AttrSpec{Name: "security_group_ids", Type: cty.List(cty.String), Required: false},
 		"source_ami":                            &hcldec.AttrSpec{Name: "source_ami", Type: cty.String, Required: false},
 		"source_ami_filter":                     &hcldec.BlockSpec{TypeName: "source_ami_filter", Nested: hcldec.ObjectSpec((*common.FlatAmiFilterOptions)(nil).HCL2Spec())},
+		"spot_allocation_strategy":              &hcldec.AttrSpec{Name: "spot_allocation_strategy", Type: cty.String, Required: false},
 		"spot_instance_types":                   &hcldec.AttrSpec{Name: "spot_instance_types", Type: cty.List(cty.String), Required: false},
 		"spot_price":                            &hcldec.AttrSpec{Name: "spot_price", Type: cty.String, Required: false},
 		"spot_price_auto_product":               &hcldec.AttrSpec{Name: "spot_price_auto_product", Type: cty.String, Required: false},
