@@ -589,6 +589,6 @@ func TestRunConfigPrepare_EnableSpotInstanceBadSpotAllocationStrategy(t *testing
 	c.SpotAllocationStrategy = "very-expensive-one"
 	err := c.Prepare(nil)
 	if len(err) != 1 {
-		t.Fatalf("Should error if spot_allocation_strategy is invalid.")
+		t.Fatalf("Should error if spot_allocation_strategy is invalid. Expected 1 error, got %d", len(err))
 	}
 }
