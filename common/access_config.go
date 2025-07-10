@@ -8,11 +8,9 @@ package common
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -25,7 +23,6 @@ import (
 	"github.com/aws/smithy-go"
 	awsbase "github.com/hashicorp/aws-sdk-go-base/v2"
 	"github.com/hashicorp/aws-sdk-go-base/v2/diag"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
 	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
 	"github.com/hashicorp/packer-plugin-sdk/common"
@@ -284,15 +281,6 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 	if c.SkipMetadataApiCheck {
 		imdsEnabledState = imds.ClientDisabled
 	}
-	httpClient := cleanhttp.DefaultClient()
-	transport := httpClient.Transport.(*http.Transport)
-	if c.InsecureSkipTLSVerify {
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
-	transport.Proxy = http.ProxyFromEnvironment
-
 	userAgentProducts := awsbase.UserAgentProducts{
 		{Name: "APN", Version: "1.0"},
 		{Name: "HashiCorp", Version: "1.0"},
@@ -305,7 +293,6 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 	}
 	awsbaseConfig := &awsbase.Config{
 		AccessKey:        c.AccessKey,
-		HTTPClient:       httpClient,
 		Region:           c.RawRegion,
 		SuppressDebugLog: true,
 		// TODO: implement for Packer
