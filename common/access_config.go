@@ -281,7 +281,7 @@ func (c *AccessConfig) Config(ctx context.Context) (*aws.Config, error) {
 
 func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error) {
 	imdsEnabledState := imds.ClientEnabled
-	if c.SkipCredsValidation {
+	if c.SkipMetadataApiCheck {
 		imdsEnabledState = imds.ClientDisabled
 	}
 	httpClient := cleanhttp.DefaultClient()
