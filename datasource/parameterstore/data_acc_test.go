@@ -5,6 +5,7 @@ package parameterstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,10 +16,10 @@ import (
 
 	_ "embed"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
@@ -61,7 +62,7 @@ func TestAccAmazonParameterStore(t *testing.T) {
 			logsString := string(logsBytes)
 
 			valueLog := fmt.Sprintf("null.basic-example: parameter value: %s", param.Value)
-			versionLog := fmt.Sprintf("null.basic-example: parameter version: %s", fmt.Sprintf("%d", aws.Int64Value(param.Info.Version)))
+			versionLog := fmt.Sprintf("null.basic-example: parameter version: %s", fmt.Sprintf("%d", param.Info.Version))
 
 			if matched, _ := regexp.MatchString(valueLog+".*", logsString); !matched {
 				t.Fatalf("logs doesn't contain expected value %q", logsString)
@@ -86,30 +87,37 @@ type AmazonParameter struct {
 
 func (ap *AmazonParameter) Create() error {
 	accessConfig := &awscommon.AccessConfig{}
-	session, err := accessConfig.Session()
+	ctx := context.TODO()
+	cfg, err := accessConfig.Config(ctx)
+	if err != nil {
+		return fmt.Errorf("Unable to load Config %s", err)
+	}
+	ssmsvc := ssm.NewFromConfig(*cfg)
 	if err != nil {
 		return fmt.Errorf("Unable to create aws session %s", err.Error())
 	}
-	ssmsvc := ssm.New(session, aws.NewConfig().WithRegion(*session.Config.Region))
 	newParam := &ssm.PutParameterInput{
 		Name:        aws.String(ap.Name),
 		Value:       aws.String(ap.Value),
-		Type:        aws.String(ap.Type),
+		Type:        types.ParameterType(ap.Type),
 		Description: aws.String(ap.Description),
 	}
 	param := new(ssm.PutParameterOutput)
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			if awserrors.Matches(err, "ParameterAlreadyExists", "") {
+			var parameterExists *types.ParameterAlreadyExists
+
+			if errors.As(err, &parameterExists) {
 				_ = ap.Delete()
 				return true
 			}
+
 			return false
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(context.TODO(), func(_ context.Context) error {
-		param, err = ssmsvc.PutParameter(newParam)
+		param, err = ssmsvc.PutParameter(ctx, newParam)
 		return err
 	})
 	ap.Info = param
@@ -117,14 +125,15 @@ func (ap *AmazonParameter) Create() error {
 }
 func (ap *AmazonParameter) Delete() error {
 	accessConfig := &awscommon.AccessConfig{}
-	session, err := accessConfig.Session()
+	ctx := context.TODO()
+	cfg, err := accessConfig.Config(ctx)
 	if err != nil {
-		return fmt.Errorf("Unable to create aws session %s", err.Error())
+		return fmt.Errorf("Unable to load Config %s", err)
 	}
-	ssmsvc := ssm.New(session, aws.NewConfig().WithRegion(*session.Config.Region))
+	ssmsvc := ssm.NewFromConfig(*cfg)
 	param := &ssm.DeleteParameterInput{
 		Name: aws.String(ap.Name),
 	}
-	_, err = ssmsvc.DeleteParameter(param)
+	_, err = ssmsvc.DeleteParameter(ctx, param)
 	return err
 }
