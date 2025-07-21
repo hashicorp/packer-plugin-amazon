@@ -22,6 +22,10 @@ Alternatively, you can use `packer plugins install` to manage installation of th
 $ packer plugins install github.com/hashicorp/amazon
 ```
 
+Note: With the new packer release the init command will try to install the official amazon plugins from the [official](https://releases.hashicorp.com/) release site.
+Also going forward the official plugins mentioned above will be released through the official release site of hashicorp. so if one need to use new version of official plugins they need to use new packer release.
+There are no change in the packer commands for the installing the plugin (both the above command works as is).
+
 ### Components
 
 **Don't know which builder to use?** If in doubt, use the [amazon-ebs builder](/packer/plugins/builders/amazon/ebs).
