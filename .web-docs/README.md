@@ -17,7 +17,7 @@ packer {
 ```
 
 Alternatively, you can use `packer plugins install` to manage installation of this plugin.
-git diff
+
 ```sh
 $ packer plugins install github.com/hashicorp/amazon
 ```
