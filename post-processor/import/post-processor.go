@@ -69,7 +69,6 @@ type PostProcessor struct {
 func (p *PostProcessor) ConfigSpec() hcldec.ObjectSpec { return p.config.FlatMapstructure().HCL2Spec() }
 
 func (p *PostProcessor) Configure(raws ...interface{}) error {
-
 	p.config.ctx.Funcs = awscommon.TemplateFuncs
 	err := config.Decode(&p.config, &config.DecodeOpts{
 		PluginType:         BuilderId,
@@ -186,16 +185,16 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	var err error
 	config, err := p.config.Config(ctx)
 
+	if err != nil {
+		return nil, false, false, err
+	}
+
 	generatedData := artifact.State("generated_data")
 	if generatedData == nil {
 		// Make sure it's not a nil map so we can assign to it later.
 		generatedData = make(map[string]interface{})
 	}
 	p.config.ctx.Data = generatedData
-
-	if err != nil {
-		return nil, false, false, err
-	}
 
 	s3Client := s3.NewFromConfig(*config)
 
@@ -264,6 +263,9 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	log.Printf("Calling EC2 to import from s3://%s/%s", p.config.S3Bucket, p.config.S3Key)
 
 	client, err := p.config.NewEC2Client(ctx)
+	if err != nil {
+		return nil, false, false, fmt.Errorf("failed to create EC2 client: %s", err)
+	}
 
 	params := &ec2.ImportImageInput{
 		Encrypted: &p.config.Encrypt,
@@ -294,12 +296,12 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		params.LicenseType = &p.config.LicenseType
 	}
 
-	var import_start *ec2.ImportImageOutput
+	var importStart *ec2.ImportImageOutput
 	err = retry.Config{
 		Tries:      11,
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		import_start, err = client.ImportImage(ctx, params)
+		importStart, err = client.ImportImage(ctx, params)
 		return err
 	})
 
@@ -307,57 +309,57 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		return nil, false, false, fmt.Errorf("Failed to start import from s3://%s/%s: %s", p.config.S3Bucket, p.config.S3Key, err)
 	}
 
-	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *import_start.ImportTaskId))
+	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *importStart.ImportTaskId))
 
 	// Wait for import process to complete, this takes a while
-	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *import_start.ImportTaskId))
+	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *importStart.ImportTaskId))
 
-	err = p.config.PollingConfig.WaitUntilImageImported(ctx, client, *import_start.ImportTaskId)
+	err = p.config.PollingConfig.WaitUntilImageImported(ctx, client, *importStart.ImportTaskId)
 	if err != nil {
 
 		// Retrieve the status message
-		import_result, err2 := client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
+		importResult, err2 := client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
 			ImportTaskIds: []string{
-				*import_start.ImportTaskId,
+				*importStart.ImportTaskId,
 			},
 		})
 
 		statusMessage := "Error retrieving status message"
 
 		if err2 == nil {
-			statusMessage = *import_result.ImportImageTasks[0].StatusMessage
+			statusMessage = *importResult.ImportImageTasks[0].StatusMessage
 		}
-		return nil, false, false, fmt.Errorf("Import task %s failed with status message: %s, error: %s", *import_start.ImportTaskId, statusMessage, err)
+		return nil, false, false, fmt.Errorf("Import task %s failed with status message: %s, error: %s", *importStart.ImportTaskId, statusMessage, err)
 	}
 
 	// Retrieve what the outcome was for the import task
-	import_result, err := client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
+	importResult, err := client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
 		ImportTaskIds: []string{
-			*import_start.ImportTaskId,
+			*importStart.ImportTaskId,
 		},
 	})
 
 	if err != nil {
-		return nil, false, false, fmt.Errorf("Failed to find import task %s: %s", *import_start.ImportTaskId, err)
+		return nil, false, false, fmt.Errorf("Failed to find import task %s: %s", *importStart.ImportTaskId, err)
 	}
 	// Check it was actually completed
-	if *import_result.ImportImageTasks[0].Status != "completed" {
+	if *importResult.ImportImageTasks[0].Status != "completed" {
 		// The most useful error message is from the job itself
-		return nil, false, false, fmt.Errorf("Import task %s failed: %s", *import_start.ImportTaskId, *import_result.ImportImageTasks[0].StatusMessage)
+		return nil, false, false, fmt.Errorf("Import task %s failed: %s", *importStart.ImportTaskId, *importResult.ImportImageTasks[0].StatusMessage)
 	}
 
-	ui.Message(fmt.Sprintf("Import task %s complete", *import_start.ImportTaskId))
+	ui.Message(fmt.Sprintf("Import task %s complete", *importStart.ImportTaskId))
 
 	// Pull AMI ID out of the completed job
-	createdami := *import_result.ImportImageTasks[0].ImageId
+	createdAmi := *importResult.ImportImageTasks[0].ImageId
 
 	if p.config.Name != "" {
 
-		ui.Message(fmt.Sprintf("Starting rename of AMI (%s)", createdami))
+		ui.Message(fmt.Sprintf("Starting rename of AMI (%s)", createdAmi))
 
 		copyInput := &ec2.CopyImageInput{
 			Name:          &p.config.Name,
-			SourceImageId: &createdami,
+			SourceImageId: &createdAmi,
 			SourceRegion:  aws.String(config.Region),
 		}
 		if p.config.Encrypt {
@@ -370,25 +372,25 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		resp, err := client.CopyImage(ctx, copyInput)
 
 		if err != nil {
-			return nil, false, false, fmt.Errorf("Error Copying AMI (%s): %s", createdami, err)
+			return nil, false, false, fmt.Errorf("Error Copying AMI (%s): %s", createdAmi, err)
 		}
 
 		ui.Message("Waiting for AMI rename to complete (may take a while)")
 
-		if err := p.config.PollingConfig.WaitUntilAMIAvailable(context.Background(), client, *resp.ImageId); err != nil {
+		if err := p.config.PollingConfig.WaitUntilAMIAvailable(ctx, client, *resp.ImageId); err != nil {
 			return nil, false, false, fmt.Errorf("Error waiting for AMI (%s): %s", *resp.ImageId, err)
 		}
 
 		// Clean up intermediary image now that it has successfully been renamed.
 		ui.Message("Destroying intermediary AMI...")
-		err = awscommon.DestroyAMIs([]string{createdami}, client)
+		err = awscommon.DestroyAMIs([]string{createdAmi}, client)
 		if err != nil {
 			return nil, false, false, fmt.Errorf("Error deregistering existing AMI: %s", err)
 		}
 
 		ui.Message("AMI rename completed")
 
-		createdami = *resp.ImageId
+		createdAmi = *resp.ImageId
 	}
 
 	// If we have tags, then apply them now to both the AMI and snaps
@@ -406,25 +408,25 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			})
 		}
 
-		resourceIds := []string{createdami}
+		resourceIds := []string{createdAmi}
 
-		log.Printf("Getting details of %s", createdami)
+		log.Printf("Getting details of %s", createdAmi)
 
 		imageResp, err := client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 			ImageIds: resourceIds,
 		})
 
 		if err != nil {
-			return nil, false, false, fmt.Errorf("Failed to retrieve details for AMI %s: %s", createdami, err)
+			return nil, false, false, fmt.Errorf("failed to retrieve details for AMI %s: %s", createdAmi, err)
 		}
 
 		if len(imageResp.Images) == 0 {
-			return nil, false, false, fmt.Errorf("AMI %s has no images", createdami)
+			return nil, false, false, fmt.Errorf("AMI %s has no images", createdAmi)
 		}
 
 		image := imageResp.Images[0]
 
-		log.Printf("Walking block device mappings for %s to find snapshots", createdami)
+		log.Printf("Walking block device mappings for %s to find snapshots", createdAmi)
 
 		for _, device := range image.BlockDeviceMappings {
 			if device.Ebs != nil && device.Ebs.SnapshotId != nil {
@@ -433,7 +435,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			}
 		}
 
-		ui.Message(fmt.Sprintf("Tagging AMI %s", createdami))
+		ui.Message(fmt.Sprintf("Tagging AMI %s", createdAmi))
 
 		_, err = client.CreateTags(ctx, &ec2.CreateTagsInput{
 			Resources: resourceIds,
@@ -522,7 +524,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	if len(options) > 0 {
 		for name, input := range options {
 			ui.Message(fmt.Sprintf("Modifying: %s", name))
-			input.ImageId = &createdami
+			input.ImageId = &createdAmi
 			_, err := client.ModifyImageAttribute(ctx, input)
 			if err != nil {
 				return nil, false, false, fmt.Errorf("Error modifying AMI attributes: %s", err)
@@ -531,10 +533,10 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	// Add the reported AMI ID to the artifact list
-	log.Printf("Adding created AMI ID %s in region %s to output artifacts", createdami, config.Region)
+	log.Printf("Adding created AMI ID %s in region %s to output artifacts", createdAmi, config.Region)
 	artifact = &awscommon.Artifact{
 		Amis: map[string]string{
-			config.Region: createdami,
+			config.Region: createdAmi,
 		},
 		BuilderIdValue: BuilderId,
 		Config:         config,

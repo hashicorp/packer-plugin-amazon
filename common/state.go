@@ -51,6 +51,11 @@ type overridableWaitVars struct {
 	awsTimeoutSeconds   envInfo
 }
 
+type PollingOptions struct {
+	MaxWaitTime time.Duration
+	MinDelay    time.Duration
+}
+
 // Following are wrapper functions that use Packer's environment-variables to
 // determine retry logic, then call the AWS SDK's built-in waiters.
 
@@ -144,10 +149,12 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 	}
 }
 
-func applyEnvOverrides(envOverrides overridableWaitVars) *ec2.ImageAvailableWaiterOptions {
-	options := &ec2.ImageAvailableWaiterOptions{}
+func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
+	options := PollingOptions{}
 
-	// If user has set poll delay seconds, overwrite it.
+	// if any of the env vars are not overridden, we return empty struct to allow the AWS SDK to use its defaults.
+
+	// if poll delay is set, we use that as the minimum delay.
 	if envOverrides.awsPollDelaySeconds.overridden {
 		options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
 	}
@@ -157,14 +164,22 @@ func applyEnvOverrides(envOverrides overridableWaitVars) *ec2.ImageAvailableWait
 	if envOverrides.awsMaxAttempts.overridden {
 		maxWaitTime := time.Duration(envOverrides.awsMaxAttempts.Val) * time.Duration(envOverrides.
 			awsPollDelaySeconds.Val) * time.Second
-		options.MaxDelay = maxWaitTime
+		options.MaxWaitTime = maxWaitTime
+		// if max attempts is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
 
 	} else if envOverrides.awsTimeoutSeconds.overridden {
-		options.MaxDelay = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		options.MaxWaitTime = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		// if timeout is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
 
 	}
 
-	return options
+	return &options
 }
 
 func getOverride(varInfo envInfo) envInfo {
@@ -196,7 +211,7 @@ func getEnvOverrides() overridableWaitVars {
 
 	return envValues
 }
-func (w *AWSPollingConfig) getWaiterOptions() *ec2.ImageAvailableWaiterOptions {
+func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 	envOverrides := getEnvOverrides()
 
 	if w.MaxAttempts != 0 {
@@ -212,32 +227,33 @@ func (w *AWSPollingConfig) getWaiterOptions() *ec2.ImageAvailableWaiterOptions {
 	return waitOpts
 }
 
-func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn Ec2Client, taskID string) error {
+func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, client Ec2Client, taskID string) error {
 	importInput := ec2.DescribeImportImageTasksInput{
 		ImportTaskIds: []string{taskID},
 	}
-
-	err := WaitForImageToBeImported(conn,
-		ctx,
+	err := WaitForImageToBeImported(ctx,
+		client,
 		&importInput,
 		w.getWaiterOptions())
 	return err
 }
 
-func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.DescribeImportImageTasksInput,
-	opts *ec2.ImageAvailableWaiterOptions) error {
+func WaitForImageToBeImported(ctx context.Context, client Ec2Client, input *ec2.DescribeImportImageTasksInput,
+	opts *PollingOptions) error {
 	maxAttempts := 720
 	delay := 5 * time.Second
 
 	if opts != nil {
-		if opts.MaxDelay > 0 {
-			maxAttempts = int(opts.MaxDelay.Seconds() / delay.Seconds())
-		}
 		if opts.MinDelay > 0 {
 			delay = opts.MinDelay
 		}
+		if opts.MaxWaitTime > 0 {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+
+		}
 	}
 
+	// we run through the loop maxAttempts times, checking the import task status
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		output, err := client.DescribeImportImageTasks(ctx, input)
 		if err != nil {
@@ -273,51 +289,29 @@ func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.
 }
 
 func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Client, imageId string) error {
-	//imageInput := ec2.DescribeImagesInput{
-	//	ImageIds: []*string{&imageId},
-	//}
+
 	imageInput := &ec2.DescribeImagesInput{
 		ImageIds: []string{imageId},
 	}
 	log.Printf("Waiting for AMI (%s) to be available...", imageId)
 	waiter := ec2.NewImageAvailableWaiter(client)
 
-	waitOpts := w.getWaiterOptions()
-	maxWaitTime := waitOpts.MaxDelay
-	if waitOpts.MaxDelay == 0 {
-		// Bump this default to 30 minutes because the aws default
-		// of ten minutes doesn't work for some of our long-running copies.
+	pollingOpts := w.getWaiterOptions()
+	maxWaitTime := pollingOpts.MaxWaitTime
+	var waiterOpts []func(*ec2.ImageAvailableWaiterOptions)
+	if pollingOpts.MaxWaitTime == 0 {
+		// Bump this default to 30 minutes to keep it consistent with aws sdk go v1
 		maxWaitTime = 30 * time.Minute
 	}
+	if pollingOpts.MinDelay > 0 {
+		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
+			o.MinDelay = pollingOpts.MinDelay
+		})
+	}
 
-	//if len(waitOpts) == 0 {
-	//
-	//	waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
-	//}
-	//err := conn.WaitUntilImageAvailableWithContext(
-	//	ctx,
-	//	&imageInput,
-	//	waitOpts...)
-	//if err != nil {
-	//	if strings.Contains(err.Error(), request.WaiterResourceNotReadyErrorCode) {
-	//		err = fmt.Errorf("Failed with ResourceNotReady error, which can "+
-	//			"have a variety of causes. For help troubleshooting, check "+
-	//			"our docs: "+
-	//			"https://www.packer.io/docs/builders/amazon.html#resourcenotready-error\n"+
-	//			"original error: %s", err.Error())
-	//	}
-	//}
-
-	// We'll set a max wait time instead of max attempts for a more direct comparison.
-
-	err := waiter.Wait(ctx, imageInput, maxWaitTime, func(o *ec2.ImageAvailableWaiterOptions) {
-		o.MinDelay = waitOpts.MinDelay
-		o.MaxDelay = waitOpts.MaxDelay
-	})
+	err := waiter.Wait(ctx, imageInput, maxWaitTime, waiterOpts...)
 
 	if err != nil {
-		// The error type for a waiter timeout is *aws.WaiterError
-		// but checking the error string is still a common pattern.
 		if strings.Contains(err.Error(), "waiter state transitioned to Failure") {
 			err = fmt.Errorf("failed with ResourceNotReady error, which can "+
 				"have a variety of causes. For help troubleshooting, check "+
