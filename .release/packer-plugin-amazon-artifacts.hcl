@@ -10,6 +10,7 @@ artifacts {
     "packer-plugin-amazon_${version}_linux_amd64.zip",
     "packer-plugin-amazon_${version}_linux_arm.zip",
     "packer-plugin-amazon_${version}_linux_arm64.zip",
+    "packer-plugin-amazon_${version}_illumos_amd64.zip",
     "packer-plugin-amazon_${version}_netbsd_386.zip",
     "packer-plugin-amazon_${version}_netbsd_amd64.zip",
     "packer-plugin-amazon_${version}_netbsd_arm.zip",

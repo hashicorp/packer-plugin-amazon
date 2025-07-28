@@ -72,7 +72,6 @@ jobs:
         with:
           version: ${{ needs.set-product-version.outputs.product-version }}
           product: ${{ env.REPO_NAME }}
-          branch: ${{ github.ref_name }}
 
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
@@ -215,3 +214,30 @@ jobs:
           instructions: |-
             cp LICENSE "$TARGET_DIR/LICENSE.txt"
             go build -o "$BIN_PATH" -ldflags="$LD_FLAGS" -trimpath -buildvcs=false
+
+
+  upload-manifest-json:
+    needs:
+      - set-product-version
+      - plugin-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: create-manifest-json
+        id: create-manifest-json
+        run: |
+          API_VERSION="${{ needs.plugin-check.outputs.api_version }}"
+          CLEAN_API_VERSION="${API_VERSION#x}"
+          cat > ${{ env.REPO_NAME }}_${{ needs.set-product-version.outputs.product-version }}_manifest.json << EOF
+          {
+            "version": "${{ needs.set-product-version.outputs.product-version }}",
+            "metadata": {
+              "protocol_version": "${CLEAN_API_VERSION}"
+            }
+          }
+          EOF
+      - name: Upload manifest json
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: packer-plugin-manifest.json
+          path: ${{ env.REPO_NAME }}_${{ needs.set-product-version.outputs.product-version }}_manifest.json
