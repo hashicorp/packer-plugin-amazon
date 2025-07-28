@@ -13,8 +13,7 @@ project "packer-package-amazon" {
     repository = "packer-plugin-amazon"
     release_branches = [
         "main",
-        "release/**",
-        "test-crt/**"
+        "release/**"
     ]
   }
 }
