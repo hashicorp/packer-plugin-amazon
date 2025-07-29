@@ -227,6 +227,18 @@ func (w *AWSPollingConfig) WaitUntilFastLaunchEnabled(ctx aws.Context, conn *ec2
 	return err
 }
 
+func (w *AWSPollingConfig) WaitUntilSnapshotImported(ctx aws.Context, conn *ec2.EC2, taskID string) error {
+	importInput := ec2.DescribeImportSnapshotTasksInput{
+		ImportTaskIds: []*string{&taskID},
+	}
+
+	err := WaitForSnapshotToBeImported(conn,
+		ctx,
+		&importInput,
+		w.getWaiterOptions()...)
+	return err
+}
+
 // Custom waiters using AWS's request.Waiter
 
 func WaitForVolumeToBeAttached(c *ec2.EC2, ctx aws.Context, input *ec2.DescribeVolumesInput, opts ...request.WaiterOption) error {
@@ -361,6 +373,43 @@ func WaitUntilFastLaunchEnabled(c *ec2.EC2, ctx aws.Context, input *ec2.Describe
 				inCpy = &tmp
 			}
 			req, _ := c.DescribeFastLaunchImagesRequest(inCpy)
+			req.SetContext(ctx)
+			req.ApplyOptions(opts...)
+			return req, nil
+		},
+	}
+	w.ApplyOptions(opts...)
+
+	return w.WaitWithContext(ctx)
+}
+
+func WaitForSnapshotToBeImported(c *ec2.EC2, ctx aws.Context, input *ec2.DescribeImportSnapshotTasksInput, opts ...request.WaiterOption) error {
+	w := request.Waiter{
+		Name:        "DescribeSnapshot",
+		MaxAttempts: 720,
+		Delay:       request.ConstantWaiterDelay(5 * time.Second),
+		Acceptors: []request.WaiterAcceptor{
+			{
+				State:    request.SuccessWaiterState,
+				Matcher:  request.PathAllWaiterMatch,
+				Argument: "ImportSnapshotTasks[].SnapshotTaskDetail.Status",
+				Expected: "completed",
+			},
+			{
+				State:    request.FailureWaiterState,
+				Matcher:  request.PathAnyWaiterMatch,
+				Argument: "ImportSnapshotTasks[].SnapshotTaskDetail.Status",
+				Expected: "deleted",
+			},
+		},
+		Logger: c.Config.Logger,
+		NewRequest: func(opts []request.Option) (*request.Request, error) {
+			var inCpy *ec2.DescribeImportSnapshotTasksInput
+			if input != nil {
+				tmp := *input
+				inCpy = &tmp
+			}
+			req, _ := c.DescribeImportSnapshotTasksRequest(inCpy)
 			req.SetContext(ctx)
 			req.ApplyOptions(opts...)
 			return req, nil
