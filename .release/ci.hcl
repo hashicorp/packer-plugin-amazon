@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-schema = "1"
+schema = "2"
 
 project "packer-package-amazon" {
   team = "#proj-packer-releases"
