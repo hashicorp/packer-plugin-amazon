@@ -7,13 +7,15 @@
 package parameterstore
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -71,26 +73,37 @@ func (d *Datasource) OutputSpec() hcldec.ObjectSpec {
 }
 
 func (d *Datasource) Execute() (cty.Value, error) {
-	session, err := d.config.Session()
+	ctx := context.TODO()
+	cfg, err := d.config.Config(ctx)
+
 	if err != nil {
 		return cty.NullVal(cty.EmptyObject), err
 	}
-	ssmsvc := ssm.New(session, aws.NewConfig().WithRegion(*session.Config.Region))
-	param, err := ssmsvc.GetParameter(&ssm.GetParameterInput{Name: &d.config.Name, WithDecryption: &d.config.WithDecryption})
+	ssmsvc := ssm.NewFromConfig(*cfg)
+
+	input := &ssm.GetParameterInput{
+		Name:           aws.String(d.config.Name),
+		WithDecryption: aws.Bool(d.config.WithDecryption),
+	}
+	param, err := ssmsvc.GetParameter(ctx, input)
 
 	if err != nil {
-		if awserrors.Matches(err, ssm.ErrCodeParameterNotFound, "") {
+		var notFoundErr *types.ParameterNotFound
+		var versionNotFoundErr *types.ParameterVersionNotFound
+
+		if errors.As(err, &notFoundErr) {
 			return cty.NullVal(cty.EmptyObject), fmt.Errorf("The parameter name %q not found", d.config.Name)
 		}
-		if awserrors.Matches(err, ssm.ErrCodeParameterVersionNotFound, "") {
+		if errors.As(err, &versionNotFoundErr) {
 			return cty.NullVal(cty.EmptyObject), fmt.Errorf("The parameter version %q not found", d.config.Name)
 		}
-		return cty.NullVal(cty.EmptyObject), fmt.Errorf("error to get parameter value: %q", err.Error())
+		return cty.NullVal(cty.EmptyObject), fmt.Errorf("error to get parameter value: %s", err.Error())
 	}
+
 	output := DatasourceOutput{
-		Value:   aws.StringValue(param.Parameter.Value),
-		Version: fmt.Sprintf("%d", aws.Int64Value(param.Parameter.Version)),
-		ARN:     aws.StringValue(param.Parameter.ARN),
+		Value:   aws.ToString(param.Parameter.Value),
+		Version: fmt.Sprintf("%d", param.Parameter.Version),
+		ARN:     aws.ToString(param.Parameter.ARN),
 	}
 	return hcl2helper.HCL2ValueFromConfig(output, d.OutputSpec()), nil
 }
