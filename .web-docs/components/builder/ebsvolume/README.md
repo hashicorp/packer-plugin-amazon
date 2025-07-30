@@ -1083,7 +1083,7 @@ Usage Example
 **HCL2**
 
 ```hcl
-source "amazon-ebs" "basic-example" {
+source "amazon-ebsvolume" "basic-example" {
   region        =  "us-east-1"
   source_ami    =  "ami-fce3c696"
   instance_type =  "t2.micro"
@@ -1107,7 +1107,7 @@ source "amazon-ebs" "basic-example" {
   },
   "builders": [
     {
-      "type": "amazon-ebs",
+      "type": "amazon-ebsvolume",
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
       "region": "us-east-1",
@@ -1606,7 +1606,7 @@ Usage example:
 // won't be easily resolvable until legacy json templates are deprecated:
 
 {
-source "amazon-ebs" "basic-example" {
+source "amazon-ebsvolume" "basic-example" {
   tags = {
         OS_Version = "Ubuntu"
         Release = "Latest"
