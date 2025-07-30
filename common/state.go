@@ -323,7 +323,7 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Clie
 			err = fmt.Errorf("failed with ResourceNotReady error, which can "+
 				"have a variety of causes. For help troubleshooting, check "+
 				"our docs: "+
-				"https://www.packer.io/docs/builders/amazon.html#resourcenotready-error\n"+
+				"https://developer.hashicorp.com/packer/integrations/hashicorp/amazon#resourcenotready-error\n"+
 				"original error: %w", err)
 		}
 	}
