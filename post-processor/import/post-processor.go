@@ -172,10 +172,10 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 			errs, fmt.Errorf("invalid boot mode '%s' for 'arm64' architecture", p.config.BootMode))
 	}
 
-	if p.config.AMIIMDSSupport != "" && p.config.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+	if p.config.AMIIMDSSupport != "" && p.config.AMIIMDSSupport != string(ec2types.ImdsSupportValuesV20) {
 		errs = packersdk.MultiErrorAppend(errs,
 			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
-				ec2.ImdsSupportValuesV20),
+				string(ec2types.ImdsSupportValuesV20)),
 		)
 	}
 
@@ -535,7 +535,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 
 	if p.config.AMIIMDSSupport != "" {
 		options["ami imds support"] = &ec2.ModifyImageAttributeInput{
-			ImdsSupport: &ec2.AttributeValue{Value: &p.config.AMIIMDSSupport},
+			ImdsSupport: &ec2types.AttributeValue{Value: &p.config.AMIIMDSSupport},
 		}
 
 	}
