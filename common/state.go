@@ -6,10 +6,16 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -122,4 +128,37 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 			"configuration options aws_polling_delay_seconds and aws_polling_max_attempts " +
 			"to your desired values.")
 	}
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client Ec2Client, instanceId string) error {
+
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+	waiter := ec2.NewInstanceRunningWaiter(ec2Client)
+
+	//err := ec2Client.WaitUntilInstanceRunningWithContext(
+	//	ctx,
+	//	&instanceInput,
+	//	w.getWaiterOptions()...)
+
+	//todo fix the wait params.
+	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	return err
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client Ec2Client, instanceId string) error {
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+	waiter := ec2.NewInstanceTerminatedWaiter(ec2Client)
+
+	//err := conn.WaitUntilInstanceTerminatedWithContext(
+	//	ctx,
+	//	&instanceInput,
+	//	w.getWaiterOptions()...)
+
+	//todo fix the wait params.
+	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	return err
 }

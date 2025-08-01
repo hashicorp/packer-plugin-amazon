@@ -13,10 +13,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
+	"google.golang.org/grpc/balancer/grpclb/state"
 )
 
 const BuilderId = "mitchellh.amazon.ebsvolume"
@@ -180,22 +181,26 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
-	session, err := b.config.Session()
+	client, err := b.config.NewEC2Client(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ec2conn := ec2.New(session)
-	iam := iam.New(session)
+	config, err := b.config.Config(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating config: %w", err)
+	}
+
+	iam := iam.NewFromConfig(*config)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
 	state.Put("config", &b.config)
 	state.Put("access_config", &b.config.AccessConfig)
-	state.Put("ec2", ec2conn)
+	state.Put("ec2v2", client)
 	state.Put("iam", iam)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
-	state.Put("region", ec2conn.Config.Region)
+	state.Put("region", config.Region)
 	generatedData := &packerbuilderdata.GeneratedData{State: state}
 
 	var instanceStep multistep.Step
@@ -221,7 +226,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
 			FleetTags:                         b.config.FleetTags,
-			Region:                            *ec2conn.Config.Region,
+			Region:                            config.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
