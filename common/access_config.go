@@ -211,7 +211,7 @@ type AccessConfig struct {
 	// resource state.
 	PollingConfig *AWSPollingConfig `mapstructure:"aws_polling" required:"false"`
 
-	getEC2Client func() Ec2Client
+	getEC2Client func() *ec2.Client
 
 	// packerConfig is set by Prepare() containing information about Packer,
 	// including the CorePackerVersionString
@@ -467,7 +467,7 @@ func (c *AccessConfig) NewNoValidCredentialSourcesError(err error) error {
 }
 
 // NewEC2Client return a aws sdk v2 ec2 client object
-func (c *AccessConfig) NewEC2Client(ctx context.Context) (Ec2Client, error) {
+func (c *AccessConfig) NewEC2Client(ctx context.Context) (*ec2.Client, error) {
 
 	if c.getEC2Client != nil {
 		return c.getEC2Client(), nil

@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -216,7 +217,7 @@ func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 }
 
 func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(Ec2Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Launching a spot AWS instance...")
@@ -604,10 +605,10 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 func waitForInstanceReadiness(
 	ctx context.Context,
 	instanceId string,
-	ec2Client Ec2Client,
+	ec2Client clients.Ec2Client,
 	ui packersdk.Ui,
 	state multistep.StateBag,
-	waitUntilInstanceRunning func(context.Context, Ec2Client, string) error,
+	waitUntilInstanceRunning func(context.Context, clients.Ec2Client, string) error,
 ) error {
 	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
 	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
@@ -638,7 +639,7 @@ func waitForInstanceReadiness(
 }
 
 func (s *StepRunSpotInstance) Cleanup(state multistep.StateBag) {
-	ec2Client := state.Get("ec2v2").(Ec2Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 	launchTemplateName := state.Get("launchTemplateName").(string)
 

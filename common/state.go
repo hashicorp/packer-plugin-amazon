@@ -13,10 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -227,7 +225,7 @@ func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 	return waitOpts
 }
 
-func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client Ec2Client, instanceId string) error {
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
 
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
@@ -244,7 +242,7 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 	return err
 }
 
-func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client Ec2Client, instanceId string) error {
+func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	}
@@ -257,5 +255,23 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 
 	//todo fix the wait params.
 	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	return err
+}
+func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, client clients.Ec2Client, snapshotID string) error {
+	snapInput := ec2.DescribeSnapshotsInput{
+		SnapshotIds: []string{snapshotID},
+	}
+
+	//todo fix waiter params here
+	/*	waitOpts := w.getWaiterOptions()
+		if len(waitOpts) == 0 {
+			// Bump this default to 30 minutes.
+			// Large snapshots can take a long time for the copy to s3
+			waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
+		}
+	*/
+	maxWaitTime := 30 * time.Minute
+	waiter := ec2.NewSnapshotCompletedWaiter(client)
+	err := waiter.Wait(ctx, &snapInput, maxWaitTime)
 	return err
 }

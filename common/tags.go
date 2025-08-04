@@ -47,8 +47,8 @@ func (t TagMap) EC2Tags(ictx interpolate.Context, region string, state multistep
 	return ec2Tags, nil
 }
 
-func (t TagMap) IamTags(ictx interpolate.Context, region string, state multistep.StateBag) ([]*iamtypes.Tag, error) {
-	var iamTags []*iamtypes.Tag
+func (t TagMap) IamTags(ictx interpolate.Context, region string, state multistep.StateBag) ([]iamtypes.Tag, error) {
+	var iamTags []iamtypes.Tag
 	generatedData := packerbuilderdata.GeneratedData{State: state}
 	ictx.Data = extractBuildInfo(region, state, &generatedData)
 
@@ -61,7 +61,7 @@ func (t TagMap) IamTags(ictx interpolate.Context, region string, state multistep
 		if err != nil {
 			return nil, fmt.Errorf("Error processing tag: %s:%s - %s", key, value, err)
 		}
-		iamTags = append(iamTags, &iamtypes.Tag{
+		iamTags = append(iamTags, iamtypes.Tag{
 			Key:   aws.String(interpolatedKey),
 			Value: aws.String(interpolatedValue),
 		})
@@ -69,12 +69,12 @@ func (t TagMap) IamTags(ictx interpolate.Context, region string, state multistep
 	return iamTags, nil
 }
 
-func (t EC2Tags) TagSpecifications(resourceType ...string) []*ec2types.TagSpecification {
-	var tagSpecs []*ec2types.TagSpecification
+func (t EC2Tags) TagSpecifications(resourceType ...ec2types.ResourceType) []ec2types.TagSpecification {
+	var tagSpecs []ec2types.TagSpecification
 	if len(t) > 0 {
 		for _, resource := range resourceType {
-			runTags := &ec2types.TagSpecification{
-				ResourceType: ec2types.ResourceType(resource),
+			runTags := ec2types.TagSpecification{
+				ResourceType: resource,
 				Tags:         t,
 			}
 			tagSpecs = append(tagSpecs, runTags)

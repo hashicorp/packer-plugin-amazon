@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
 type mockEC2Client struct {
@@ -31,7 +32,7 @@ func (m *mockEC2Client) DescribeRegions(ctx context.Context, params *ec2.Describ
 
 func FakeAccessConfig() *AccessConfig {
 	accessConfig := AccessConfig{
-		getEC2Client: func() Ec2Client {
+		getEC2Client: func() clients.Ec2Client {
 			return &mockEC2Client{}
 		},
 		PollingConfig: new(AWSPollingConfig),
