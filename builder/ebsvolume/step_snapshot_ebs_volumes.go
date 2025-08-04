@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -27,8 +28,8 @@ type stepSnapshotEBSVolumes struct {
 }
 
 func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
-	instance := state.Get("instance").(*ec2.Instance)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packer.Ui)
 
 	s.snapshotMap = make(map[string]*BlockDevice)
@@ -52,8 +53,8 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				}
 				tags.Report(ui)
 
-				tagSpec := &ec2.TagSpecification{
-					ResourceType: aws.String("snapshot"),
+				tagSpec := ec2types.TagSpecification{
+					ResourceType: "snapshot",
 					Tags:         tags,
 				}
 				description := configVolumeMapping.SnapshotDescription
@@ -62,7 +63,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				}
 				input := &ec2.CreateSnapshotInput{
 					VolumeId:          aws.String(*instanceBlockDevice.Ebs.VolumeId),
-					TagSpecifications: []*ec2.TagSpecification{tagSpec},
+					TagSpecifications: []ec2types.TagSpecification{tagSpec},
 					Description:       aws.String(description),
 				}
 
@@ -72,7 +73,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 				}
 
 				ui.Message(fmt.Sprintf("Requesting snapshot of volume: %s...", *instanceBlockDevice.Ebs.VolumeId))
-				snapshot, err := ec2conn.CreateSnapshot(input)
+				snapshot, err := ec2Client.CreateSnapshot(ctx, input)
 				if err != nil || snapshot == nil {
 					err := fmt.Errorf("Error generating snapsot for volume %s: %s", *instanceBlockDevice.Ebs.VolumeId, err)
 					state.Put("error", err)
@@ -88,7 +89,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 	ui.Say("Waiting for Snapshots to become ready...")
 	for snapID := range s.snapshotMap {
 		ui.Message(fmt.Sprintf("Waiting for %s to be ready.", snapID))
-		err := s.PollingConfig.WaitUntilSnapshotDone(ctx, ec2conn, snapID)
+		err := s.PollingConfig.WaitUntilSnapshotDone(ctx, ec2Client, snapID)
 		if err != nil {
 			err = fmt.Errorf("Error waiting for snapsot to become ready %s", err)
 			state.Put("error", err)
@@ -105,17 +106,17 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 		snapshotOptions := make(map[string]*ec2.ModifySnapshotAttributeInput)
 
 		if len(bd.SnapshotGroups) > 0 {
-			groups := make([]*string, len(bd.SnapshotGroups))
-			addsSnapshot := make([]*ec2.CreateVolumePermission, len(bd.SnapshotGroups))
+			groups := make([]string, len(bd.SnapshotGroups))
+			addsSnapshot := make([]ec2types.CreateVolumePermission, len(bd.SnapshotGroups))
 
 			addSnapshotGroups := &ec2.ModifySnapshotAttributeInput{
-				CreateVolumePermission: &ec2.CreateVolumePermissionModifications{},
+				CreateVolumePermission: &ec2types.CreateVolumePermissionModifications{},
 			}
 
 			for i, g := range bd.SnapshotGroups {
-				groups[i] = aws.String(g)
-				addsSnapshot[i] = &ec2.CreateVolumePermission{
-					Group: aws.String(g),
+				groups[i] = g
+				addsSnapshot[i] = ec2types.CreateVolumePermission{
+					Group: ec2types.PermissionGroup(g),
 				}
 			}
 
@@ -126,16 +127,16 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 		}
 
 		if len(bd.SnapshotUsers) > 0 {
-			users := make([]*string, len(bd.SnapshotUsers))
-			addsSnapshot := make([]*ec2.CreateVolumePermission, len(bd.SnapshotUsers))
+			users := make([]string, len(bd.SnapshotUsers))
+			addsSnapshot := make([]ec2types.CreateVolumePermission, len(bd.SnapshotUsers))
 			for i, u := range bd.SnapshotUsers {
-				users[i] = aws.String(u)
-				addsSnapshot[i] = &ec2.CreateVolumePermission{UserId: aws.String(u)}
+				users[i] = u
+				addsSnapshot[i] = ec2types.CreateVolumePermission{UserId: aws.String(u)}
 			}
 
 			snapshotOptions["users"] = &ec2.ModifySnapshotAttributeInput{
 				UserIds: users,
-				CreateVolumePermission: &ec2.CreateVolumePermissionModifications{
+				CreateVolumePermission: &ec2types.CreateVolumePermissionModifications{
 					Add: addsSnapshot,
 				},
 			}
@@ -145,7 +146,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 		for name, input := range snapshotOptions {
 			ui.Message(fmt.Sprintf("Modifying: %s", name))
 			input.SnapshotId = &snapID
-			_, err := ec2conn.ModifySnapshotAttribute(input)
+			_, err := ec2Client.ModifySnapshotAttribute(ctx, input)
 			if err != nil {
 				err := fmt.Errorf("Error modify snapshot attributes: %s", err)
 				state.Put("error", err)

@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
@@ -25,7 +24,6 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
-	"google.golang.org/grpc/balancer/grpclb/state"
 )
 
 const BuilderId = "mitchellh.amazon.ebsvolume"
@@ -185,12 +183,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err != nil {
 		return nil, err
 	}
-	config, err := b.config.Config(ctx)
+	aws_config, err := b.config.Config(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating config: %w", err)
 	}
 
-	iam := iam.NewFromConfig(*config)
+	iam := iam.NewFromConfig(*aws_config)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
@@ -200,7 +198,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	state.Put("iam", iam)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
-	state.Put("region", config.Region)
+	state.Put("region", aws_config.Region)
+	state.Put("aws_config", aws_config)
 	generatedData := &packerbuilderdata.GeneratedData{State: state}
 
 	var instanceStep multistep.Step
@@ -226,7 +225,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
 			FleetTags:                         b.config.FleetTags,
-			Region:                            config.Region,
+			Region:                            aws_config.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
@@ -339,8 +338,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BuildName: b.config.PackerBuildName,
 		},
 		&awscommon.StepCreateSSMTunnel{
-			AWSSession:       session,
-			Region:           *ec2conn.Config.Region,
+			AwsConfig:        *aws_config,
+			Region:           aws_config.Region,
 			PauseBeforeSSM:   b.config.PauseBeforeSSM,
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
@@ -350,7 +349,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&communicator.StepConnect{
 			Config: &b.config.RunConfig.Comm,
 			Host: awscommon.SSHHost(
-				ec2conn,
+				ctx,
+				client,
 				b.config.SSHInterface,
 				b.config.Comm.Host(),
 			),
@@ -398,7 +398,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		Volumes:        state.Get("ebsvolumes").(EbsVolumes),
 		Snapshots:      state.Get("ebssnapshots").(EbsSnapshots),
 		BuilderIdValue: BuilderId,
-		Conn:           ec2conn,
+		Client:         client,
 		StateData:      map[string]interface{}{"generated_data": state.Get("generated_data")},
 	}
 	ui.Say(fmt.Sprintf("Created Volumes: %s", artifact))
