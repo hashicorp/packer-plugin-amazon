@@ -14,7 +14,6 @@ project "packer-package-amazon" {
     release_branches = [
         "main",
         "release/**"
-        "test-crt/**"
     ]
   }
 }
