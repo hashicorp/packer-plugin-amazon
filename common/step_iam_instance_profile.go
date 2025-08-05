@@ -69,8 +69,8 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Say(fmt.Sprintf("Creating temporary instance profile for this instance: %s", profileName))
 
-		region := state.Get("region").(*string)
-		iamProfileTags, err := TagMap(s.Tags).IamTags(s.Ctx, *region, state)
+		region := state.Get("region").(string)
+		iamProfileTags, err := TagMap(s.Tags).IamTags(s.Ctx, region, state)
 		if err != nil {
 			err := fmt.Errorf("Error creating IAM tags: %s", err)
 			state.Put("error", err)

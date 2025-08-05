@@ -6,7 +6,6 @@ package common
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
@@ -20,8 +19,6 @@ type StepSetGeneratedData struct {
 }
 
 func (s *StepSetGeneratedData) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	//ec2Client := state.Get("ec2v2").(Ec2Client)
-
 	region := state.Get("region").(string)
 	extractBuildInfo(region, state, s.GeneratedData)
 

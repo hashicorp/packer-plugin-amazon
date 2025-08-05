@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -35,7 +36,7 @@ type StepSecurityGroup struct {
 }
 
 func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(*ec2.Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	config := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	vpcId := state.Get("vpc_id").(string)
@@ -227,7 +228,7 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 		return
 	}
 	ctx := context.TODO()
-	ec2conn := state.Get("ec2v2").(*ec2.Client)
+	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deleting temporary security group...")
@@ -250,7 +251,7 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 	}
 }
 
-func waitUntilSecurityGroupExists(c *ec2.Client, input *ec2.DescribeSecurityGroupsInput) error {
+func waitUntilSecurityGroupExists(c clients.Ec2Client, input *ec2.DescribeSecurityGroupsInput) error {
 	//todo implement the wait logic
 	return nil
 }

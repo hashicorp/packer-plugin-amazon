@@ -6,13 +6,14 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -34,7 +35,7 @@ type StepKeyPair struct {
 
 func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
-
+	log.Printf("************** StepKeyPair called ***********")
 	if s.Comm.SSHPrivateKeyFile != "" {
 		ui.Say("Using existing SSH private key")
 		privateKeyBytes, err := s.Comm.ReadSSHPrivateKeyFile()
@@ -64,7 +65,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionContinue
 	}
 
-	ec2Client := state.Get("ec2v2").(ec2.Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	var keyResp *ec2.CreateKeyPairOutput
 
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
@@ -72,10 +73,11 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		KeyName: &s.Comm.SSHTemporaryKeyPairName,
 		KeyType: ec2types.KeyType(s.Comm.SSHTemporaryKeyPairType),
 	}
-
+	log.Printf("*****BEFORE RESTRICTED BLOCK CALLED*****")
 	if !s.IsRestricted {
-		region := state.Get("region").(*string)
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.ToString(region), state)
+		log.Printf("*****IF NOT RESTRICTED BLOCK CALLED*****")
+		region := state.Get("region").(string)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)
@@ -140,7 +142,7 @@ func (s *StepKeyPair) Cleanup(state multistep.StateBag) {
 		return
 	}
 	ctx := context.TODO()
-	ec2Client := state.Get("ec2v2").(*ec2.Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Remove the keypair

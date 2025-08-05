@@ -122,8 +122,8 @@ type BlockDevice struct {
 
 type BlockDevices []BlockDevice
 
-func (bds BlockDevices) BuildEC2BlockDeviceMappings() []*ec2types.BlockDeviceMapping {
-	var blockDevices []*ec2types.BlockDeviceMapping
+func (bds BlockDevices) BuildEC2BlockDeviceMappings() []ec2types.BlockDeviceMapping {
+	var blockDevices []ec2types.BlockDeviceMapping
 
 	for _, blockDevice := range bds {
 		blockDevices = append(blockDevices, blockDevice.BuildEC2BlockDeviceMapping())
@@ -131,9 +131,9 @@ func (bds BlockDevices) BuildEC2BlockDeviceMappings() []*ec2types.BlockDeviceMap
 	return blockDevices
 }
 
-func (blockDevice BlockDevice) BuildEC2BlockDeviceMapping() *ec2types.BlockDeviceMapping {
+func (blockDevice BlockDevice) BuildEC2BlockDeviceMapping() ec2types.BlockDeviceMapping {
 
-	mapping := &ec2types.BlockDeviceMapping{
+	mapping := ec2types.BlockDeviceMapping{
 		DeviceName: aws.String(blockDevice.DeviceName),
 	}
 

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -28,7 +29,7 @@ import (
 )
 
 type EC2BlockDeviceMappingsBuilder interface {
-	BuildEC2BlockDeviceMappings() []*ec2types.BlockDeviceMapping
+	BuildEC2BlockDeviceMappings() []ec2types.BlockDeviceMapping
 }
 
 type StepRunSpotInstance struct {
@@ -124,6 +125,7 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 	ui := state.Get("ui").(packersdk.Ui)
 
 	iamInstanceProfile := aws.String(state.Get("iamInstanceProfile").(string))
+	log.Printf("****INSTANCE PROFILE IS %s", *iamInstanceProfile)
 
 	// Create a launch template.
 	templateData := ec2types.RequestLaunchTemplateData{
@@ -418,12 +420,15 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 
 	var createOutput *ec2.CreateFleetOutput
 	err = retry.Config{
-		Tries: 11,
+		Tries: 30,
 		ShouldRetry: func(err error) bool {
+			log.Printf("**** INSIDE THE SHOULD RETRY FUNC")
+
 			if strings.Contains(err.Error(), "Invalid IAM Instance Profile name") {
 				// eventual consistency of the profile. PutRolePolicy &
 				// AddRoleToInstanceProfile are eventually consistent and once
 				// we can wait on those operations, this can be removed.
+				log.Printf("*****INVALID INSTANCE PROFILE ERROR, RETRYING")
 				return true
 			}
 			if err.Error() == "InsufficientInstanceCapacity" {
@@ -435,8 +440,19 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}.Run(ctx, func(ctx context.Context) error {
 		createOutput, err = ec2Client.CreateFleet(ctx, createFleetInput)
 		if err == nil && createOutput.Errors != nil {
-			err = fmt.Errorf("errors: %v", createOutput.Errors)
+			err = fmt.Errorf("errors: %v", awsutil.Prettify(createOutput.Errors))
+			//log.Printf("******FLEET ERRORS ARE: %v", err.Error())
 		}
+		/*if err == nil && createOutput.Errors != nil {
+			var sb strings.Builder
+			for _, fleetErr := range createOutput.Errors {
+				sb.WriteString(fmt.Sprintf("Error code: %v, Error Message: %v\n", *fleetErr.ErrorCode,
+					*fleetErr.ErrorMessage))
+			}
+			errString := sb.String()
+			err = fmt.Errorf("errors: %v", errString)
+			log.Printf("*****Generated error string is %s, error: %s", err.Error(), err)
+		}*/
 		// We can end up with errors because one of the allowed availability
 		// zones doesn't have one of the allowed instance types; as long as
 		// an instance is launched, these errors aren't important.
@@ -600,42 +616,6 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	state.Put("instance_id", instance.InstanceId)
 
 	return multistep.ActionContinue
-}
-
-func waitForInstanceReadiness(
-	ctx context.Context,
-	instanceId string,
-	ec2Client clients.Ec2Client,
-	ui packersdk.Ui,
-	state multistep.StateBag,
-	waitUntilInstanceRunning func(context.Context, clients.Ec2Client, string) error,
-) error {
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
-	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
-
-	describeInstance := &ec2.DescribeInstancesInput{
-		InstanceIds: []string{instanceId},
-	}
-
-	if err := waitUntilInstanceRunning(ctx, ec2Client, instanceId); err != nil {
-		err := fmt.Errorf("Error waiting for instance (%s) to become ready: %s", instanceId, err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-
-		// try to get some context from AWS on why was instance
-		// transitioned to the unexpected state
-		if resp, e := ec2Client.DescribeInstances(ctx, describeInstance); e == nil {
-			if len(resp.Reservations) > 0 && len(resp.Reservations[0].Instances) > 0 {
-				instance := resp.Reservations[0].Instances[0]
-				if instance.StateTransitionReason != nil && instance.StateReason != nil && instance.StateReason.Message != nil {
-					ui.Error(fmt.Sprintf("Instance state change details: %s: %s",
-						*instance.StateTransitionReason, *instance.StateReason.Message))
-				}
-			}
-		}
-		return err
-	}
-	return nil
 }
 
 func (s *StepRunSpotInstance) Cleanup(state multistep.StateBag) {

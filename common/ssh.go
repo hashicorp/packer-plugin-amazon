@@ -41,7 +41,7 @@ func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host stri
 		const tries = 2
 		// <= with current structure to check result of describing `tries` times
 		for j := 0; j <= tries; j++ {
-			i := state.Get("instance").(*ec2types.Instance)
+			i := state.Get("instance").(ec2types.Instance)
 			if sshInterface != "" {
 				switch sshInterface {
 				case "public_ip":

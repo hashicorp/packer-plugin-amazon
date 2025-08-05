@@ -24,6 +24,7 @@ import (
 	awsbase "github.com/hashicorp/aws-sdk-go-base/v2"
 	"github.com/hashicorp/aws-sdk-go-base/v2/diag"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -211,7 +212,7 @@ type AccessConfig struct {
 	// resource state.
 	PollingConfig *AWSPollingConfig `mapstructure:"aws_polling" required:"false"`
 
-	getEC2Client func() *ec2.Client
+	getEC2Client func() clients.Ec2Client
 
 	// packerConfig is set by Prepare() containing information about Packer,
 	// including the CorePackerVersionString
@@ -266,7 +267,7 @@ func (c *AccessConfig) Config(ctx context.Context) (*aws.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error loading credentials for AWS Provider: %s", err)
 	}
-
+	c.config = &cfg
 	log.Printf("[INFO] AWS Auth provider used: %q", creds.Source)
 
 	if c.DecodeAuthZMessages {
@@ -345,6 +346,7 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 }
 
 func (c *AccessConfig) SessionRegion() string {
+	log.Printf("************** AccessConfig.SessionRegion called **********")
 	if c.config == nil {
 		panic("access config's aws config should be set.")
 	}
@@ -467,7 +469,7 @@ func (c *AccessConfig) NewNoValidCredentialSourcesError(err error) error {
 }
 
 // NewEC2Client return a aws sdk v2 ec2 client object
-func (c *AccessConfig) NewEC2Client(ctx context.Context) (*ec2.Client, error) {
+func (c *AccessConfig) NewEC2Client(ctx context.Context) (clients.Ec2Client, error) {
 
 	if c.getEC2Client != nil {
 		return c.getEC2Client(), nil
