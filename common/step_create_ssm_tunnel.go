@@ -64,7 +64,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	// Get instance information
-	instance, ok := state.Get("instance").(*ec2types.Instance)
+	instance, ok := state.Get("instance").(ec2types.Instance)
 	if !ok {
 		err := fmt.Errorf("error encountered in obtaining target instance id for session tunnel")
 		ui.Error(err.Error())
@@ -94,7 +94,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 }
 
 func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui packersdk.Ui, session *pssm.Session,
-	instance *ec2types.Instance) {
+	instance ec2types.Instance) {
 	sessionChan := make(chan struct{})
 
 	go func() {
@@ -119,7 +119,7 @@ func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui
 
 func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
 	ctx context.Context,
-	instance *ec2types.Instance,
+	instance ec2types.Instance,
 	privateKey []byte,
 ) error {
 	publicKey, err := sshkey.PublicKeyFromPrivate(privateKey)

@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -58,11 +59,13 @@ func mostFreeSubnet(subnets []ec2types.Subnet) ec2types.Subnet {
 }
 
 func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(*ec2.Client)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
+	log.Printf("*****REACHED AT THE BEGINNING OF StepNetworkInfo.Run")
 	// Set VpcID if none was specified but filters are defined in the template.
 	if s.VpcId == "" && !s.VpcFilter.Empty() {
+		log.Printf("****INSIDE THE IF BLOCK FOR VPC ID")
 		params := &ec2.DescribeVpcsInput{}
 		vpcFilters, err := buildEc2Filters(s.VpcFilter.Filters)
 		if err != nil {
@@ -151,6 +154,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		ui.Message(fmt.Sprintf("Found Subnet ID: %s", s.SubnetId))
 	}
 
+	log.Printf("****AFTER THE IF BLOCK FOR SUBNET ID")
 	// Set VPC/Subnet if we explicitely enable or disable public IP assignment to the instance
 	// and we did not set or get a subnet ID before
 	if s.AssociatePublicIpAddress != config.TriUnset && s.SubnetId == "" {
@@ -188,7 +192,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ctx context.Context, ui packersdk.Ui, ec2Client *ec2.Client,
+func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ctx context.Context, ui packersdk.Ui, ec2Client clients.Ec2Client,
 	state multistep.StateBag) error {
 	ui.Say(fmt.Sprintf("Setting public IP address to %t on instance without a subnet ID",
 		*s.AssociatePublicIpAddress.ToBoolPointer()))
@@ -274,7 +278,7 @@ func getAZFromSubnets(subnets []ec2types.Subnet) []string {
 	return retAZ
 }
 
-func filterAZByMachineType(ctx context.Context, azs []string, machineType string, ec2Client *ec2.Client) ([]string,
+func filterAZByMachineType(ctx context.Context, azs []string, machineType string, ec2Client clients.Ec2Client) ([]string,
 	error) {
 	var retAZ []string
 

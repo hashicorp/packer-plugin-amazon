@@ -183,23 +183,23 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err != nil {
 		return nil, err
 	}
-	aws_config, err := b.config.Config(ctx)
+	awsConfig, err := b.config.Config(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error creating config: %w", err)
 	}
 
-	iam := iam.NewFromConfig(*aws_config)
+	iamClient := iam.NewFromConfig(*awsConfig)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
 	state.Put("config", &b.config)
 	state.Put("access_config", &b.config.AccessConfig)
 	state.Put("ec2v2", client)
-	state.Put("iam", iam)
+	state.Put("iam", iamClient)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
-	state.Put("region", aws_config.Region)
-	state.Put("aws_config", aws_config)
+	state.Put("region", awsConfig.Region)
+	state.Put("aws_config", awsConfig)
 	generatedData := &packerbuilderdata.GeneratedData{State: state}
 
 	var instanceStep multistep.Step
@@ -225,7 +225,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
 			FleetTags:                         b.config.FleetTags,
-			Region:                            aws_config.Region,
+			Region:                            awsConfig.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
@@ -338,8 +338,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BuildName: b.config.PackerBuildName,
 		},
 		&awscommon.StepCreateSSMTunnel{
-			AwsConfig:        *aws_config,
-			Region:           aws_config.Region,
+			AwsConfig:        *awsConfig,
+			Region:           awsConfig.Region,
 			PauseBeforeSSM:   b.config.PauseBeforeSSM,
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
