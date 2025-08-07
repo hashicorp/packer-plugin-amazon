@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -439,20 +438,18 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
 		createOutput, err = ec2Client.CreateFleet(ctx, createFleetInput)
-		if err == nil && createOutput.Errors != nil {
+		/*if err == nil && createOutput.Errors != nil {
 			err = fmt.Errorf("errors: %v", awsutil.Prettify(createOutput.Errors))
 			//log.Printf("******FLEET ERRORS ARE: %v", err.Error())
-		}
-		/*if err == nil && createOutput.Errors != nil {
+		}*/
+		if err == nil && createOutput.Errors != nil {
 			var sb strings.Builder
 			for _, fleetErr := range createOutput.Errors {
 				sb.WriteString(fmt.Sprintf("Error code: %v, Error Message: %v\n", *fleetErr.ErrorCode,
 					*fleetErr.ErrorMessage))
 			}
-			errString := sb.String()
-			err = fmt.Errorf("errors: %v", errString)
-			log.Printf("*****Generated error string is %s, error: %s", err.Error(), err)
-		}*/
+			err = fmt.Errorf("errors: %v", sb.String())
+		}
 		// We can end up with errors because one of the allowed availability
 		// zones doesn't have one of the allowed instance types; as long as
 		// an instance is launched, these errors aren't important.

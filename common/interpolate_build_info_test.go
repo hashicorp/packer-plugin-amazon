@@ -7,21 +7,21 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
 
-func testImage() *ec2.Image {
-	return &ec2.Image{
+func testImage() *ec2types.Image {
+	return &ec2types.Image{
 		ImageId:         aws.String("ami-abcd1234"),
 		CreationDate:    aws.String("ami_test_creation_date"),
 		Name:            aws.String("ami_test_name"),
 		OwnerId:         aws.String("ami_test_owner_id"),
 		ImageOwnerAlias: aws.String("ami_test_owner_alias"),
-		RootDeviceType:  aws.String("ebs"),
-		Tags: []*ec2.Tag{
+		RootDeviceType:  "ebs",
+		Tags: []ec2types.Tag{
 			{
 				Key:   aws.String("key-1"),
 				Value: aws.String("value-1"),
