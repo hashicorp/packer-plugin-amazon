@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
@@ -31,6 +33,23 @@ type StateChangeConf struct {
 	Refresh   StateRefreshFunc
 	StepState multistep.StateBag
 	Target    string
+}
+
+type envInfo struct {
+	envKey     string
+	Val        int
+	overridden bool
+}
+
+type overridableWaitVars struct {
+	awsPollDelaySeconds envInfo
+	awsMaxAttempts      envInfo
+	awsTimeoutSeconds   envInfo
+}
+
+type PollingOptions struct {
+	MaxWaitTime time.Duration
+	MinDelay    time.Duration
 }
 
 // Following are wrapper functions that use Packer's environment-variables to
@@ -63,6 +82,8 @@ type AWSPollingConfig struct {
 	// This value can also be set via the AWS_MAX_ATTEMPTS.
 	// If both option and environment variable are set, the max_attempts will be considered over the AWS_MAX_ATTEMPTS.
 	// If none is set, defaults to AWS waiter default which is 40 max_attempts.
+	// In aws sdk go v2, the max attempts is not set directly, but rather set via max wait time and delay seconds.
+	// maxWaitTime = maxAttempts * delaySeconds
 	MaxAttempts int `mapstructure:"max_attempts" required:"false"`
 	// Specifies the delay in seconds between attempts to check the resource state.
 	// This value can also be set via the AWS_POLL_DELAY_SECONDS.
@@ -122,4 +143,81 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 			"configuration options aws_polling_delay_seconds and aws_polling_max_attempts " +
 			"to your desired values.")
 	}
+}
+func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
+	options := PollingOptions{}
+
+	// if any of the env vars are not overridden, we return empty struct to allow the AWS SDK to use its defaults.
+
+	// if poll delay is set, we use that as the minimum delay.
+	if envOverrides.awsPollDelaySeconds.overridden {
+		options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+	}
+
+	// If user has set max attempts, aws sdk go v2 doesn't have a direct way to set max attempts,
+	// we calculate the max wait time instead.
+	if envOverrides.awsMaxAttempts.overridden {
+		maxWaitTime := time.Duration(envOverrides.awsMaxAttempts.Val) * time.Duration(envOverrides.
+			awsPollDelaySeconds.Val) * time.Second
+		options.MaxWaitTime = maxWaitTime
+		// if max attempts is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
+
+	} else if envOverrides.awsTimeoutSeconds.overridden {
+		options.MaxWaitTime = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		// if timeout is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
+
+	}
+
+	return &options
+}
+
+func getOverride(varInfo envInfo) envInfo {
+	override := os.Getenv(varInfo.envKey)
+	if override != "" {
+		n, err := strconv.Atoi(override)
+		if err != nil {
+			log.Printf("Invalid %s '%s', using default", varInfo.envKey, override)
+		} else {
+			varInfo.overridden = true
+			varInfo.Val = n
+		}
+	}
+
+	return varInfo
+}
+
+func getEnvOverrides() overridableWaitVars {
+	// Load env vars from environment.
+	envValues := overridableWaitVars{
+		envInfo{"AWS_POLL_DELAY_SECONDS", 2, false},
+		envInfo{"AWS_MAX_ATTEMPTS", 0, false},
+		envInfo{"AWS_TIMEOUT_SECONDS", 0, false},
+	}
+
+	envValues.awsMaxAttempts = getOverride(envValues.awsMaxAttempts)
+	envValues.awsPollDelaySeconds = getOverride(envValues.awsPollDelaySeconds)
+	envValues.awsTimeoutSeconds = getOverride(envValues.awsTimeoutSeconds)
+
+	return envValues
+}
+func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
+	envOverrides := getEnvOverrides()
+
+	if w.MaxAttempts != 0 {
+		envOverrides.awsMaxAttempts.Val = w.MaxAttempts
+		envOverrides.awsMaxAttempts.overridden = true
+	}
+	if w.DelaySeconds != 0 {
+		envOverrides.awsPollDelaySeconds.Val = w.DelaySeconds
+		envOverrides.awsPollDelaySeconds.overridden = true
+	}
+
+	waitOpts := applyEnvOverrides(envOverrides)
+	return waitOpts
 }
