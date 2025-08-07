@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
+
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
-func listEC2Regions(ctx context.Context, client Ec2Client) ([]string, error) {
+func listEC2Regions(ctx context.Context, client clients.Ec2Client) ([]string, error) {
 	var regions []string
 	resultRegions, err := client.DescribeRegions(ctx, nil)
 	if err != nil {

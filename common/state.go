@@ -6,10 +6,14 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -122,4 +126,55 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 			"configuration options aws_polling_delay_seconds and aws_polling_max_attempts " +
 			"to your desired values.")
 	}
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
+
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+	waiter := ec2.NewInstanceRunningWaiter(ec2Client)
+
+	//err := ec2Client.WaitUntilInstanceRunningWithContext(
+	//	ctx,
+	//	&instanceInput,
+	//	w.getWaiterOptions()...)
+
+	//todo fix the wait params.
+	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	return err
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+	waiter := ec2.NewInstanceTerminatedWaiter(ec2Client)
+
+	//err := conn.WaitUntilInstanceTerminatedWithContext(
+	//	ctx,
+	//	&instanceInput,
+	//	w.getWaiterOptions()...)
+
+	//todo fix the wait params.
+	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	return err
+}
+func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, client clients.Ec2Client, snapshotID string) error {
+	snapInput := ec2.DescribeSnapshotsInput{
+		SnapshotIds: []string{snapshotID},
+	}
+
+	//todo fix waiter params here
+	/*	waitOpts := w.getWaiterOptions()
+		if len(waitOpts) == 0 {
+			// Bump this default to 30 minutes.
+			// Large snapshots can take a long time for the copy to s3
+			waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
+		}
+	*/
+	maxWaitTime := 30 * time.Minute
+	waiter := ec2.NewSnapshotCompletedWaiter(client)
+	err := waiter.Wait(ctx, &snapInput, maxWaitTime)
+	return err
 }

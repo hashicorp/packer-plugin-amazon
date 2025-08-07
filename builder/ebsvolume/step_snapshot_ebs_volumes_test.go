@@ -9,39 +9,55 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 
 	//"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 // Define a mock struct to be used in unit tests for common aws steps.
 type mockEC2Conn struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 	Config *aws.Config
 }
 
-func (m *mockEC2Conn) CreateSnapshot(input *ec2.CreateSnapshotInput) (*ec2.Snapshot, error) {
-	snap := &ec2.Snapshot{
+func (m *mockEC2Conn) CreateSnapshot(ctx context.Context, params *ec2.CreateSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.CreateSnapshotOutput, error) {
+	snap := &ec2.CreateSnapshotOutput{
 		// This isn't typical amazon format, but injecting the volume id into
 		// this field lets us verify that the right volume was snapshotted with
 		// a simple string comparison
-		SnapshotId: aws.String(fmt.Sprintf("snap-of-%s", *input.VolumeId)),
+		SnapshotId: aws.String(fmt.Sprintf("snap-of-%s", *params.VolumeId)),
 	}
 
 	return snap, nil
 }
 
-func (m *mockEC2Conn) WaitUntilSnapshotCompletedWithContext(aws.Context, *ec2.DescribeSnapshotsInput, ...request.WaiterOption) error {
-	return nil
+func (m *mockEC2Conn) DescribeSnapshots(ctx context.Context, params *ec2.DescribeSnapshotsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSnapshotsOutput, error) {
+	// Return a fake snapshot that matches the volume ID in the request
+	snapshotId := fmt.Sprintf("snap-of-%s", params.SnapshotIds[0])
+	snap := &ec2.DescribeSnapshotsOutput{
+		Snapshots: []ec2types.Snapshot{
+			{
+				SnapshotId: aws.String(snapshotId),
+				State:      ec2types.SnapshotStateCompleted,
+			},
+		},
+	}
+
+	return snap, nil
 }
 
-func getMockConn(config *common.AccessConfig, target string) (ec2iface.EC2API, error) {
+/*func (m *mockEC2Conn) WaitUntilSnapshotCompletedWithContext(aws.Context, *ec2.DescribeSnapshotsInput,
+	...request.WaiterOption) error {
+	return nil
+}*/
+
+func getMockConn(config *common.AccessConfig, target string) (clients.Ec2Client, error) {
 	mockConn := &mockEC2Conn{
 		Config: aws.NewConfig(),
 	}
@@ -59,21 +75,21 @@ func tState(t *testing.T) multistep.StateBag {
 	// state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
 	conn, _ := getMockConn(&common.AccessConfig{}, "us-east-2")
 
-	state.Put("ec2", conn)
+	state.Put("ec2v2", conn)
 	// Store a fake instance that contains a block device that matches the
 	// volumes defined in the config above
-	state.Put("instance", &ec2.Instance{
+	state.Put("instance", ec2types.Instance{
 		InstanceId: aws.String("instance-id"),
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
+		BlockDeviceMappings: []ec2types.InstanceBlockDeviceMapping{
 			{
 				DeviceName: aws.String("/dev/xvda"),
-				Ebs: &ec2.EbsInstanceBlockDevice{
+				Ebs: &ec2types.EbsInstanceBlockDevice{
 					VolumeId: aws.String("vol-1234"),
 				},
 			},
 			{
 				DeviceName: aws.String("/dev/xvdb"),
-				Ebs: &ec2.EbsInstanceBlockDevice{
+				Ebs: &ec2types.EbsInstanceBlockDevice{
 					VolumeId: aws.String("vol-5678"),
 				},
 			},

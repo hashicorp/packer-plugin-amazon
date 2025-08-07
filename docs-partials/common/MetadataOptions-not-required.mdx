@@ -1,0 +1,16 @@
+<!-- Code generated from the comments of the MetadataOptions struct in common/run_config.go; DO NOT EDIT MANUALLY -->
+
+- `http_endpoint` (string) - A string to enable or disable the IMDS endpoint for an instance. Defaults to enabled.
+  Accepts either "enabled" or "disabled"
+
+- `http_tokens` (string) - A string to either set the use of IMDSv2 for the instance to optional or required. Defaults to "optional".
+  Accepts either "optional" or "required"
+
+- `http_put_response_hop_limit` (int32) - A numerical value to set an upper limit for the amount of hops allowed when communicating with IMDS endpoints.
+  Defaults to 1.
+
+- `instance_metadata_tags` (string) - A string to enable or disable access to instance tags from the instance metadata. Defaults to disabled.
+  Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
+  Accepts either "enabled" or "disabled"
+
+<!-- End of code generated from the comments of the MetadataOptions struct in common/run_config.go; -->
