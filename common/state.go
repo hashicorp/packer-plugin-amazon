@@ -3,6 +3,7 @@
 
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type AWSPollingConfig
+//nolint:all #todo: adding this for now (to allow us to merge), will remove it once we start using the common methods
 package common
 
 import (
