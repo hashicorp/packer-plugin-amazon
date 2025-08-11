@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -88,14 +87,14 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		s.createdInstanceProfileName = aws.ToString(profileResp.InstanceProfile.InstanceProfileName)
 
 		log.Printf("[DEBUG] Waiting for temporary instance profile: %s", s.createdInstanceProfileName)
-		waiter := iam.NewInstanceProfileExistsWaiter(iamsvc)
+
 		/*err = iamsvc.WaitUntilInstanceProfileExists(&iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
 		})*/
 		//todo fix the params here
-		err = waiter.Wait(ctx, &iam.GetInstanceProfileInput{
+		err = iam.NewInstanceProfileExistsWaiter(iamsvc).Wait(ctx, &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
-		}, 15*time.Minute)
+		}, AwsDefaultInstanceProfileExistsWaitTimeDuration)
 
 		if err == nil {
 			log.Printf("[DEBUG] Found instance profile %s", s.createdInstanceProfileName)
@@ -123,7 +122,6 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		s.createdRoleName = aws.ToString(roleResp.Role.RoleName)
 
 		log.Printf("[DEBUG] Waiting for temporary role: %s", s.createdInstanceProfileName)
-		roleWaiter := iam.NewRoleExistsWaiter(iamsvc)
 
 		/*err = iamsvc.WaitUntilRoleExistsWithContext(
 			aws.BackgroundContext(),
@@ -132,11 +130,24 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			},
 			s.PollingConfig.getWaiterOptions()...,
 		)*/
+		pollingOptions := s.PollingConfig.getWaiterOptions()
+		var optFns []func(*iam.RoleExistsWaiterOptions)
+
+		if pollingOptions.MaxWaitTime == nil {
+			log.Printf("************* USING DEFAULT MAX WAIT TIME FOR ROLE EXISTS WAITER *************")
+
+			pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultRoleExistsWaitTimeDuration)
+		}
+		if pollingOptions.MinDelay != nil {
+			optFns = append(optFns, func(o *iam.RoleExistsWaiterOptions) {
+				o.MinDelay = *pollingOptions.MinDelay
+			})
+		}
 
 		//todo fix the params here
-		err = roleWaiter.Wait(ctx, &iam.GetRoleInput{
+		err = iam.NewRoleExistsWaiter(iamsvc).Wait(ctx, &iam.GetRoleInput{
 			RoleName: aws.String(s.createdRoleName),
-		}, 15*time.Minute)
+		}, *pollingOptions.MaxWaitTime, optFns...)
 
 		if err == nil {
 			log.Printf("[DEBUG] Found temporary role %s", s.createdRoleName)

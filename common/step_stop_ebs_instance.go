@@ -6,8 +6,10 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
@@ -77,12 +79,24 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 
 	// Wait for the instance to actually stop
 	ui.Say("Waiting for the instance to stop...")
-	waiter := ec2.NewInstanceStoppedWaiter(ec2Client)
 	// todo (fix the params here)
-	maxWaitTime := 30 * time.Minute
-	err = waiter.Wait(ctx, &ec2.DescribeInstancesInput{
+	pollingOptions := s.PollingConfig.getWaiterOptions()
+	var optFns []func(*ec2.InstanceStoppedWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		log.Printf("************* USING DEFAULT MAX WAIT TIME *************")
+
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.InstanceStoppedWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+
+	err = ec2.NewInstanceStoppedWaiter(ec2Client).Wait(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{*instance.InstanceId},
-	}, maxWaitTime)
+	}, *pollingOptions.MaxWaitTime, optFns...)
 
 	/*	err = ec2Client.WaitUntilInstanceStoppedWithContext(ctx,
 		&ec2.DescribeInstancesInput{

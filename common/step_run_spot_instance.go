@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -416,10 +417,10 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			},
 		)
 	}
-
+	log.Printf("CREATE FLEEET INPUT IS: %s", awsutil.Prettify(createFleetInput))
 	var createOutput *ec2.CreateFleetOutput
 	err = retry.Config{
-		Tries: 30,
+		Tries: 11,
 		ShouldRetry: func(err error) bool {
 			log.Printf("**** INSIDE THE SHOULD RETRY FUNC")
 

@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -51,8 +52,8 @@ type overridableWaitVars struct {
 }
 
 type PollingOptions struct {
-	MaxWaitTime time.Duration
-	MinDelay    time.Duration
+	MaxWaitTime *time.Duration
+	MinDelay    *time.Duration
 }
 
 // Following are wrapper functions that use Packer's environment-variables to
@@ -94,6 +95,10 @@ type AWSPollingConfig struct {
 	// If none is set, defaults to AWS waiter default which is 15 seconds.
 	DelaySeconds int `mapstructure:"delay_seconds" required:"false"`
 }
+
+const AwsDefaultMaxWaitTimeDuration = 10 * time.Minute
+const AwsDefaultInstanceProfileExistsWaitTimeDuration = 40 * time.Second
+const AwsDefaultRoleExistsWaitTimeDuration = 20 * time.Second
 
 // This helper function uses the environment variables AWS_TIMEOUT_SECONDS and
 // AWS_POLL_DELAY_SECONDS to generate waiter options that can be passed into any
@@ -154,7 +159,7 @@ func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
 
 	// if poll delay is set, we use that as the minimum delay.
 	if envOverrides.awsPollDelaySeconds.overridden {
-		options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 	}
 
 	// If user has set max attempts, aws sdk go v2 doesn't have a direct way to set max attempts,
@@ -162,17 +167,17 @@ func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
 	if envOverrides.awsMaxAttempts.overridden {
 		maxWaitTime := time.Duration(envOverrides.awsMaxAttempts.Val) * time.Duration(envOverrides.
 			awsPollDelaySeconds.Val) * time.Second
-		options.MaxWaitTime = maxWaitTime
+		options.MaxWaitTime = aws.Duration(maxWaitTime)
 		// if max attempts is set and poll delay is not set, we default to 2 seconds.
 		if !envOverrides.awsPollDelaySeconds.overridden {
-			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+			options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 		}
 
 	} else if envOverrides.awsTimeoutSeconds.overridden {
-		options.MaxWaitTime = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		options.MaxWaitTime = aws.Duration(time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second)
 		// if timeout is set and poll delay is not set, we default to 2 seconds.
 		if !envOverrides.awsPollDelaySeconds.overridden {
-			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+			options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 		}
 
 	}
@@ -209,6 +214,8 @@ func getEnvOverrides() overridableWaitVars {
 
 	return envValues
 }
+
+// we have changed the return type to PollingOptions here as SDK v2 does not have request.WaiterOptions
 func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 	envOverrides := getEnvOverrides()
 
@@ -230,7 +237,20 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	}
-	waiter := ec2.NewInstanceRunningWaiter(ec2Client)
+
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(*ec2.InstanceRunningWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		log.Printf("************* USING DEFAULT MAX WAIT TIME *************")
+
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.InstanceRunningWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
 
 	//err := ec2Client.WaitUntilInstanceRunningWithContext(
 	//	ctx,
@@ -238,7 +258,7 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 	//	w.getWaiterOptions()...)
 
 	//todo fix the wait params.
-	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	err := ec2.NewInstanceRunningWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
 
@@ -246,7 +266,19 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	}
-	waiter := ec2.NewInstanceTerminatedWaiter(ec2Client)
+
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.InstanceTerminatedWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		log.Printf("************* USING DEFAULT MAX WAIT TIME *************")
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.InstanceTerminatedWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
 
 	//err := conn.WaitUntilInstanceTerminatedWithContext(
 	//	ctx,
@@ -254,12 +286,24 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 	//	w.getWaiterOptions()...)
 
 	//todo fix the wait params.
-	err := waiter.Wait(ctx, &instanceInput, 15*time.Minute)
+	err := ec2.NewInstanceTerminatedWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
-func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, client clients.Ec2Client, snapshotID string) error {
+func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client clients.Ec2Client, snapshotID string) error {
 	snapInput := ec2.DescribeSnapshotsInput{
 		SnapshotIds: []string{snapshotID},
+	}
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		log.Printf("************* USING 30 MIN DEFAULT *************")
+		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.SnapshotCompletedWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
 	}
 
 	//todo fix waiter params here
@@ -270,8 +314,7 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, client cli
 			waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
 		}
 	*/
-	maxWaitTime := 30 * time.Minute
-	waiter := ec2.NewSnapshotCompletedWaiter(client)
-	err := waiter.Wait(ctx, &snapInput, maxWaitTime)
+
+	err := ec2.NewSnapshotCompletedWaiter(ec2Client).Wait(ctx, &snapInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
