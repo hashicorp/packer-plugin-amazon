@@ -16,10 +16,10 @@ import (
 )
 
 // DestroyAMIs deregisters the AWS machine images in imageids from an active AWS account
-func DestroyAMIs(imageids []string, client Ec2Client) error {
+func DestroyAMIs(imageIds []string, client Ec2Client) error {
 	ctx := context.TODO()
 	resp, err := client.DescribeImages(ctx, &ec2.DescribeImagesInput{
-		ImageIds: imageids,
+		ImageIds: imageIds,
 	})
 
 	if err != nil {

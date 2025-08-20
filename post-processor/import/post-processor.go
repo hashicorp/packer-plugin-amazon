@@ -197,6 +197,10 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	var err error
 	config, err := p.config.Config(ctx)
 
+	if err != nil {
+		return nil, false, false, err
+	}
+
 	generatedData := artifact.State("generated_data")
 	if generatedData == nil {
 		// Make sure it's not a nil map so we can assign to it later.
@@ -275,6 +279,9 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	log.Printf("Calling EC2 to import from s3://%s/%s", p.config.S3Bucket, p.config.S3Key)
 
 	ec2Client, err := p.config.NewEC2Client(ctx)
+	if err != nil {
+		return nil, false, false, fmt.Errorf("failed to create EC2 client: %s", err)
+	}
 
 	params := &ec2.ImportImageInput{
 		Encrypted: &p.config.Encrypt,
