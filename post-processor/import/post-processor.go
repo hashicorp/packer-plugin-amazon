@@ -13,12 +13,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -168,10 +172,10 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 			errs, fmt.Errorf("invalid boot mode '%s' for 'arm64' architecture", p.config.BootMode))
 	}
 
-	if p.config.AMIIMDSSupport != "" && p.config.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+	if p.config.AMIIMDSSupport != "" && p.config.AMIIMDSSupport != string(ec2types.ImdsSupportValuesV20) {
 		errs = packersdk.MultiErrorAppend(errs,
 			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
-				ec2.ImdsSupportValuesV20),
+				string(ec2types.ImdsSupportValuesV20)),
 		)
 	}
 
@@ -191,6 +195,7 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 
 func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifact packersdk.Artifact) (packersdk.Artifact, bool, bool, error) {
 	var err error
+	config, err := p.config.Config(ctx)
 
 	generatedData := artifact.State("generated_data")
 	if generatedData == nil {
@@ -199,11 +204,11 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 	p.config.ctx.Data = generatedData
 
-	session, err := p.config.Session()
 	if err != nil {
 		return nil, false, false, err
 	}
-	config := session.Config
+
+	s3Client := s3.NewFromConfig(*config)
 
 	// Render this key since we didn't in the configure phase
 	p.config.S3Key, err = interpolate.Render(p.config.S3Key, &p.config.ctx)
@@ -228,7 +233,7 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	if p.config.S3Encryption == "AES256" && p.config.S3EncryptionKey != "" {
-		ui.Message(fmt.Sprintf("Ignoring s3_encryption_key because s3_encryption is set to '%s'", p.config.S3Encryption))
+		ui.Say(fmt.Sprintf("Ignoring s3_encryption_key because s3_encryption is set to '%s'", p.config.S3Encryption))
 	}
 
 	// open the source file
@@ -238,10 +243,10 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		return nil, false, false, fmt.Errorf("Failed to open %s: %s", source, err)
 	}
 
-	ui.Message(fmt.Sprintf("Uploading %s to s3://%s/%s", source, p.config.S3Bucket, p.config.S3Key))
+	ui.Say(fmt.Sprintf("Uploading %s to s3://%s/%s", source, p.config.S3Bucket, p.config.S3Key))
 
 	// Prepare S3 request
-	updata := &s3manager.UploadInput{
+	updata := &s3.PutObjectInput{
 		Body:   file,
 		Bucket: &p.config.S3Bucket,
 		Key:    &p.config.S3Key,
@@ -249,40 +254,41 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 
 	// Add encryption if specified in the config
 	if p.config.S3Encryption != "" {
-		updata.ServerSideEncryption = &p.config.S3Encryption
-		if p.config.S3Encryption == "aws:kms" && p.config.S3EncryptionKey != "" {
-			updata.SSEKMSKeyId = &p.config.S3EncryptionKey
+		updata.ServerSideEncryption = s3types.ServerSideEncryption(p.config.S3Encryption)
+		if p.config.S3Encryption == string(s3types.ServerSideEncryptionAwsKms) && p.config.S3EncryptionKey != "" {
+			updata.SSEKMSKeyId = aws.String(p.config.S3EncryptionKey)
 		}
 	}
 
 	// Copy the image file into the S3 bucket specified
-	uploader := s3manager.NewUploader(session)
-	if _, err = uploader.Upload(updata); err != nil {
+	uploader := manager.NewUploader(s3Client)
+	if _, err = uploader.Upload(ctx, updata); err != nil {
 		return nil, false, false, fmt.Errorf("Failed to upload %s: %s", source, err)
 	}
 
 	// May as well stop holding this open now
 	file.Close()
 
-	ui.Message(fmt.Sprintf("Completed upload of %s to s3://%s/%s", source, p.config.S3Bucket, p.config.S3Key))
+	ui.Say(fmt.Sprintf("Completed upload of %s to s3://%s/%s", source, p.config.S3Bucket, p.config.S3Key))
 
 	// Call EC2 image import process
 	log.Printf("Calling EC2 to import from s3://%s/%s", p.config.S3Bucket, p.config.S3Key)
 
-	ec2conn := ec2.New(session)
+	ec2Client, err := p.config.NewEC2Client(ctx)
+
 	params := &ec2.ImportImageInput{
 		Encrypted: &p.config.Encrypt,
-		DiskContainers: []*ec2.ImageDiskContainer{
+		DiskContainers: []ec2types.ImageDiskContainer{
 			{
 				Format: &p.config.Format,
-				UserBucket: &ec2.UserBucket{
+				UserBucket: &ec2types.UserBucket{
 					S3Bucket: &p.config.S3Bucket,
 					S3Key:    &p.config.S3Key,
 				},
 			},
 		},
 		Architecture: &p.config.Architecture,
-		BootMode:     &p.config.BootMode,
+		BootMode:     ec2types.BootModeValues(p.config.BootMode),
 		Platform:     &p.config.Platform,
 	}
 
@@ -291,20 +297,20 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	if p.config.RoleName != "" {
-		params.SetRoleName(p.config.RoleName)
+		params.RoleName = &p.config.RoleName
 	}
 
 	if p.config.LicenseType != "" {
-		ui.Message(fmt.Sprintf("Setting license type to '%s'", p.config.LicenseType))
+		ui.Say(fmt.Sprintf("Setting license type to '%s'", p.config.LicenseType))
 		params.LicenseType = &p.config.LicenseType
 	}
 
-	var import_start *ec2.ImportImageOutput
+	var importStart *ec2.ImportImageOutput
 	err = retry.Config{
 		Tries:      11,
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		import_start, err = ec2conn.ImportImage(params)
+		importStart, err = ec2Client.ImportImage(ctx, params)
 		return err
 	})
 
@@ -312,57 +318,59 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 		return nil, false, false, fmt.Errorf("Failed to start import from s3://%s/%s: %s", p.config.S3Bucket, p.config.S3Key, err)
 	}
 
-	ui.Message(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key, *import_start.ImportTaskId))
+	ui.Say(fmt.Sprintf("Started import of s3://%s/%s, task id %s", p.config.S3Bucket, p.config.S3Key,
+		*importStart.ImportTaskId))
 
 	// Wait for import process to complete, this takes a while
-	ui.Message(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *import_start.ImportTaskId))
-	err = p.config.PollingConfig.WaitUntilImageImported(aws.BackgroundContext(), ec2conn, *import_start.ImportTaskId)
+	ui.Say(fmt.Sprintf("Waiting for task %s to complete (may take a while)", *importStart.ImportTaskId))
+
+	err = p.config.PollingConfig.WaitUntilImageImported(ctx, ec2Client, *importStart.ImportTaskId)
 	if err != nil {
 
 		// Retrieve the status message
-		import_result, err2 := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
-			ImportTaskIds: []*string{
-				import_start.ImportTaskId,
+		importResult, err2 := ec2Client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
+			ImportTaskIds: []string{
+				*importStart.ImportTaskId,
 			},
 		})
 
 		statusMessage := "Error retrieving status message"
 
 		if err2 == nil {
-			statusMessage = *import_result.ImportImageTasks[0].StatusMessage
+			statusMessage = *importResult.ImportImageTasks[0].StatusMessage
 		}
-		return nil, false, false, fmt.Errorf("Import task %s failed with status message: %s, error: %s", *import_start.ImportTaskId, statusMessage, err)
+		return nil, false, false, fmt.Errorf("Import task %s failed with status message: %s, error: %s", *importStart.ImportTaskId, statusMessage, err)
 	}
 
 	// Retrieve what the outcome was for the import task
-	import_result, err := ec2conn.DescribeImportImageTasks(&ec2.DescribeImportImageTasksInput{
-		ImportTaskIds: []*string{
-			import_start.ImportTaskId,
+	importResult, err := ec2Client.DescribeImportImageTasks(ctx, &ec2.DescribeImportImageTasksInput{
+		ImportTaskIds: []string{
+			*importStart.ImportTaskId,
 		},
 	})
 
 	if err != nil {
-		return nil, false, false, fmt.Errorf("Failed to find import task %s: %s", *import_start.ImportTaskId, err)
+		return nil, false, false, fmt.Errorf("Failed to find import task %s: %s", *importStart.ImportTaskId, err)
 	}
 	// Check it was actually completed
-	if *import_result.ImportImageTasks[0].Status != "completed" {
+	if *importResult.ImportImageTasks[0].Status != "completed" {
 		// The most useful error message is from the job itself
-		return nil, false, false, fmt.Errorf("Import task %s failed: %s", *import_start.ImportTaskId, *import_result.ImportImageTasks[0].StatusMessage)
+		return nil, false, false, fmt.Errorf("Import task %s failed: %s", *importStart.ImportTaskId, *importResult.ImportImageTasks[0].StatusMessage)
 	}
 
-	ui.Message(fmt.Sprintf("Import task %s complete", *import_start.ImportTaskId))
+	ui.Say(fmt.Sprintf("Import task %s complete", *importStart.ImportTaskId))
 
 	// Pull AMI ID out of the completed job
-	createdami := *import_result.ImportImageTasks[0].ImageId
+	createdami := *importResult.ImportImageTasks[0].ImageId
 
 	if p.config.Name != "" {
 
-		ui.Message(fmt.Sprintf("Starting rename of AMI (%s)", createdami))
+		ui.Say(fmt.Sprintf("Starting rename of AMI (%s)", createdami))
 
 		copyInput := &ec2.CopyImageInput{
 			Name:          &p.config.Name,
 			SourceImageId: &createdami,
-			SourceRegion:  config.Region,
+			SourceRegion:  aws.String(config.Region),
 		}
 		if p.config.Encrypt {
 			copyInput.Encrypted = aws.Bool(p.config.Encrypt)
@@ -371,26 +379,26 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 			}
 		}
 
-		resp, err := ec2conn.CopyImage(copyInput)
+		resp, err := ec2Client.CopyImage(ctx, copyInput)
 
 		if err != nil {
 			return nil, false, false, fmt.Errorf("Error Copying AMI (%s): %s", createdami, err)
 		}
 
-		ui.Message("Waiting for AMI rename to complete (may take a while)")
+		ui.Say("Waiting for AMI rename to complete (may take a while)")
 
-		if err := p.config.PollingConfig.WaitUntilAMIAvailable(aws.BackgroundContext(), ec2conn, *resp.ImageId); err != nil {
+		if err := p.config.PollingConfig.WaitUntilAMIAvailable(ctx, ec2Client, *resp.ImageId); err != nil {
 			return nil, false, false, fmt.Errorf("Error waiting for AMI (%s): %s", *resp.ImageId, err)
 		}
 
 		// Clean up intermediary image now that it has successfully been renamed.
-		ui.Message("Destroying intermediary AMI...")
-		err = awscommon.DestroyAMIs([]*string{&createdami}, ec2conn)
+		ui.Say("Destroying intermediary AMI...")
+		err = awscommon.DestroyAMIs([]string{createdami}, ec2Client)
 		if err != nil {
 			return nil, false, false, fmt.Errorf("Error deregistering existing AMI: %s", err)
 		}
 
-		ui.Message("AMI rename completed")
+		ui.Say("AMI rename completed")
 
 		createdami = *resp.ImageId
 	}
@@ -398,23 +406,23 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	// If we have tags, then apply them now to both the AMI and snaps
 	// created by the import
 	if len(p.config.Tags) > 0 {
-		var ec2Tags []*ec2.Tag
+		var ec2Tags []ec2types.Tag
 
 		log.Printf("Repacking tags into AWS format")
 
 		for key, value := range p.config.Tags {
-			ui.Message(fmt.Sprintf("Adding tag \"%s\": \"%s\"", key, value))
-			ec2Tags = append(ec2Tags, &ec2.Tag{
+			ui.Say(fmt.Sprintf("Adding tag \"%s\": \"%s\"", key, value))
+			ec2Tags = append(ec2Tags, ec2types.Tag{
 				Key:   aws.String(key),
 				Value: aws.String(value),
 			})
 		}
 
-		resourceIds := []*string{&createdami}
+		resourceIds := []string{createdami}
 
 		log.Printf("Getting details of %s", createdami)
 
-		imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+		imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 			ImageIds: resourceIds,
 		})
 
@@ -432,14 +440,14 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 
 		for _, device := range image.BlockDeviceMappings {
 			if device.Ebs != nil && device.Ebs.SnapshotId != nil {
-				ui.Message(fmt.Sprintf("Tagging snapshot %s", *device.Ebs.SnapshotId))
-				resourceIds = append(resourceIds, device.Ebs.SnapshotId)
+				ui.Say(fmt.Sprintf("Tagging snapshot %s", *device.Ebs.SnapshotId))
+				resourceIds = append(resourceIds, *device.Ebs.SnapshotId)
 			}
 		}
 
-		ui.Message(fmt.Sprintf("Tagging AMI %s", createdami))
+		ui.Say(fmt.Sprintf("Tagging AMI %s", createdami))
 
-		_, err = ec2conn.CreateTags(&ec2.CreateTagsInput{
+		_, err = ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
 			Resources: resourceIds,
 			Tags:      ec2Tags,
 		})
@@ -455,21 +463,21 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	options := make(map[string]*ec2.ModifyImageAttributeInput)
 	if p.config.Description != "" {
 		options["description"] = &ec2.ModifyImageAttributeInput{
-			Description: &ec2.AttributeValue{Value: &p.config.Description},
+			Description: &ec2types.AttributeValue{Value: &p.config.Description},
 		}
 	}
 
 	if len(p.config.Groups) > 0 {
-		groups := make([]*string, len(p.config.Groups))
-		adds := make([]*ec2.LaunchPermission, len(p.config.Groups))
+		groups := make([]string, len(p.config.Groups))
+		adds := make([]ec2types.LaunchPermission, len(p.config.Groups))
 		addGroups := &ec2.ModifyImageAttributeInput{
-			LaunchPermission: &ec2.LaunchPermissionModifications{},
+			LaunchPermission: &ec2types.LaunchPermissionModifications{},
 		}
 
 		for i, g := range p.config.Groups {
-			groups[i] = aws.String(g)
-			adds[i] = &ec2.LaunchPermission{
-				Group: aws.String(g),
+			groups[i] = g
+			adds[i] = ec2types.LaunchPermission{
+				Group: ec2types.PermissionGroup(g),
 			}
 		}
 		addGroups.UserGroups = groups
@@ -479,45 +487,45 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	if len(p.config.Users) > 0 {
-		users := make([]*string, len(p.config.Users))
-		adds := make([]*ec2.LaunchPermission, len(p.config.Users))
+		users := make([]string, len(p.config.Users))
+		adds := make([]ec2types.LaunchPermission, len(p.config.Users))
 		for i, u := range p.config.Users {
-			users[i] = aws.String(u)
-			adds[i] = &ec2.LaunchPermission{UserId: aws.String(u)}
+			users[i] = u
+			adds[i] = ec2types.LaunchPermission{UserId: aws.String(u)}
 		}
 		options["users"] = &ec2.ModifyImageAttributeInput{
 			UserIds: users,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: adds,
 			},
 		}
 	}
 
 	if len(p.config.OrgArns) > 0 {
-		orgArns := make([]*string, len(p.config.OrgArns))
-		adds := make([]*ec2.LaunchPermission, len(p.config.OrgArns))
+		orgArns := make([]string, len(p.config.OrgArns))
+		adds := make([]ec2types.LaunchPermission, len(p.config.OrgArns))
 		for i, u := range p.config.OrgArns {
-			orgArns[i] = aws.String(u)
-			adds[i] = &ec2.LaunchPermission{OrganizationArn: aws.String(u)}
+			orgArns[i] = u
+			adds[i] = ec2types.LaunchPermission{OrganizationArn: aws.String(u)}
 		}
 		options["ami org arns"] = &ec2.ModifyImageAttributeInput{
 			OrganizationArns: orgArns,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: adds,
 			},
 		}
 	}
 
 	if len(p.config.OuArns) > 0 {
-		ouArns := make([]*string, len(p.config.OuArns))
-		adds := make([]*ec2.LaunchPermission, len(p.config.OuArns))
+		ouArns := make([]string, len(p.config.OuArns))
+		adds := make([]ec2types.LaunchPermission, len(p.config.OuArns))
 		for i, u := range p.config.OuArns {
-			ouArns[i] = aws.String(u)
-			adds[i] = &ec2.LaunchPermission{OrganizationalUnitArn: aws.String(u)}
+			ouArns[i] = u
+			adds[i] = ec2types.LaunchPermission{OrganizationalUnitArn: aws.String(u)}
 		}
 		options["ami ou arns"] = &ec2.ModifyImageAttributeInput{
 			OrganizationalUnitArns: ouArns,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: adds,
 			},
 		}
@@ -525,16 +533,16 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 
 	if p.config.AMIIMDSSupport != "" {
 		options["ami imds support"] = &ec2.ModifyImageAttributeInput{
-			ImdsSupport: &ec2.AttributeValue{Value: &p.config.AMIIMDSSupport},
+			ImdsSupport: &ec2types.AttributeValue{Value: &p.config.AMIIMDSSupport},
 		}
 
 	}
 
 	if len(options) > 0 {
 		for name, input := range options {
-			ui.Message(fmt.Sprintf("Modifying: %s", name))
+			ui.Say(fmt.Sprintf("Modifying: %s", name))
 			input.ImageId = &createdami
-			_, err := ec2conn.ModifyImageAttribute(input)
+			_, err := ec2Client.ModifyImageAttribute(ctx, input)
 			if err != nil {
 				return nil, false, false, fmt.Errorf("Error modifying AMI attributes: %s", err)
 			}
@@ -542,19 +550,19 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 
 	// Add the reported AMI ID to the artifact list
-	log.Printf("Adding created AMI ID %s in region %s to output artifacts", createdami, *config.Region)
+	log.Printf("Adding created AMI ID %s in region %s to output artifacts", createdami, config.Region)
 	artifact = &awscommon.Artifact{
 		Amis: map[string]string{
-			*config.Region: createdami,
+			config.Region: createdami,
 		},
 		BuilderIdValue: BuilderId,
-		Session:        session,
+		Config:         config,
 	}
 
 	if !p.config.SkipClean {
-		ui.Message(fmt.Sprintf("Deleting import source s3://%s/%s", p.config.S3Bucket, p.config.S3Key))
-		s3conn := s3.New(session)
-		_, err = s3conn.DeleteObject(&s3.DeleteObjectInput{
+		ui.Say(fmt.Sprintf("Deleting import source s3://%s/%s", p.config.S3Bucket, p.config.S3Key))
+
+		_, err = s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 			Bucket: &p.config.S3Bucket,
 			Key:    &p.config.S3Key,
 		})
