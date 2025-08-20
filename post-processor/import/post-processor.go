@@ -208,10 +208,6 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 	}
 	p.config.ctx.Data = generatedData
 
-	if err != nil {
-		return nil, false, false, err
-	}
-
 	s3Client := s3.NewFromConfig(*config)
 
 	// Render this key since we didn't in the configure phase
