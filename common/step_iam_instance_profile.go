@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -88,9 +89,6 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		log.Printf("[DEBUG] Waiting for temporary instance profile: %s", s.createdInstanceProfileName)
 
-		/*err = iamsvc.WaitUntilInstanceProfileExists(&iam.GetInstanceProfileInput{
-			InstanceProfileName: aws.String(s.createdInstanceProfileName),
-		})*/
 		//todo fix the params here
 		err = iam.NewInstanceProfileExistsWaiter(iamsvc).Wait(ctx, &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
@@ -184,6 +182,11 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 
 		s.roleIsAttached = true
+		// Sleep to allow IAM changes to propagate
+		// In aws sdk go v2, we noticed if there was no Wait, the spot fleet requests were failing even with retry.
+		// Adding a delay here to allow IAM changes to propagate
+
+		time.Sleep(5 * time.Second)
 		state.Put("iamInstanceProfile", aws.ToString(profileResp.InstanceProfile.InstanceProfileName))
 	}
 

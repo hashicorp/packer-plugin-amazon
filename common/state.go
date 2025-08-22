@@ -318,3 +318,25 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 	err := ec2.NewSnapshotCompletedWaiter(ec2Client).Wait(ctx, &snapInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
+
+func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2Client clients.Ec2Client,
+	securityGroupId string) error {
+	securityGroupInput := ec2.DescribeSecurityGroupsInput{
+		GroupIds: []string{securityGroupId},
+	}
+	log.Printf("********Waiting for security group %s to exist", securityGroupId)
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		pollingOptions.MaxWaitTime = aws.Duration(200 * time.Second)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.SecurityGroupExistsWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+	err := ec2.NewSecurityGroupExistsWaiter(ec2Client).Wait(ctx, &securityGroupInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+
+}

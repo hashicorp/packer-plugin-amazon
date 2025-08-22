@@ -22,6 +22,7 @@ import (
 )
 
 type StepSecurityGroup struct {
+	PollingConfig             *AWSPollingConfig
 	CommConfig                *communicator.Config
 	SecurityGroupFilter       SecurityGroupFilterOptions
 	SecurityGroupIds          []string
@@ -128,11 +129,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	// Wait for the security group become available for authorizing
 	log.Printf("[DEBUG] Waiting for temporary security group: %s", s.createdGroupId)
-	err = waitUntilSecurityGroupExists(ec2Client,
-		&ec2.DescribeSecurityGroupsInput{
-			GroupIds: []string{s.createdGroupId},
-		},
-	)
+	err = s.PollingConfig.WaitUntilSecurityGroupExists(ctx, ec2Client, s.createdGroupId)
 	if err != nil {
 		err := fmt.Errorf("Timed out waiting for security group %s: %s", s.createdGroupId, err)
 		log.Printf("[DEBUG] %s", err.Error())
@@ -249,9 +246,4 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 			"Error cleaning up security group. Please delete the group manually:"+
 				" err: %s; security group ID: %s", err, s.createdGroupId))
 	}
-}
-
-func waitUntilSecurityGroupExists(c clients.Ec2Client, input *ec2.DescribeSecurityGroupsInput) error {
-	//todo implement the wait logic
-	return nil
 }
