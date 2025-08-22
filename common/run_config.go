@@ -142,6 +142,7 @@ type RunConfig struct {
 	// duration. Note: This parameter is no longer available to new customers
 	// from July 1, 2021. [See Amazon's
 	//documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
+	// Deprecated argument
 	BlockDurationMinutes int64 `mapstructure:"block_duration_minutes" required:"false"`
 	// Set the preference for using a capacity reservation if one exists.
 	// Either will be `open` or `none`. Defaults to `none`

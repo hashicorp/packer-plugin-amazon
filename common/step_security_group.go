@@ -89,7 +89,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 			securityGroupIds = append(securityGroupIds, *sg.GroupId)
 		}
 
-		ui.Message(fmt.Sprintf("Found Security Group(s): %s", strings.Join(securityGroupIds, ", ")))
+		ui.Say(fmt.Sprintf("Found Security Group(s): %s", strings.Join(securityGroupIds, ", ")))
 		state.Put("securityGroupIds", securityGroupIds)
 
 		return multistep.ActionContinue

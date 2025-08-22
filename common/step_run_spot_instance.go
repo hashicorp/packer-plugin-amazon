@@ -8,15 +8,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -125,7 +124,6 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 	ui := state.Get("ui").(packersdk.Ui)
 
 	iamInstanceProfile := aws.String(state.Get("iamInstanceProfile").(string))
-	log.Printf("****INSTANCE PROFILE IS %s", *iamInstanceProfile)
 
 	// Create a launch template.
 	templateData := ec2types.RequestLaunchTemplateData{
@@ -202,7 +200,7 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 	userData := s.UserData
 	if s.UserDataFile != "" {
-		contents, err := ioutil.ReadFile(s.UserDataFile)
+		contents, err := os.ReadFile(s.UserDataFile)
 		if err != nil {
 			return "", fmt.Errorf("Problem reading user data file: %s", err)
 		}
@@ -276,11 +274,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	if s.SpotPrice != "auto" {
 		spotOptions.MaxPrice = &s.SpotPrice
 	}
-	if s.BlockDurationMinutes != 0 {
-		//todo circle back on this.
-		// Block Duration Minutes seemed to be deprecated
-		//spotOptions.BlockDurationMinutes = &s.BlockDurationMinutes
-	}
+	// Block Duration Minutes is not supported in aws sdk go v2
+	/*
+		if s.BlockDurationMinutes != 0 {
+			spotOptions.BlockDurationMinutes = &s.BlockDurationMinutes
+		}
+	*/
 	marketOptions := &ec2types.LaunchTemplateInstanceMarketOptionsRequest{
 		SpotOptions: &spotOptions,
 	}
@@ -295,7 +294,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	// Create a launch template for the instance
-	ui.Message("Loading User Data File...")
+	ui.Say("Loading User Data File...")
 
 	// Generate a random name to avoid conflicting with other
 	// instances of packer running in this AWS account
@@ -309,7 +308,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	ui.Message("Creating Spot Fleet launch template...")
+	ui.Say("Creating Spot Fleet launch template...")
 	templateData := s.CreateTemplateData(&userData, az, state, marketOptions)
 	launchTemplate := &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: templateData,
@@ -364,7 +363,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	launchTemplateId := createLaunchTemplateOutput.LaunchTemplate.LaunchTemplateId
-	ui.Message(fmt.Sprintf("Created Spot Fleet launch template: %s", *launchTemplateId))
+	ui.Say(fmt.Sprintf("Created Spot Fleet launch template: %s", *launchTemplateId))
 
 	// Add overrides for each user-provided instance type
 	var overrides []ec2types.FleetLaunchTemplateOverridesRequest
@@ -417,18 +416,14 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			},
 		)
 	}
-	log.Printf("CREATE FLEEET INPUT IS: %s", awsutil.Prettify(createFleetInput))
 	var createOutput *ec2.CreateFleetOutput
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			log.Printf("**** INSIDE THE SHOULD RETRY FUNC")
-
 			if strings.Contains(err.Error(), "Invalid IAM Instance Profile name") {
 				// eventual consistency of the profile. PutRolePolicy &
 				// AddRoleToInstanceProfile are eventually consistent and once
 				// we can wait on those operations, this can be removed.
-				log.Printf("*****INVALID INSTANCE PROFILE ERROR, RETRYING")
 				return true
 			}
 			if err.Error() == "InsufficientInstanceCapacity" {
@@ -439,10 +434,6 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
 		createOutput, err = ec2Client.CreateFleet(ctx, createFleetInput)
-		/*if err == nil && createOutput.Errors != nil {
-			err = fmt.Errorf("errors: %v", awsutil.Prettify(createOutput.Errors))
-			//log.Printf("******FLEET ERRORS ARE: %v", err.Error())
-		}*/
 		if err == nil && createOutput.Errors != nil {
 			var sb strings.Builder
 			for _, fleetErr := range createOutput.Errors {
@@ -596,15 +587,15 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 
 	if s.Debug {
 		if instance.PublicDnsName != nil && *instance.PublicDnsName != "" {
-			ui.Message(fmt.Sprintf("Public DNS: %s", *instance.PublicDnsName))
+			ui.Say(fmt.Sprintf("Public DNS: %s", *instance.PublicDnsName))
 		}
 
 		if instance.PublicIpAddress != nil && *instance.PublicIpAddress != "" {
-			ui.Message(fmt.Sprintf("Public IP: %s", *instance.PublicIpAddress))
+			ui.Say(fmt.Sprintf("Public IP: %s", *instance.PublicIpAddress))
 		}
 
 		if instance.PrivateIpAddress != nil && *instance.PrivateIpAddress != "" {
-			ui.Message(fmt.Sprintf("Private IP: %s", *instance.PrivateIpAddress))
+			ui.Say(fmt.Sprintf("Private IP: %s", *instance.PrivateIpAddress))
 		}
 	}
 

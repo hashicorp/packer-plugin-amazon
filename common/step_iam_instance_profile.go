@@ -89,7 +89,6 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		log.Printf("[DEBUG] Waiting for temporary instance profile: %s", s.createdInstanceProfileName)
 
-		//todo fix the params here
 		err = iam.NewInstanceProfileExistsWaiter(iamsvc).Wait(ctx, &iam.GetInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
 		}, AwsDefaultInstanceProfileExistsWaitTimeDuration)
@@ -121,19 +120,10 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		log.Printf("[DEBUG] Waiting for temporary role: %s", s.createdInstanceProfileName)
 
-		/*err = iamsvc.WaitUntilRoleExistsWithContext(
-			aws.BackgroundContext(),
-			&iam.GetRoleInput{
-				RoleName: aws.String(s.createdRoleName),
-			},
-			s.PollingConfig.getWaiterOptions()...,
-		)*/
 		pollingOptions := s.PollingConfig.getWaiterOptions()
 		var optFns []func(*iam.RoleExistsWaiterOptions)
 
 		if pollingOptions.MaxWaitTime == nil {
-			log.Printf("************* USING DEFAULT MAX WAIT TIME FOR ROLE EXISTS WAITER *************")
-
 			pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultRoleExistsWaitTimeDuration)
 		}
 		if pollingOptions.MinDelay != nil {
@@ -141,8 +131,6 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 				o.MinDelay = *pollingOptions.MinDelay
 			})
 		}
-
-		//todo fix the params here
 		err = iam.NewRoleExistsWaiter(iamsvc).Wait(ctx, &iam.GetRoleInput{
 			RoleName: aws.String(s.createdRoleName),
 		}, *pollingOptions.MaxWaitTime, optFns...)

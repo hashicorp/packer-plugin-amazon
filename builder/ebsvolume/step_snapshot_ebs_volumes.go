@@ -72,7 +72,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 					input.TagSpecifications = nil
 				}
 
-				ui.Message(fmt.Sprintf("Requesting snapshot of volume: %s...", *instanceBlockDevice.Ebs.VolumeId))
+				ui.Say(fmt.Sprintf("Requesting snapshot of volume: %s...", *instanceBlockDevice.Ebs.VolumeId))
 				snapshot, err := ec2Client.CreateSnapshot(ctx, input)
 				if err != nil || snapshot == nil {
 					err := fmt.Errorf("Error generating snapsot for volume %s: %s", *instanceBlockDevice.Ebs.VolumeId, err)
@@ -80,7 +80,8 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 					ui.Error(err.Error())
 					return multistep.ActionHalt
 				}
-				ui.Message(fmt.Sprintf("Requested Snapshot of Volume %s: %s", *instanceBlockDevice.Ebs.VolumeId, *snapshot.SnapshotId))
+				ui.Say(fmt.Sprintf("Requested Snapshot of Volume %s: %s", *instanceBlockDevice.Ebs.VolumeId,
+					*snapshot.SnapshotId))
 				s.snapshotMap[*snapshot.SnapshotId] = &configVolumeMapping
 			}
 		}
@@ -88,16 +89,16 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 
 	ui.Say("Waiting for Snapshots to become ready...")
 	for snapID := range s.snapshotMap {
-		ui.Message(fmt.Sprintf("Waiting for %s to be ready.", snapID))
+		ui.Say(fmt.Sprintf("Waiting for %s to be ready.", snapID))
 		err := s.PollingConfig.WaitUntilSnapshotDone(ctx, ec2Client, snapID)
 		if err != nil {
 			err = fmt.Errorf("Error waiting for snapsot to become ready %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
-			ui.Message("Failed to wait")
+			ui.Say("Failed to wait")
 			return multistep.ActionHalt
 		}
-		ui.Message(fmt.Sprintf("Snapshot Ready: %s", snapID))
+		ui.Say(fmt.Sprintf("Snapshot Ready: %s", snapID))
 	}
 
 	//Attach User and Group permissions to snapshots
@@ -144,7 +145,7 @@ func (s *stepSnapshotEBSVolumes) Run(ctx context.Context, state multistep.StateB
 
 		//Todo: Copy to other regions and repeat this block in all regions.
 		for name, input := range snapshotOptions {
-			ui.Message(fmt.Sprintf("Modifying: %s", name))
+			ui.Say(fmt.Sprintf("Modifying: %s", name))
 			input.SnapshotId = &snapID
 			_, err := ec2Client.ModifySnapshotAttribute(ctx, input)
 			if err != nil {

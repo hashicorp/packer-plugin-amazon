@@ -242,8 +242,6 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 	var optFns []func(*ec2.InstanceRunningWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		log.Printf("************* USING DEFAULT MAX WAIT TIME *************")
-
 		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
@@ -252,12 +250,6 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 		})
 	}
 
-	//err := ec2Client.WaitUntilInstanceRunningWithContext(
-	//	ctx,
-	//	&instanceInput,
-	//	w.getWaiterOptions()...)
-
-	//todo fix the wait params.
 	err := ec2.NewInstanceRunningWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
@@ -271,7 +263,6 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 	var optFns []func(options *ec2.InstanceTerminatedWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		log.Printf("************* USING DEFAULT MAX WAIT TIME *************")
 		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
@@ -280,12 +271,6 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 		})
 	}
 
-	//err := conn.WaitUntilInstanceTerminatedWithContext(
-	//	ctx,
-	//	&instanceInput,
-	//	w.getWaiterOptions()...)
-
-	//todo fix the wait params.
 	err := ec2.NewInstanceTerminatedWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
@@ -297,7 +282,6 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		log.Printf("************* USING 30 MIN DEFAULT *************")
 		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
 	}
 	if pollingOptions.MinDelay != nil {
@@ -305,15 +289,6 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 			o.MinDelay = *pollingOptions.MinDelay
 		})
 	}
-
-	//todo fix waiter params here
-	/*	waitOpts := w.getWaiterOptions()
-		if len(waitOpts) == 0 {
-			// Bump this default to 30 minutes.
-			// Large snapshots can take a long time for the copy to s3
-			waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
-		}
-	*/
 
 	err := ec2.NewSnapshotCompletedWaiter(ec2Client).Wait(ctx, &snapInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
@@ -324,7 +299,6 @@ func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2
 	securityGroupInput := ec2.DescribeSecurityGroupsInput{
 		GroupIds: []string{securityGroupId},
 	}
-	log.Printf("********Waiting for security group %s to exist", securityGroupId)
 	pollingOptions := w.getWaiterOptions()
 	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
 

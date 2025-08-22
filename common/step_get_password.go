@@ -53,7 +53,7 @@ func (s *StepGetPassword) Run(ctx context.Context, state multistep.StateBag) mul
 	waitDone := make(chan bool, 1)
 	go func() {
 		ui.Say("Waiting for auto-generated password for instance...")
-		ui.Message(
+		ui.Say(
 			"It is normal for this process to take up to 15 minutes,\n" +
 				"but it usually takes around 5. Please wait.")
 		password, err = s.waitForPassword(ctx, state)
@@ -73,7 +73,7 @@ WaitLoop:
 				return multistep.ActionHalt
 			}
 
-			ui.Message(" \nPassword retrieved!")
+			ui.Say(" \nPassword retrieved!")
 			s.Comm.WinRMPassword = password
 			break WaitLoop
 		case <-timeout:
@@ -91,7 +91,7 @@ WaitLoop:
 
 	// In debug-mode, we output the password
 	if s.Debug {
-		ui.Message(fmt.Sprintf(
+		ui.Say(fmt.Sprintf(
 			"Password (since debug is enabled): %s", s.Comm.WinRMPassword))
 	}
 	// store so that we can access this later during provisioning

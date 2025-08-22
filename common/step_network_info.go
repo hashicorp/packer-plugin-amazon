@@ -62,10 +62,8 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
-	log.Printf("*****REACHED AT THE BEGINNING OF StepNetworkInfo.Run")
 	// Set VpcID if none was specified but filters are defined in the template.
 	if s.VpcId == "" && !s.VpcFilter.Empty() {
-		log.Printf("****INSIDE THE IF BLOCK FOR VPC ID")
 		params := &ec2.DescribeVpcsInput{}
 		vpcFilters, err := buildEc2Filters(s.VpcFilter.Filters)
 		if err != nil {
@@ -95,7 +93,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		}
 
 		s.VpcId = *vpcResp.Vpcs[0].VpcId
-		ui.Message(fmt.Sprintf("Found VPC ID: %s", s.VpcId))
+		ui.Say(fmt.Sprintf("Found VPC ID: %s", s.VpcId))
 	}
 
 	// Set SubnetID if none was specified but filters are defined in the template.
@@ -151,10 +149,9 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			subnet = subnetsResp.Subnets[0]
 		}
 		s.SubnetId = *subnet.SubnetId
-		ui.Message(fmt.Sprintf("Found Subnet ID: %s", s.SubnetId))
+		ui.Say(fmt.Sprintf("Found Subnet ID: %s", s.SubnetId))
 	}
 
-	log.Printf("****AFTER THE IF BLOCK FOR SUBNET ID")
 	// Set VPC/Subnet if we explicitely enable or disable public IP assignment to the instance
 	// and we did not set or get a subnet ID before
 	if s.AssociatePublicIpAddress != config.TriUnset && s.SubnetId == "" {

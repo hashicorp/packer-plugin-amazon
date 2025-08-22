@@ -68,7 +68,7 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 		return multistep.ActionHalt
 	}
 
-	ui.Message(fmt.Sprintf("Found Image ID: %s", *image.ImageId))
+	ui.Say(fmt.Sprintf("Found Image ID: %s", *image.ImageId))
 
 	// Enhanced Networking can only be enabled on HVM AMIs.
 	// See http://goo.gl/icuXh5

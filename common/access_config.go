@@ -346,7 +346,6 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 }
 
 func (c *AccessConfig) SessionRegion() string {
-	log.Printf("************** AccessConfig.SessionRegion called **********")
 	if c.config == nil {
 		panic("access config's aws config should be set.")
 	}

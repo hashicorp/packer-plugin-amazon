@@ -7,8 +7,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -72,7 +72,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	userData := s.UserData
 	if s.UserDataFile != "" {
-		contents, err := ioutil.ReadFile(s.UserDataFile)
+		contents, err := os.ReadFile(s.UserDataFile)
 		if err != nil {
 			state.Put("error", fmt.Errorf("Problem reading user data file: %s", err))
 			return multistep.ActionHalt
@@ -324,9 +324,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	// will fail. Retry a couple of times to try to mitigate that race.
 
 	var r *ec2.DescribeInstancesOutput
-	err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
-		return awserrors.Matches(err, "InvalidInstanceID.NotFound", "")
-	},
+	err = retry.Config{
+		Tries: 11,
+		ShouldRetry: func(err error) bool {
+			return awserrors.Matches(err, "InvalidInstanceID.NotFound", "")
+		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
 		r, err = ec2Client.DescribeInstances(ctx, describeInstance)
@@ -343,15 +345,15 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	if s.Debug {
 		if instance.PublicDnsName != nil && *instance.PublicDnsName != "" {
-			ui.Message(fmt.Sprintf("Public DNS: %s", *instance.PublicDnsName))
+			ui.Say(fmt.Sprintf("Public DNS: %s", *instance.PublicDnsName))
 		}
 
 		if instance.PublicIpAddress != nil && *instance.PublicIpAddress != "" {
-			ui.Message(fmt.Sprintf("Public IP: %s", *instance.PublicIpAddress))
+			ui.Say(fmt.Sprintf("Public IP: %s", *instance.PublicIpAddress))
 		}
 
 		if instance.PrivateIpAddress != nil && *instance.PrivateIpAddress != "" {
-			ui.Message(fmt.Sprintf("Private IP: %s", *instance.PrivateIpAddress))
+			ui.Say(fmt.Sprintf("Private IP: %s", *instance.PrivateIpAddress))
 		}
 	}
 
@@ -449,7 +451,7 @@ func waitForInstanceReadiness(
 	state multistep.StateBag,
 	waitUntilInstanceRunning func(context.Context, clients.Ec2Client, string) error,
 ) error {
-	ui.Message(fmt.Sprintf("Instance ID: %s", instanceId))
+	ui.Say(fmt.Sprintf("Instance ID: %s", instanceId))
 	ui.Say(fmt.Sprintf("Waiting for instance (%v) to become ready...", instanceId))
 
 	describeInstance := &ec2.DescribeInstancesInput{

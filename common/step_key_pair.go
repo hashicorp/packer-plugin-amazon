@@ -6,7 +6,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"time"
@@ -35,7 +34,6 @@ type StepKeyPair struct {
 
 func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
-	log.Printf("************** StepKeyPair called ***********")
 	if s.Comm.SSHPrivateKeyFile != "" {
 		ui.Say("Using existing SSH private key")
 		privateKeyBytes, err := s.Comm.ReadSSHPrivateKeyFile()
@@ -73,9 +71,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		KeyName: &s.Comm.SSHTemporaryKeyPairName,
 		KeyType: ec2types.KeyType(s.Comm.SSHTemporaryKeyPairType),
 	}
-	log.Printf("*****BEFORE RESTRICTED BLOCK CALLED*****")
 	if !s.IsRestricted {
-		log.Printf("*****IF NOT RESTRICTED BLOCK CALLED*****")
 		region := state.Get("region").(string)
 		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, region, state)
 		if err != nil {
@@ -111,7 +107,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	// If we're in debug mode, output the private key to the working
 	// directory.
 	if s.Debug {
-		ui.Message(fmt.Sprintf("Saving key for debug purposes: %s", s.DebugKeyPath))
+		ui.Say(fmt.Sprintf("Saving key for debug purposes: %s", s.DebugKeyPath))
 		f, err := os.Create(s.DebugKeyPath)
 		if err != nil {
 			state.Put("error", fmt.Errorf("Error saving debug key: %s", err))
