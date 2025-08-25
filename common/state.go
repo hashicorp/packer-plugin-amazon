@@ -6,10 +6,16 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -31,6 +37,23 @@ type StateChangeConf struct {
 	Refresh   StateRefreshFunc
 	StepState multistep.StateBag
 	Target    string
+}
+
+type envInfo struct {
+	envKey     string
+	Val        int
+	overridden bool
+}
+
+type overridableWaitVars struct {
+	awsPollDelaySeconds envInfo
+	awsMaxAttempts      envInfo
+	awsTimeoutSeconds   envInfo
+}
+
+type PollingOptions struct {
+	MaxWaitTime time.Duration
+	MinDelay    time.Duration
 }
 
 // Following are wrapper functions that use Packer's environment-variables to
@@ -63,6 +86,8 @@ type AWSPollingConfig struct {
 	// This value can also be set via the AWS_MAX_ATTEMPTS.
 	// If both option and environment variable are set, the max_attempts will be considered over the AWS_MAX_ATTEMPTS.
 	// If none is set, defaults to AWS waiter default which is 40 max_attempts.
+	// In aws sdk go v2, the max attempts is not set directly, but rather set via max wait time and delay seconds.
+	// maxWaitTime = maxAttempts * delaySeconds
 	MaxAttempts int `mapstructure:"max_attempts" required:"false"`
 	// Specifies the delay in seconds between attempts to check the resource state.
 	// This value can also be set via the AWS_POLL_DELAY_SECONDS.
@@ -122,4 +147,186 @@ func (w *AWSPollingConfig) LogEnvOverrideWarnings() {
 			"configuration options aws_polling_delay_seconds and aws_polling_max_attempts " +
 			"to your desired values.")
 	}
+}
+func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
+	options := PollingOptions{}
+
+	// if any of the env vars are not overridden, we return empty struct to allow the AWS SDK to use its defaults.
+
+	// if poll delay is set, we use that as the minimum delay.
+	if envOverrides.awsPollDelaySeconds.overridden {
+		options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+	}
+
+	// If user has set max attempts, aws sdk go v2 doesn't have a direct way to set max attempts,
+	// we calculate the max wait time instead.
+	if envOverrides.awsMaxAttempts.overridden {
+		maxWaitTime := time.Duration(envOverrides.awsMaxAttempts.Val) * time.Duration(envOverrides.
+			awsPollDelaySeconds.Val) * time.Second
+		options.MaxWaitTime = maxWaitTime
+		// if max attempts is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
+
+	} else if envOverrides.awsTimeoutSeconds.overridden {
+		options.MaxWaitTime = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		// if timeout is set and poll delay is not set, we default to 2 seconds.
+		if !envOverrides.awsPollDelaySeconds.overridden {
+			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		}
+
+	}
+
+	return &options
+}
+
+func getOverride(varInfo envInfo) envInfo {
+	override := os.Getenv(varInfo.envKey)
+	if override != "" {
+		n, err := strconv.Atoi(override)
+		if err != nil {
+			log.Printf("Invalid %s '%s', using default", varInfo.envKey, override)
+		} else {
+			varInfo.overridden = true
+			varInfo.Val = n
+		}
+	}
+
+	return varInfo
+}
+
+func getEnvOverrides() overridableWaitVars {
+	// Load env vars from environment.
+	envValues := overridableWaitVars{
+		envInfo{"AWS_POLL_DELAY_SECONDS", 2, false},
+		envInfo{"AWS_MAX_ATTEMPTS", 0, false},
+		envInfo{"AWS_TIMEOUT_SECONDS", 0, false},
+	}
+
+	envValues.awsMaxAttempts = getOverride(envValues.awsMaxAttempts)
+	envValues.awsPollDelaySeconds = getOverride(envValues.awsPollDelaySeconds)
+	envValues.awsTimeoutSeconds = getOverride(envValues.awsTimeoutSeconds)
+
+	return envValues
+}
+func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
+	envOverrides := getEnvOverrides()
+
+	if w.MaxAttempts != 0 {
+		envOverrides.awsMaxAttempts.Val = w.MaxAttempts
+		envOverrides.awsMaxAttempts.overridden = true
+	}
+	if w.DelaySeconds != 0 {
+		envOverrides.awsPollDelaySeconds.Val = w.DelaySeconds
+		envOverrides.awsPollDelaySeconds.overridden = true
+	}
+
+	waitOpts := applyEnvOverrides(envOverrides)
+	return waitOpts
+}
+func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn Ec2Client, taskID string) error {
+	importInput := ec2.DescribeImportImageTasksInput{
+		ImportTaskIds: []string{taskID},
+	}
+
+	err := WaitForImageToBeImported(conn,
+		ctx,
+		&importInput,
+		w.getWaiterOptions())
+	return err
+}
+
+func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.DescribeImportImageTasksInput,
+	opts *PollingOptions) error {
+	// we have tried to simulate here a behaviour that's similar to what we have in v1.
+	// aws sdk go v2 does not provide a builtin waiter for Import Image Tasks.
+
+	maxAttempts := 720
+	delay := 5 * time.Second
+
+	if opts != nil {
+		if opts.MinDelay > 0 {
+			delay = opts.MinDelay
+		}
+
+		if opts.MaxWaitTime > 0 {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeImportImageTasks(ctx, input)
+		if err != nil {
+			return err
+		}
+
+		if len(output.ImportImageTasks) == 0 {
+			return fmt.Errorf("import task not found")
+		}
+
+		for _, task := range output.ImportImageTasks {
+			// Check for failure states
+			if *task.Status == "deleted" {
+				return fmt.Errorf("import task was deleted")
+			}
+
+			// Check for success state
+			if *task.Status == "completed" {
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+	}
+
+	return fmt.Errorf("timeout waiting for image import to complete after %d attempts", maxAttempts)
+}
+
+func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Client, imageId string) error {
+
+	imageInput := &ec2.DescribeImagesInput{
+		ImageIds: []string{imageId},
+	}
+	log.Printf("Waiting for AMI (%s) to be available...", imageId)
+
+	pollingOpts := w.getWaiterOptions()
+
+	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
+	maxWaitTime := pollingOpts.MaxWaitTime // Default to 10 minutes
+
+	if pollingOpts.MaxWaitTime == 0 {
+		// Bump this default to 30 minutes because the aws default
+		// of ten minutes doesn't work for some of our long-running copies.
+		maxWaitTime = 30 * time.Minute
+	}
+
+	if pollingOpts.MinDelay == 0 {
+		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
+			o.MinDelay = 5 * time.Second // Set a default 5-second delay
+		})
+	}
+
+	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, maxWaitTime, waiterOpts...)
+
+	if err != nil {
+		// The error type for a waiter timeout is *aws.WaiterError
+		// but checking the error string is still a common pattern.
+		if strings.Contains(err.Error(), "waiter state transitioned to Failure") {
+			err = fmt.Errorf("failed with ResourceNotReady error, which can "+
+				"have a variety of causes. For help troubleshooting, check "+
+				"our docs: "+
+				"https://developer.hashicorp.com/packer/integrations/hashicorp/amazon#resourcenotready-error\n"+
+				"original error: %w", err)
+		}
+	}
+
+	return err
 }
