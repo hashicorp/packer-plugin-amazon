@@ -185,7 +185,9 @@ func (s *StepCreateAMI) combineDevices() []*ec2.BlockDeviceMapping {
 
 		// Remove KmsKeyId if present, as it is not supported for CreateImage API Call
 		// Any encrypted devices will retain their encryption status.
-		device.Ebs.KmsKeyId = nil
+		if device.Ebs != nil {
+			device.Ebs.KmsKeyId = nil
+		}
 
 		devices[*device.DeviceName] = device
 	}
