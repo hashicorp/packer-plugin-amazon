@@ -3,6 +3,9 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
 ---
+## 1.5.0 (Upcoming)
+
+
 ## 1.4.0 (August 27, 2025)
 ### AWS SDK V2 UPGRADES:
 
