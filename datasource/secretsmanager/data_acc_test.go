@@ -6,6 +6,7 @@ package secretsmanager
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
@@ -64,7 +65,7 @@ func TestAccAmazonSecretsManager(t *testing.T) {
 
 			valueLog := fmt.Sprintf("null.basic-example: secret value: %s", secret.Value)
 			secretStringLog := fmt.Sprintf("null.basic-example: secret secret_string: %s", fmt.Sprintf("{%s:%s}", secret.Key, secret.Value))
-			versionIdLog := fmt.Sprintf("null.basic-example: secret version_id: %s", aws.StringValue(secret.Info.VersionId))
+			versionIdLog := fmt.Sprintf("null.basic-example: secret version_id: %s", aws.ToString(secret.Info.VersionId))
 			secretValueLog := fmt.Sprintf("null.basic-example: secret value: %s", secret.Value)
 
 			if matched, _ := regexp.MatchString(valueLog+".*", logsString); !matched {
@@ -91,18 +92,19 @@ type AmazonSecret struct {
 	Value       string
 	Description string
 
-	Info    *secretsmanager.CreateSecretOutput
-	manager *secretsmanager.SecretsManager
+	Info   *secretsmanager.CreateSecretOutput
+	client *secretsmanager.Client
 }
 
 func (as *AmazonSecret) Create() error {
-	if as.manager == nil {
+	ctx := context.TODO()
+	if as.client == nil {
 		accessConfig := &awscommon.AccessConfig{}
-		session, err := accessConfig.Session()
+		cfg, err := accessConfig.Config(ctx)
 		if err != nil {
 			return fmt.Errorf("Unable to create aws session %s", err.Error())
 		}
-		as.manager = secretsmanager.New(session)
+		as.client = secretsmanager.NewFromConfig(*cfg)
 	}
 
 	newSecret := &secretsmanager.CreateSecretInput{
@@ -116,18 +118,21 @@ func (as *AmazonSecret) Create() error {
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			if awserrors.Matches(err, "ResourceExistsException", "") {
+			var resourceExists *types.ResourceExistsException
+			var invalidRequestException *types.InvalidRequestException
+
+			if errors.As(err, &resourceExists) {
 				_ = as.Delete()
 				return true
 			}
-			if awserrors.Matches(err, "InvalidRequestException", "already scheduled for deletion") {
+			if errors.As(err, &invalidRequestException) {
 				return true
 			}
 			return false
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(context.TODO(), func(_ context.Context) error {
-		secret, err = as.manager.CreateSecret(newSecret)
+		secret, err = as.client.CreateSecret(ctx, newSecret)
 		return err
 	})
 	as.Info = secret
@@ -135,19 +140,20 @@ func (as *AmazonSecret) Create() error {
 }
 
 func (as *AmazonSecret) Delete() error {
-	if as.manager == nil {
+	ctx := context.TODO()
+	if as.client == nil {
 		accessConfig := &awscommon.AccessConfig{}
-		session, err := accessConfig.Session()
+		cfg, err := accessConfig.Config(ctx)
 		if err != nil {
 			return fmt.Errorf("Unable to create aws session %s", err.Error())
 		}
-		as.manager = secretsmanager.New(session)
+		as.client = secretsmanager.NewFromConfig(*cfg)
 	}
 
 	secret := &secretsmanager.DeleteSecretInput{
 		ForceDeleteWithoutRecovery: aws.Bool(true),
 		SecretId:                   aws.String(as.Name),
 	}
-	_, err := as.manager.DeleteSecret(secret)
+	_, err := as.client.DeleteSecret(ctx, secret)
 	return err
 }
