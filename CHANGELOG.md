@@ -3,6 +3,15 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
 ---
+## 1.4.0 (August 27, 2025)
+### AWS SDK V2 UPGRADES:
+
+* Datasource: Secretsmanager Aws Sdk v2 upgrade by @kp2099 in https://github.com/hashicorp/packer-plugin-amazon/pull/569
+* Datasource: Parameterstore Aws Sdk v2 upgrade by @kp2099 in https://github.com/hashicorp/packer-plugin-amazon/pull/562
+
+### OTHER CHANGES:
+* [COMPLIANCE] Add Copyright and License Headers by @hashicorp-copywrite[bot] in https://github.com/hashicorp/packer-plugin-amazon/pull/590
+
 ## 1.3.10 (August 6, 2025)
 ### IMPROVEMENTS:
 
