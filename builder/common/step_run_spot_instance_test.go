@@ -54,6 +54,7 @@ func getBasicStep() *StepRunSpotInstance {
 		Region:                            "us-east-1",
 		SourceAMI:                         "",
 		SpotPrice:                         "auto",
+		SpotAllocationStrategy:            "price-capacity-optimized",
 		SpotTags:                          nil,
 		Tags:                              map[string]string{},
 		VolumeTags:                        nil,
@@ -250,6 +251,7 @@ func TestRun(t *testing.T) {
 	spotRequestId := aws.String("spot-id")
 	volumeId := aws.String("volume-id")
 	launchTemplateId := aws.String("launchTemplateId")
+	spotAllocationStrategy := aws.String("price-capacity-optimized")
 	ec2Mock := defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId)
 
 	uiMock := packersdk.TestUi(t)
@@ -317,6 +319,9 @@ func TestRun(t *testing.T) {
 	}
 	if *ec2Mock.CreateFleetParams[0].LaunchTemplateConfigs[0].LaunchTemplateSpecification.LaunchTemplateName != *launchTemplateName {
 		t.Fatalf("launchTemplateName should match in createLaunchTemplate and createFleet requests")
+	}
+	if *ec2Mock.CreateFleetParams[0].SpotOptions.AllocationStrategy != *spotAllocationStrategy {
+		t.Fatalf("AllocationStrategy in CreateFleet request should match with spotAllocationStrategy param.")
 	}
 
 	fleetNameTag := ec2Mock.CreateFleetParams[0].TagSpecifications[0].Tags[0]

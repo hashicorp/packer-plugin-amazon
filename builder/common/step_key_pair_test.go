@@ -6,7 +6,6 @@ package common
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 
@@ -74,13 +73,13 @@ func TestStepKeyPair_withDefault(t *testing.T) {
 	createKeyPairCallCount := state.Get("ec2").(*mockEC2KeyPairConn).CreateKeyPairCount
 	createKeyPairArgs := state.Get("ec2").(*mockEC2KeyPairConn).CreateKeyPairArgs
 	if createKeyPairCallCount != 1 {
-		t.Fatalf(fmt.Sprintf("Expected CreateKeyPair to be called %d times, was called %d times", 1, createKeyPairCallCount))
+		t.Fatalf("Expected CreateKeyPair to be called %d times, was called %d times", 1, createKeyPairCallCount)
 	}
 	if *createKeyPairArgs[0].KeyName != "temp-key-name" {
-		t.Fatalf(fmt.Sprintf("Unexpected Key Type expected %s, got %s", "temp-key-name", *createKeyPairArgs[0].KeyName))
+		t.Fatalf("Unexpected Key Type expected %s, got %s", "temp-key-name", *createKeyPairArgs[0].KeyName)
 	}
 
 	if *createKeyPairArgs[0].KeyType != "rsa" {
-		t.Fatalf(fmt.Sprintf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType))
+		t.Fatalf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType)
 	}
 }

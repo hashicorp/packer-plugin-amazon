@@ -3,7 +3,31 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
 ---
-## 1.0.5 (Upcoming)
+## 1.5.0 (Upcoming)
+
+
+## 1.4.0 (August 27, 2025)
+### AWS SDK V2 UPGRADES:
+
+* Datasource: Secretsmanager Aws Sdk v2 upgrade by @kp2099 in https://github.com/hashicorp/packer-plugin-amazon/pull/569
+* Datasource: Parameterstore Aws Sdk v2 upgrade by @kp2099 in https://github.com/hashicorp/packer-plugin-amazon/pull/562
+
+### OTHER CHANGES:
+* [COMPLIANCE] Add Copyright and License Headers by @hashicorp-copywrite[bot] in https://github.com/hashicorp/packer-plugin-amazon/pull/590
+
+## 1.3.10 (August 6, 2025)
+### IMPROVEMENTS:
+
+* Updated plugin release process: Plugin binaries are now published on the HashiCorp official [release site](https://releases.hashicorp.com/packer-plugin-amazon), ensuring a secure and standardized delivery pipeline.
+* Imds support for Amazon AMI-Import Post Processor [GH-577](https://github.com/hashicorp/packer-plugin-amazon/pull/577)
+* Fixing typos in the documentation for ebs volume builder [GH-576](https://github.com/hashicorp/packer-plugin-amazon/pull/576)
+
+### NOTES:
+* **Binary Distribution Update**: To streamline our release process and align with other HashiCorp tools, all 
+  release binaries will now be published exclusively to the official HashiCorp [release](https://releases.hashicorp.com/packer-plugin-amazon) site. We will no longer attach release assets to GitHub Releases. Any scripts or automation 
+  that rely on the old location will need to be updated. For more information, see our post [here](https://discuss.hashicorp.com/t/important-update-official-packer-plugin-distribution-moving-to-releases-hashicorp-com/75972).
+
+## 1.0.5 (December 22, 2021)
 
 ### IMPROVEMENTS
 * builder/chroot: Add support for i386 and x86_64_mac architectures. [GH-154]

@@ -761,6 +761,12 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
     criteria provided in `source_ami_filter`; this pins the AMI returned by the
     filter, but will cause Packer to fail if the `source_ami` does not exist.
 
+- `spot_allocation_strategy` (string) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
+  The strategy that determines how to allocate the target Spot Instance capacity
+  across the Spot Instance pools specified by the EC2 Fleet launch configuration.
+  If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
+  For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
+
 - `spot_instance_types` ([]string) - a list of acceptable instance
   types to run your build on. We will request a spot instance using the max
   price of spot_price and the allocation strategy of "lowest price".
@@ -1077,7 +1083,7 @@ Usage Example
 **HCL2**
 
 ```hcl
-source "amazon-ebs" "basic-example" {
+source "amazon-ebsvolume" "basic-example" {
   region        =  "us-east-1"
   source_ami    =  "ami-fce3c696"
   instance_type =  "t2.micro"
@@ -1101,7 +1107,7 @@ source "amazon-ebs" "basic-example" {
   },
   "builders": [
     {
-      "type": "amazon-ebs",
+      "type": "amazon-ebsvolume",
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
       "region": "us-east-1",
@@ -1366,9 +1372,13 @@ The absence of this permission won't prevent you from building the AMI, and the 
   useful if, for example, packer hangs on a connection after a reboot.
   Example: `5m`. Disabled by default.
 
-- `ssh_remote_tunnels` ([]string) - 
+- `ssh_remote_tunnels` ([]string) - Remote tunnels forward a port from your local machine to the instance.
+  Format: ["REMOTE_PORT:LOCAL_HOST:LOCAL_PORT"]
+  Example: "9090:localhost:80" forwards localhost:9090 on your machine to port 80 on the instance.
 
-- `ssh_local_tunnels` ([]string) - 
+- `ssh_local_tunnels` ([]string) - Local tunnels forward a port from the instance to your local machine.
+  Format: ["LOCAL_PORT:REMOTE_HOST:REMOTE_PORT"]
+  Example: "8080:localhost:3000" allows the instance to access your local machine’s port 3000 via localhost:8080.
 
 <!-- End of code generated from the comments of the SSH struct in communicator/config.go; -->
 
@@ -1596,7 +1606,7 @@ Usage example:
 // won't be easily resolvable until legacy json templates are deprecated:
 
 {
-source "amazon-ebs" "basic-example" {
+source "amazon-ebsvolume" "basic-example" {
   tags = {
         OS_Version = "Ubuntu"
         Release = "Latest"

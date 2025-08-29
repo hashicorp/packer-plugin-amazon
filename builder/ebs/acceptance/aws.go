@@ -131,3 +131,59 @@ func (a *AMIHelper) GetAmi() ([]*ec2.Image, error) {
 	}
 	return resp.Images, nil
 }
+
+type VolumeHelper struct {
+	Region string
+	Tags   []map[string]string
+}
+
+// GetVolumes retrieves all EBS volumes in the specified region that match the provided tags and are not in a deleting or deleted state.
+func (v *VolumeHelper) GetVolumes() ([]*ec2.Volume, error) {
+	accessConfig := &awscommon.AccessConfig{}
+	session, err := accessConfig.Session()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create aws session %s", err.Error())
+	}
+
+	regionconn := ec2.New(session.Copy(&aws.Config{
+		Region: aws.String(v.Region),
+	}))
+
+	var resp *ec2.DescribeVolumesOutput
+	var filters []*ec2.Filter
+	var activeVolumes []*ec2.Volume
+
+	for _, tag := range v.Tags {
+		for key, value := range tag {
+			filters = append(filters, &ec2.Filter{
+				Name:   aws.String(fmt.Sprintf("tag:%s", key)),
+				Values: []*string{aws.String(value)},
+			})
+		}
+	}
+
+	ctx := context.TODO()
+	err = retry.Config{
+		Tries: 11,
+		ShouldRetry: func(err error) bool {
+			return true // TODO make retry more specific to eventual consitencey
+		},
+		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+	}.Run(ctx, func(ctx context.Context) error {
+		resp, err = regionconn.DescribeVolumes(&ec2.DescribeVolumesInput{
+			Filters: filters,
+		})
+		return err
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("Unable to find Volumes with specified tags %s: %s", v.Tags, err.Error())
+	}
+
+	for _, volume := range resp.Volumes {
+		if volume.State != nil && *volume.State != ec2.VolumeStateDeleting && *volume.State != ec2.VolumeStateDeleted {
+			activeVolumes = append(activeVolumes, volume)
+		}
+	}
+	return activeVolumes, nil
+}

@@ -285,10 +285,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			if awserrors.Matches(err, "InvalidParameterValue", "iamInstanceProfile") {
-				return true
-			}
-			return false
+			return awserrors.Matches(err, "InvalidParameterValue", "iamInstanceProfile")
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
@@ -326,10 +323,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	var r *ec2.DescribeInstancesOutput
 	err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
-		if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
-			return true
-		}
-		return false
+		return awserrors.Matches(err, "InvalidInstanceID.NotFound", "")
 	},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {

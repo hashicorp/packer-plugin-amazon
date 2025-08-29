@@ -227,6 +227,12 @@ func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 		Region: "us-east-1",
 		Name:   "ebssurrogate-image-method-create-acc-test",
 	}
+	volumeHelper := amazon_acc.VolumeHelper{
+		Region: "us-east-1",
+		Tags: []map[string]string{
+			{"volume_tag": "block_device_tag"},
+		},
+	}
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebssurrogate_image_method_create_test",
 		Template: fmt.Sprintf(testBuilderAccUseCreateImageTrue, ami.Name),
@@ -238,6 +244,18 @@ func TestAccBuilder_EbssurrogateUseCreateImageTrue(t *testing.T) {
 				if buildCommand.ProcessState.ExitCode() != 0 {
 					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 				}
+			}
+
+			// Volume tags were applied to the EBS volumes during creation.
+			// This check verifies that all such volumes have been deleted,
+			// as the 'DeleteOnTermination' flag is set to true in the test template.
+
+			volumes, err := volumeHelper.GetVolumes()
+			if err != nil {
+				return fmt.Errorf("failed to get volumes: %s", err)
+			}
+			if len(volumes) != 0 {
+				return fmt.Errorf("expected 0 volume, got %d", len(volumes))
 			}
 			return nil
 		},

@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -47,6 +48,7 @@ type StepRunSpotInstance struct {
 	InstanceType                      string
 	Region                            string
 	SourceAMI                         string
+	SpotAllocationStrategy            string
 	SpotPrice                         string
 	SpotTags                          map[string]string
 	SpotInstanceTypes                 []string
@@ -383,6 +385,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		Type: aws.String("instant"),
 	}
 
+	if s.SpotAllocationStrategy != "" {
+		createFleetInput.SpotOptions = &ec2.SpotOptionsRequest{
+			AllocationStrategy: aws.String(s.SpotAllocationStrategy),
+		}
+	}
+
 	fleetTags, err := TagMap(s.FleetTags).EC2Tags(s.Ctx, s.Region, state)
 	if err != nil {
 		err := fmt.Errorf("Error generating fleet tags: %s", err)
@@ -412,6 +420,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 				// we can wait on those operations, this can be removed.
 				return true
 			}
+			if err.Error() == "InsufficientInstanceCapacity" {
+				return true
+			}
 			return false
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
@@ -432,6 +443,12 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		if err != nil {
 			log.Printf("create request failed %v", err)
 		}
+		// We can end up unavailable Spot capacity, we keep retrying
+		for _, err := range createOutput.Errors {
+			if err.ErrorCode != nil && *err.ErrorCode == "InsufficientInstanceCapacity" {
+				return fmt.Errorf("%s", *err.ErrorCode)
+			}
+		}
 		return err
 	})
 
@@ -444,7 +461,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			for _, outErr := range createOutput.Errors {
 				errString = errString + aws.StringValue(outErr.ErrorMessage)
 			}
-			err = fmt.Errorf(errString)
+			err = errors.New(errString)
 		}
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -512,10 +529,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 
 	// Retry creating tags for about 2.5 minutes
 	err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
-		if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
-			return true
-		}
-		return false
+		return awserrors.Matches(err, "InvalidInstanceID.NotFound", "")
 	},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {

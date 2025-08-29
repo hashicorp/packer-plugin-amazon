@@ -48,12 +48,17 @@ type Config struct {
 	OuArns          []string          `mapstructure:"ami_ou_arns"`
 	Encrypt         bool              `mapstructure:"ami_encrypt"`
 	KMSKey          string            `mapstructure:"ami_kms_key"`
-	LicenseType     string            `mapstructure:"license_type"`
-	RoleName        string            `mapstructure:"role_name"`
-	Format          string            `mapstructure:"format"`
-	Architecture    string            `mapstructure:"architecture"`
-	BootMode        string            `mapstructure:"boot_mode"`
-	Platform        string            `mapstructure:"platform"`
+	// Enforce version of the Instance Metadata Service on the built AMI.
+	// Valid options are unset (legacy) and `v2.0`. See the documentation on
+	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+	// for more information. Defaults to legacy.
+	AMIIMDSSupport string `mapstructure:"imds_support" required:"false"`
+	LicenseType    string `mapstructure:"license_type"`
+	RoleName       string `mapstructure:"role_name"`
+	Format         string `mapstructure:"format"`
+	Architecture   string `mapstructure:"architecture"`
+	BootMode       string `mapstructure:"boot_mode"`
+	Platform       string `mapstructure:"platform"`
 
 	ctx interpolate.Context
 }
@@ -161,6 +166,13 @@ func (p *PostProcessor) Configure(raws ...interface{}) error {
 	if p.config.Architecture == "arm64" && p.config.BootMode != "uefi" {
 		errs = packersdk.MultiErrorAppend(
 			errs, fmt.Errorf("invalid boot mode '%s' for 'arm64' architecture", p.config.BootMode))
+	}
+
+	if p.config.AMIIMDSSupport != "" && p.config.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs,
+			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
+				ec2.ImdsSupportValuesV20),
+		)
 	}
 
 	// Anything which flagged return back up the stack
@@ -509,6 +521,13 @@ func (p *PostProcessor) PostProcess(ctx context.Context, ui packersdk.Ui, artifa
 				Add: adds,
 			},
 		}
+	}
+
+	if p.config.AMIIMDSSupport != "" {
+		options["ami imds support"] = &ec2.ModifyImageAttributeInput{
+			ImdsSupport: &ec2.AttributeValue{Value: &p.config.AMIIMDSSupport},
+		}
+
 	}
 
 	if len(options) > 0 {

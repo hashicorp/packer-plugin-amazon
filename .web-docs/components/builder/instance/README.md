@@ -256,6 +256,18 @@ necessary for this build to succeed and can be found further down the page.
   the intermediary AMI into any regions provided in `ami_regions`, then
   delete the intermediary AMI. Default `false`.
 
+- `snapshot_copy_duration_minutes` (int64) - Specify a completion duration, in 15 minute increments, to initiate a
+  time-based AMI copy. The specified completion duration applies to each of the
+  snapshots associated with the AMI. Each snapshot associated with the AMI will be
+  completed within the specified completion duration, regardless of their size.
+  
+  If you do not specify a value, the AMI copy operation is completed on a
+  best-effort basis.
+  
+  For more information, see [Time-based copies].
+  
+  [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
+
 - `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on
   [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
@@ -797,6 +809,12 @@ JSON example:
     to the filter. The provided `source_ami` must meet all of the filtering
     criteria provided in `source_ami_filter`; this pins the AMI returned by the
     filter, but will cause Packer to fail if the `source_ami` does not exist.
+
+- `spot_allocation_strategy` (string) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
+  The strategy that determines how to allocate the target Spot Instance capacity
+  across the Spot Instance pools specified by the EC2 Fleet launch configuration.
+  If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
+  For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
 
 - `spot_instance_types` ([]string) - a list of acceptable instance
   types to run your build on. We will request a spot instance using the max
@@ -1438,9 +1456,13 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   useful if, for example, packer hangs on a connection after a reboot.
   Example: `5m`. Disabled by default.
 
-- `ssh_remote_tunnels` ([]string) - 
+- `ssh_remote_tunnels` ([]string) - Remote tunnels forward a port from your local machine to the instance.
+  Format: ["REMOTE_PORT:LOCAL_HOST:LOCAL_PORT"]
+  Example: "9090:localhost:80" forwards localhost:9090 on your machine to port 80 on the instance.
 
-- `ssh_local_tunnels` ([]string) - 
+- `ssh_local_tunnels` ([]string) - Local tunnels forward a port from the instance to your local machine.
+  Format: ["LOCAL_PORT:REMOTE_HOST:REMOTE_PORT"]
+  Example: "8080:localhost:3000" allows the instance to access your local machine’s port 3000 via localhost:8080.
 
 <!-- End of code generated from the comments of the SSH struct in communicator/config.go; -->
 

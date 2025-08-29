@@ -6,15 +6,18 @@
 package secretsmanager
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/hcl2helper"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -89,7 +92,9 @@ func (d *Datasource) OutputSpec() hcldec.ObjectSpec {
 }
 
 func (d *Datasource) Execute() (cty.Value, error) {
-	session, err := d.config.Session()
+	ctx := context.TODO()
+	cfg, err := d.config.Config(ctx)
+
 	if err != nil {
 		return cty.NullVal(cty.EmptyObject), err
 	}
@@ -107,27 +112,30 @@ func (d *Datasource) Execute() (cty.Value, error) {
 		version = d.config.VersionStage
 	}
 
-	secretsApi := secretsmanager.New(session)
-	secret, err := secretsApi.GetSecretValue(input)
+	secretsApiClient := secretsmanager.NewFromConfig(*cfg)
+	secret, err := secretsApiClient.GetSecretValue(ctx, input)
 	if err != nil {
-		if awserrors.Matches(err, secretsmanager.ErrCodeResourceNotFoundException, "") {
+		var resourceNotFoundErr *types.ResourceNotFoundException
+		var invalidRequestErr *types.InvalidRequestException
+
+		if errors.As(err, &resourceNotFoundErr) {
 			return cty.NullVal(cty.EmptyObject), fmt.Errorf("Secrets Manager Secret %q Version %q not found", d.config.Name, version)
 		}
-		if awserrors.Matches(err, secretsmanager.ErrCodeInvalidRequestException, "You can’t perform this operation on the secret because it was deleted") {
+		if errors.As(err, &invalidRequestErr) && strings.Contains(err.Error(), "because it was deleted") {
 			return cty.NullVal(cty.EmptyObject), fmt.Errorf("Secrets Manager Secret %q Version %q not found", d.config.Name, version)
 		}
 		return cty.NullVal(cty.EmptyObject), fmt.Errorf("error reading Secrets Manager Secret Version: %s", err)
 	}
 
-	value, err := getSecretValue(aws.StringValue(secret.SecretString), d.config.Key)
+	value, err := getSecretValue(aws.ToString(secret.SecretString), d.config.Key)
 	if err != nil {
 		return cty.NullVal(cty.EmptyObject), fmt.Errorf("error to get secret value: %q", err.Error())
 	}
 
-	versionId := aws.StringValue(secret.VersionId)
+	versionId := aws.ToString(secret.VersionId)
 	output := DatasourceOutput{
 		Value:        value,
-		SecretString: aws.StringValue(secret.SecretString),
+		SecretString: aws.ToString(secret.SecretString),
 		SecretBinary: string(secret.SecretBinary),
 		VersionId:    versionId,
 	}
