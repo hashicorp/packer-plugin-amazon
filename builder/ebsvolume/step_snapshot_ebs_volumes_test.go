@@ -52,11 +52,6 @@ func (m *mockEC2Conn) DescribeSnapshots(ctx context.Context, params *ec2.Describ
 	return snap, nil
 }
 
-/*func (m *mockEC2Conn) WaitUntilSnapshotCompletedWithContext(aws.Context, *ec2.DescribeSnapshotsInput,
-	...request.WaiterOption) error {
-	return nil
-}*/
-
 func getMockConn(config *common.AccessConfig, target string) (clients.Ec2Client, error) {
 	mockConn := &mockEC2Conn{
 		Config: aws.NewConfig(),

@@ -154,7 +154,7 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 		sessionChan <- struct{}{}
 		cmd := exec.CommandContext(ctx, "session-manager-plugin", args...)
 
-		ui.Message(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
+		ui.Say(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
 		err = localexec.RunAndStream(cmd, ui, nil)
 		sessionFinished <- struct{}{}
 		if err != nil {

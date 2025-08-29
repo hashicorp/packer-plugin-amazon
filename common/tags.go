@@ -20,7 +20,7 @@ type EC2Tags []ec2types.Tag
 
 func (t EC2Tags) Report(ui packersdk.Ui) {
 	for _, tag := range t {
-		ui.Message(fmt.Sprintf("Adding tag: \"%s\": \"%s\"",
+		ui.Say(fmt.Sprintf("Adding tag: \"%s\": \"%s\"",
 			aws.ToString(tag.Key), aws.ToString(tag.Value)))
 	}
 }

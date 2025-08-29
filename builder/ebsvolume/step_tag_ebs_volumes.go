@@ -53,7 +53,7 @@ func (s *stepTagEBSVolumes) Run(ctx context.Context, state multistep.StateBag) m
 		if len(config.VolumeRunTags) > 0 {
 			ui.Say("Removing any tags applied to EBS volumes when the source instance was created...")
 
-			ui.Message("Compiling list of existing tags to remove...")
+			ui.Say("Compiling list of existing tags to remove...")
 			existingTags, err := awscommon.TagMap(config.VolumeRunTags).EC2Tags(s.Ctx, region, state)
 			if err != nil {
 				err := fmt.Errorf("Error generating list of tags to remove: %s", err)
@@ -76,7 +76,7 @@ func (s *stepTagEBSVolumes) Run(ctx context.Context, state multistep.StateBag) m
 			}
 
 			// Delete the tags
-			ui.Message(fmt.Sprintf("Deleting 'run_volume_tags' on EBS Volumes: %s", strings.Join(volumeIds, ", ")))
+			ui.Say(fmt.Sprintf("Deleting 'run_volume_tags' on EBS Volumes: %s", strings.Join(volumeIds, ", ")))
 			_, err = ec2Client.DeleteTags(ctx, &ec2.DeleteTagsInput{
 				Resources: volumeIds,
 				Tags:      existingTags,
