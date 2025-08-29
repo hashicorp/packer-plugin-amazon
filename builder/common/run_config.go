@@ -780,6 +780,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.SSHInterface != "private_ip" &&
 		c.SSHInterface != "public_dns" &&
 		c.SSHInterface != "private_dns" &&
+		c.SSHInterface != "ipv6" &&
 		c.SSHInterface != "session_manager" &&
 		c.SSHInterface != "" {
 		errs = append(errs, fmt.Errorf("Unknown interface type: %s", c.SSHInterface))
@@ -867,7 +868,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	}
 
 	if len(c.TemporarySGSourceCidrs) == 0 && !c.TemporarySGSourcePublicIp {
-		c.TemporarySGSourceCidrs = []string{"0.0.0.0/0"}
+		if c.SSHInterface == "ipv6" {
+			c.TemporarySGSourceCidrs = []string{"::/0"}
+		} else {
+			c.TemporarySGSourceCidrs = []string{"0.0.0.0/0"}
+		}
 	} else {
 		for _, cidr := range c.TemporarySGSourceCidrs {
 			if _, _, err := net.ParseCIDR(cidr); err != nil {
