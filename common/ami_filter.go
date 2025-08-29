@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
 type AmiFilterOptions struct {
@@ -60,7 +61,7 @@ func prettyFilters(params *ec2.DescribeImagesInput) string {
 	return string(b)
 }
 
-func (d *AmiFilterOptions) GetFilteredImage(ctx context.Context, params *ec2.DescribeImagesInput, client Ec2Client) (*types.Image, error) {
+func (d *AmiFilterOptions) GetFilteredImage(ctx context.Context, params *ec2.DescribeImagesInput, client clients.Ec2Client) (*types.Image, error) {
 	// We have filters to apply
 	if len(d.Filters) > 0 {
 		amiFilters, err := buildEc2Filters(d.Filters)
