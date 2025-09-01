@@ -569,10 +569,10 @@ type RunConfig struct {
 	Placement Placement `mapstructure:"placement" required:"false"`
 	// Deprecated: Use Placement Tenancy instead.
 	Tenancy string `mapstructure:"tenancy" required:"false"`
-	// A list of IPv4 CIDR blocks to be authorized access to the instance, when
+	// A list of IPv4/IPv6 CIDR blocks to be authorized access to the instance, when
 	// packer is creating a temporary security group.
 	//
-	// The default is [`0.0.0.0/0`] (i.e., allow any IPv4 source).
+	// The default is [`0.0.0.0/0`] (i.e., allow any IPv4 source) and if ssh_interface is set as "ipv6" the default is [`::/0`] (i.e., allow any IPv6 source).
 	// Use `temporary_security_group_source_public_ip` to allow current host's
 	// public IP instead of any IPv4 source.
 	// This is only used when `security_group_id` or `security_group_ids` is not
@@ -653,7 +653,7 @@ type RunConfig struct {
 	// Communicator settings
 	Comm communicator.Config `mapstructure:",squash"`
 
-	// One of `public_ip`, `private_ip`, `public_dns`, `private_dns` or `session_manager`.
+	// One of `public_ip`, `private_ip`, `public_dns`, `private_dns`, `ipv6` or `session_manager`.
 	//    If set, either the public IP address, private IP address, public DNS name
 	//    or private DNS name will be used as the host for SSH. The default behaviour
 	//    if inside a VPC is to use the public IP address if available, otherwise
@@ -664,6 +664,10 @@ type RunConfig struct {
 	//    should be direct, `ssh_interface` must be set to `private_dns` and
 	//    `<region>.compute.internal` included in the `NO_PROXY` environment
 	//    variable.
+	//
+	//	  When using `ipv6` the VPC and subnet must be configured to support IPv6.
+	//	  The default VPC and subnets do not have ipv6 configured by default.
+	//	  Refer: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-migrate-ipv6-add.html
 	//
 	//    When using `session_manager` the machine running Packer must have
 	//	  the AWS Session Manager Plugin installed and within the users' system path.

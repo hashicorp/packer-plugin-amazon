@@ -200,31 +200,17 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	port := s.CommConfig.Port()
 	// Authorize access for the provided port within the security group
-	var groupRules *ec2.AuthorizeSecurityGroupIngressInput
-	if len(groupIpv6Ranges) != 0 {
-		groupRules = &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: groupResp.GroupId,
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(int64(port)),
-					ToPort:     aws.Int64(int64(port)),
-					Ipv6Ranges: groupIpv6Ranges,
-					IpProtocol: aws.String("tcp"),
-				},
+	groupRules := &ec2.AuthorizeSecurityGroupIngressInput{
+		GroupId: groupResp.GroupId,
+		IpPermissions: []*ec2.IpPermission{
+			{
+				FromPort:   aws.Int64(int64(port)),
+				ToPort:     aws.Int64(int64(port)),
+				Ipv6Ranges: groupIpv6Ranges,
+				IpRanges:   groupIpRanges,
+				IpProtocol: aws.String("tcp"),
 			},
-		}
-	} else {
-		groupRules = &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: groupResp.GroupId,
-			IpPermissions: []*ec2.IpPermission{
-				{
-					FromPort:   aws.Int64(int64(port)),
-					ToPort:     aws.Int64(int64(port)),
-					IpRanges:   groupIpRanges,
-					IpProtocol: aws.String("tcp"),
-				},
-			},
-		}
+		},
 	}
 
 	ui.Say(fmt.Sprintf(
