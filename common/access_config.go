@@ -282,8 +282,6 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 		imdsEnabledState = imds.ClientDisabled
 	}
 	userAgentProducts := awsbase.UserAgentProducts{
-		{Name: "APN", Version: "1.0"},
-		{Name: "HashiCorp", Version: "1.0"},
 		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Comment: "+https://www.packer.io/docs/builders/amazon"},
 	}
 
@@ -296,9 +294,7 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 		AccessKey: c.AccessKey,
 		APNInfo: &awsbase.APNInfo{
 			PartnerName: "HashiCorp",
-			Products: []awsbase.UserAgentProduct{
-				{Name: "packer-plugin-amazon", Version: pluginversion.Version, Comment: "+https://www.packer.io/docs/builders/amazon"},
-			},
+			Products:    userAgentProducts,
 		},
 		Region:           c.RawRegion,
 		SuppressDebugLog: true,
