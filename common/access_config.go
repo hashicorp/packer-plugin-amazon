@@ -301,7 +301,7 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 			},
 		},
 		Region:           c.RawRegion,
-		SuppressDebugLog: false,
+		SuppressDebugLog: true,
 		// TODO: implement for Packer
 		// IamEndpoint:                 c.Endpoints["iam"],
 		Insecure:                      c.InsecureSkipTLSVerify,
