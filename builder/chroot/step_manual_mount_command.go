@@ -69,7 +69,7 @@ func (s *StepManualMountCommand) Run(ctx context.Context, state multistep.StateB
 	wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
 
 	ui.Say("Running manual mount commands...")
-	mountCommand, err := wrappedCommand(fmt.Sprintf("%s", s.Command))
+	mountCommand, err := wrappedCommand(s.Command)
 	if err != nil {
 		err := fmt.Errorf("Error creating mount command: %s", err)
 		state.Put("error", err)
