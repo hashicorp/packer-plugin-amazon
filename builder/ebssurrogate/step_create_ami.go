@@ -182,6 +182,13 @@ func (s *StepCreateAMI) combineDevices() []*ec2.BlockDeviceMapping {
 		if *device.DeviceName == s.RootDevice.SourceDeviceName {
 			device.DeviceName = aws.String(s.RootDevice.DeviceName)
 		}
+
+		// Remove KmsKeyId if present, as it is not supported for CreateImage API Call
+		// Any encrypted devices will retain their encryption status.
+		if device.Ebs != nil {
+			device.Ebs.KmsKeyId = nil
+		}
+
 		devices[*device.DeviceName] = device
 	}
 

@@ -11,6 +11,7 @@ import (
 
 type Ec2Client interface {
 	ec2.DescribeImagesAPIClient
+	ec2.DescribeImportImageTasksAPIClient
 	ec2.DescribeInstancesAPIClient
 	ec2.DescribeSnapshotsAPIClient
 

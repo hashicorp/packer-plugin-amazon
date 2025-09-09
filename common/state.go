@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -228,8 +229,112 @@ func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 		envOverrides.awsPollDelaySeconds.overridden = true
 	}
 
-	waitOpts := applyEnvOverrides(envOverrides)
-	return waitOpts
+	return applyEnvOverrides(envOverrides)
+}
+func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn clients.Ec2Client, taskID string) error {
+	importInput := ec2.DescribeImportImageTasksInput{
+		ImportTaskIds: []string{taskID},
+	}
+
+	err := WaitForImageToBeImported(conn,
+		ctx,
+		&importInput,
+		w.getWaiterOptions())
+	return err
+}
+
+func WaitForImageToBeImported(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeImportImageTasksInput,
+	opts *PollingOptions) error {
+	// we have tried to simulate here a behaviour that's similar to what we have in v1.
+	// aws sdk go v2 does not provide a builtin waiter for Import Image Tasks.
+
+	maxAttempts := 720
+	delay := 5 * time.Second
+
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
+
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeImportImageTasks(ctx, input)
+		if err != nil {
+			return err
+		}
+
+		if len(output.ImportImageTasks) == 0 {
+			return fmt.Errorf("import task not found")
+		}
+
+		for _, task := range output.ImportImageTasks {
+			// Check for failure states
+			if *task.Status == "deleted" {
+				return fmt.Errorf("import task was deleted")
+			}
+
+			// Check for success state
+			if *task.Status == "completed" {
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+	}
+
+	return fmt.Errorf("timeout waiting for image import to complete after %d attempts", maxAttempts)
+}
+
+func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client clients.Ec2Client, imageId string) error {
+
+	imageInput := &ec2.DescribeImagesInput{
+		ImageIds: []string{imageId},
+	}
+	log.Printf("Waiting for AMI (%s) to be available...", imageId)
+
+	pollingOpts := w.getWaiterOptions()
+
+	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
+	// Default to 10 minutes
+
+	if pollingOpts.MaxWaitTime == nil {
+		// Bump this default to 30 minutes because the aws default
+		// of ten minutes doesn't work for some of our long-running copies.
+		pollingOpts.MaxWaitTime = aws.Duration(30 * time.Minute)
+	}
+
+	if pollingOpts.MinDelay == nil {
+		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
+			o.MinDelay = 5 * time.Second // Set a default 5-second delay
+		})
+	}
+
+	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOpts.MaxWaitTime, waiterOpts...)
+
+	if err != nil {
+		// The error type for a waiter timeout is *aws.WaiterError
+		// but checking the error string is still a common pattern.
+		if strings.Contains(err.Error(), "waiter state transitioned to Failure") {
+			err = fmt.Errorf("failed with ResourceNotReady error, which can "+
+				"have a variety of causes. For help troubleshooting, check "+
+				"our docs: "+
+				"https://developer.hashicorp.com/packer/integrations/hashicorp/amazon#resourcenotready-error\n"+
+				"original error: %w", err)
+		}
+	}
+
+	return err
 }
 
 func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
