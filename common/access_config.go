@@ -282,8 +282,6 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 		imdsEnabledState = imds.ClientDisabled
 	}
 	userAgentProducts := awsbase.UserAgentProducts{
-		{Name: "APN", Version: "1.0"},
-		{Name: "HashiCorp", Version: "1.0"},
 		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Comment: "+https://www.packer.io/docs/builders/amazon"},
 	}
 
@@ -291,8 +289,13 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 		// In acceptance tests, this is nil when authenticating for cleaning up created resources.
 		userAgentProducts = append(userAgentProducts, awsbase.UserAgentProduct{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Comment: "+https://www.packer.io"})
 	}
+
 	awsbaseConfig := &awsbase.Config{
-		AccessKey:        c.AccessKey,
+		AccessKey: c.AccessKey,
+		APNInfo: &awsbase.APNInfo{
+			PartnerName: "HashiCorp",
+			Products:    userAgentProducts,
+		},
 		Region:           c.RawRegion,
 		SuppressDebugLog: true,
 		// TODO: implement for Packer
@@ -306,8 +309,7 @@ func (c *AccessConfig) getBaseAwsConfig(ctx context.Context) (aws.Config, error)
 		// TODO: implement for Packer
 		// SkipRequestingAccountId:     c.SkipRequestingAccountId,
 		// StsEndpoint:                 c.Endpoints["sts"],
-		Token:     c.Token,
-		UserAgent: userAgentProducts,
+		Token: c.Token,
 	}
 
 	if c.AssumeRole.AssumeRoleARN != "" {
