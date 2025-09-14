@@ -12,11 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
 // DestroyAMIs deregisters the AWS machine images in imageids from an active AWS account
-func DestroyAMIs(imageIds []string, client Ec2Client) error {
+func DestroyAMIs(imageIds []string, client clients.Ec2Client) error {
 	ctx := context.TODO()
 	resp, err := client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		ImageIds: imageIds,

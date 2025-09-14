@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
@@ -295,6 +296,102 @@ func WaitForImageToBeImported(client clients.Ec2Client, ctx context.Context, inp
 
 	return fmt.Errorf("timeout waiting for image import to complete after %d attempts", maxAttempts)
 }
+func WaitForVolumeToBeAttached(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeVolumesInput,
+	opts *PollingOptions) error {
+	maxAttempts := 40
+	delay := 5 * time.Second
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
+
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeVolumes(ctx, input)
+		if err != nil {
+			return err
+		}
+		if len(output.Volumes) == 0 {
+			return fmt.Errorf("no volumes found")
+		}
+
+		for _, volume := range output.Volumes {
+
+			// Check for attaching state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttaching {
+				log.Printf("volume %s is in attaching state, retrying...", volume.VolumeId)
+			}
+			// Check for success state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttached {
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+
+	}
+	return fmt.Errorf("timeout waiting for volume to attached after %d attempts", maxAttempts)
+}
+func WaitForVolumeToBeDetached(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeVolumesInput,
+	opts *PollingOptions) error {
+	maxAttempts := 40
+	delay := 5 * time.Second
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
+
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeVolumes(ctx, input)
+		if err != nil {
+			return err
+		}
+		if len(output.Volumes) == 0 {
+			return fmt.Errorf("no volumes found")
+		}
+
+		for _, volume := range output.Volumes {
+			if len(volume.Attachments) == 0 {
+				return nil
+			}
+
+			// Check for attaching state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateDetaching {
+				log.Printf("volume %s is in detaching state, retrying...", aws.ToString(volume.VolumeId))
+			}
+			// Check for success state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateDetached {
+				log.Printf("Volume %s is detached", aws.ToString(volume.VolumeId))
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+
+	}
+	return fmt.Errorf("timeout waiting for volume to be detached after %d attempts", maxAttempts)
+}
 
 func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client clients.Ec2Client, imageId string) error {
 
@@ -416,6 +513,30 @@ func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2
 		})
 	}
 	err := ec2.NewSecurityGroupExistsWaiter(ec2Client).Wait(ctx, &securityGroupInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+
+}
+
+func (w *AWSPollingConfig) WaitUntilVolumeAttached(ctx context.Context, ec2Client clients.Ec2Client, volumeId string) error {
+	volumeInput := ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeId},
+	}
+
+	err := WaitForVolumeToBeAttached(ec2Client,
+		ctx,
+		&volumeInput,
+		w.getWaiterOptions())
+	return err
+}
+func (w *AWSPollingConfig) WaitUntilVolumeDetached(ctx context.Context, ec2Client clients.Ec2Client,
+	volumeId string) error {
+	volumeInput := ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeId},
+	}
+	err := WaitForVolumeToBeDetached(ec2Client,
+		ctx,
+		&volumeInput,
+		w.getWaiterOptions())
 	return err
 
 }

@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
@@ -20,12 +22,12 @@ import (
 type StepRegisterAMI struct {
 	PollingConfig            *awscommon.AWSPollingConfig
 	RootDevice               RootBlockDevice
-	AMIDevices               []*ec2.BlockDeviceMapping
-	LaunchDevices            []*ec2.BlockDeviceMapping
+	AMIDevices               []ec2types.BlockDeviceMapping
+	LaunchDevices            []ec2types.BlockDeviceMapping
 	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
 	Architecture             string
-	image                    *ec2.Image
+	image                    ec2types.Image
 	LaunchOmitMap            map[string]bool
 	AMISkipBuildRegion       bool
 	BootMode                 string
@@ -35,7 +37,8 @@ type StepRegisterAMI struct {
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	awsConfig := state.Get("aws.config").(*aws.Config)
 	snapshotIds := state.Get("snapshot_ids").(map[string]string)
 	ui := state.Get("ui").(packersdk.Ui)
 
@@ -62,7 +65,7 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 
 	registerOpts := &ec2.RegisterImageInput{
 		Name:                &amiName,
-		Architecture:        aws.String(s.Architecture),
+		Architecture:        ec2types.ArchitectureValues(s.Architecture),
 		RootDeviceName:      aws.String(s.RootDevice.DeviceName),
 		VirtualizationType:  aws.String(config.AMIVirtType),
 		BlockDeviceMappings: blockDevices,
@@ -79,15 +82,15 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 		registerOpts.EnaSupport = aws.Bool(true)
 	}
 	if s.BootMode != "" {
-		registerOpts.BootMode = aws.String(s.BootMode)
+		registerOpts.BootMode = ec2types.BootModeValues(s.BootMode)
 	}
 	if s.UefiData != "" {
 		registerOpts.UefiData = aws.String(s.UefiData)
 	}
 	if s.TpmSupport != "" {
-		registerOpts.TpmSupport = aws.String(s.TpmSupport)
+		registerOpts.TpmSupport = ec2types.TpmSupportValues(s.TpmSupport)
 	}
-	registerResp, err := ec2conn.RegisterImage(registerOpts)
+	registerResp, err := ec2Client.RegisterImage(ctx, registerOpts)
 	if err != nil {
 		state.Put("error", fmt.Errorf("Error registering AMI: %s", err))
 		ui.Error(state.Get("error").(error).Error())
@@ -97,19 +100,20 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	// Set the AMI ID in the state
 	ui.Say(fmt.Sprintf("AMI: %s", *registerResp.ImageId))
 	amis := make(map[string]string)
-	amis[*ec2conn.Config.Region] = *registerResp.ImageId
+	amis[awsConfig.Region] = *registerResp.ImageId
 	state.Put("amis", amis)
 
 	// Wait for the image to become ready
 	ui.Say("Waiting for AMI to become ready...")
-	if err := s.PollingConfig.WaitUntilAMIAvailable(ctx, ec2conn, *registerResp.ImageId); err != nil {
+	if err := s.PollingConfig.WaitUntilAMIAvailable(ctx, ec2Client, *registerResp.ImageId); err != nil {
 		err := fmt.Errorf("Error waiting for AMI: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
 
-	imagesResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{registerResp.ImageId}})
+	imagesResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{ImageIds: []string{*registerResp.
+		ImageId}})
 	if err != nil {
 		err := fmt.Errorf("Error searching for AMI: %s", err)
 		state.Put("error", err)
@@ -122,7 +126,7 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	for _, blockDeviceMapping := range imagesResp.Images[0].BlockDeviceMappings {
 		if blockDeviceMapping.Ebs != nil && blockDeviceMapping.Ebs.SnapshotId != nil {
 
-			snapshots[*ec2conn.Config.Region] = append(snapshots[*ec2conn.Config.Region], *blockDeviceMapping.Ebs.SnapshotId)
+			snapshots[awsConfig.Region] = append(snapshots[awsConfig.Region], *blockDeviceMapping.Ebs.SnapshotId)
 		}
 	}
 	state.Put("snapshots", snapshots)
@@ -131,29 +135,29 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 }
 
 func (s *StepRegisterAMI) Cleanup(state multistep.StateBag) {
-	if s.image == nil {
+	if s.image.ImageId == nil {
 		return
 	}
-
+	ctx := context.TODO()
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 	if !cancelled && !halted {
 		return
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deregistering the AMI because cancellation or error...")
 	deregisterOpts := &ec2.DeregisterImageInput{ImageId: s.image.ImageId}
-	if _, err := ec2conn.DeregisterImage(deregisterOpts); err != nil {
+	if _, err := ec2Client.DeregisterImage(ctx, deregisterOpts); err != nil {
 		ui.Error(fmt.Sprintf("Error deregistering AMI, may still be around: %s", err))
 		return
 	}
 }
 
-func (s *StepRegisterAMI) combineDevices(snapshotIds map[string]string) []*ec2.BlockDeviceMapping {
-	devices := map[string]*ec2.BlockDeviceMapping{}
+func (s *StepRegisterAMI) combineDevices(snapshotIds map[string]string) []ec2types.BlockDeviceMapping {
+	devices := map[string]ec2types.BlockDeviceMapping{}
 
 	for _, device := range s.AMIDevices {
 		devices[*device.DeviceName] = device
@@ -182,7 +186,7 @@ func (s *StepRegisterAMI) combineDevices(snapshotIds map[string]string) []*ec2.B
 		devices[*device.DeviceName] = device
 	}
 
-	blockDevices := []*ec2.BlockDeviceMapping{}
+	blockDevices := []ec2types.BlockDeviceMapping{}
 	for _, device := range devices {
 		blockDevices = append(blockDevices, device)
 	}
