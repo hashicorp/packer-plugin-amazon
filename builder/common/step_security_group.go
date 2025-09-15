@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -180,15 +181,24 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	groupIpRanges := []*ec2.IpRange{}
 	groupIpv6Ranges := []*ec2.Ipv6Range{}
 	for _, cidr := range temporarySGSourceCidrs {
-		if strings.Contains(cidr, ":") {
-			groupIpv6Ranges = append(groupIpv6Ranges, &ec2.Ipv6Range{
-				CidrIpv6: aws.String(cidr),
-			})
-		} else {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			ui.Error(err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		if ipNet.IP.To4() != nil {
+			// IPv4 CIDR
 			groupIpRanges = append(groupIpRanges, &ec2.IpRange{
 				CidrIp: aws.String(cidr),
 			})
+		} else {
+			// IPv6 CIDR
+			groupIpv6Ranges = append(groupIpv6Ranges, &ec2.Ipv6Range{
+				CidrIpv6: aws.String(cidr),
+			})
 		}
+
 	}
 
 	// Set some state data for use in future steps
