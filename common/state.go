@@ -99,6 +99,8 @@ type AWSPollingConfig struct {
 const AwsDefaultMaxWaitTimeDuration = 10 * time.Minute
 const AwsDefaultInstanceProfileExistsWaitTimeDuration = 40 * time.Second
 const AwsDefaultRoleExistsWaitTimeDuration = 20 * time.Second
+const AwsDefaultSecurityGroupExistsWaitTimeDuration = 200 * time.Second
+const AwsDefaultSnapshotCompletedWaitTimeDuration = 30 * time.Minute
 
 // This helper function uses the environment variables AWS_TIMEOUT_SECONDS and
 // AWS_POLL_DELAY_SECONDS to generate waiter options that can be passed into any
@@ -282,7 +284,7 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSnapshotCompletedWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SnapshotCompletedWaiterOptions) {
@@ -303,7 +305,7 @@ func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2
 	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(200 * time.Second)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSecurityGroupExistsWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SecurityGroupExistsWaiterOptions) {
