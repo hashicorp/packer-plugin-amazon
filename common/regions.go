@@ -33,7 +33,6 @@ func (c *AccessConfig) ValidateRegion(ctx context.Context, regions ...string) er
 	if err != nil {
 		return err
 	}
-
 	validRegions, err := listEC2Regions(ctx, client)
 	if err != nil {
 		return err

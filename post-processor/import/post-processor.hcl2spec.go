@@ -4,7 +4,7 @@ package amazonimport
 
 import (
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/zclconf/go-cty/cty"
 )
 
