@@ -6,7 +6,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -194,7 +193,6 @@ func GetRegionConn(ctx context.Context, accessConfig *AccessConfig, target strin
 func (s *StepAMIRegionCopy) copyImage(ctx context.Context, regionconn clients.Ec2Client, name, imageId, target, source,
 	keyId string, encrypt *bool, amiSnapshotCopyDurationMinutes *int64) (string, error) {
 	var amiImageId string
-	log.Printf("************INSIDE COPY IMAGE.... %s", imageId)
 	t := true
 	resp, err := regionconn.CopyImage(ctx, &ec2.CopyImageInput{
 		SourceRegion:                          &source,
@@ -211,7 +209,6 @@ func (s *StepAMIRegionCopy) copyImage(ctx context.Context, regionconn clients.Ec
 			imageId, target, err)
 	}
 	amiImageId = *resp.ImageId
-	log.Printf("***************AMI copied (%s) to (%s)", amiImageId, target)
 	return amiImageId, nil
 
 }

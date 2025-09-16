@@ -114,7 +114,6 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 			Name:   aws.String("name"),
 			Values: []string{s.DestAmiName},
 		}}}, func(o *ec2.Options) {
-		// todo check this once
 		o.RetryMaxAttempts = 11
 	})
 

@@ -403,7 +403,6 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client cli
 	pollingOpts := w.getWaiterOptions()
 
 	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
-	// Default to 10 minutes
 
 	if pollingOpts.MaxWaitTime == nil {
 		// Bump this default to 30 minutes because the aws default

@@ -55,7 +55,7 @@ func TestStepPreValidate_checkVpc(t *testing.T) {
 		{"NonDefaultVpcWithSubnetFilter", StepPreValidate{VpcId: "vpc-1234567890", HasSubnetFilter: true}, false},
 	}
 
-	mockConn, err := getMockConn(nil, "")
+	mockConn, err := getMockConn(context.TODO(), nil, "")
 	if err != nil {
 		t.Fatal("unable to get a mock connection")
 	}

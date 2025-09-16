@@ -27,8 +27,7 @@ type StepCreateTags struct {
 }
 
 func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	//ec2conn := state.Get("ec2v2").(clients.Ec2Client)
-	//session := state.Get("awsSession").(*session.Session)
+	accessConfig := state.Get("access_config").(*AccessConfig)
 	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 
@@ -47,12 +46,7 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Adding tags to AMI (%s)...", ami))
 
-		regionConfig := awsConfig.Copy()
-		regionConfig.Region = region
-
-		regionEc2Client := ec2.NewFromConfig(*awsConfig, func(o *ec2.Options) {
-			o.Region = region
-		})
+		regionEc2Client, err := GetRegionConn(ctx, accessConfig, region)
 
 		// Retrieve image list for given AMI
 		resourceIds := []string{ami}

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -39,17 +38,14 @@ func (s *StepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s) in region %q ...", ami, region))
 
-		// todo fix this
-		//GetRegionConn(s.AccessConfig, region)
-		ec2Client, err := state.Get("ec2v2").(clients.Ec2Client), error(nil)
+		regionEc2Client, err := GetRegionConn(ctx, s.AccessConfig, region)
 		if err != nil {
-			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
-			state.Put("error", err.Error())
+			err := fmt.Errorf("Error getting region connection for deprecation: %s", err)
+			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
-
-		_, err = ec2Client.EnableImageDeprecation(ctx, &ec2.EnableImageDeprecationInput{
+		_, err = regionEc2Client.EnableImageDeprecation(ctx, &ec2.EnableImageDeprecationInput{
 			ImageId:     &ami,
 			DeprecateAt: &deprecationTime,
 		})

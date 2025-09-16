@@ -35,14 +35,6 @@ func (s *StepDeregisterAMI) Run(ctx context.Context, state multistep.StateBag) m
 
 	for _, region := range regions {
 		// get new connection for each region in which we need to deregister vms
-		/*session, err := s.AccessConfig.Session()
-		if err != nil {
-			return multistep.ActionHalt
-		}
-
-		regionconn := ec2.New(session.Copy(&aws.Config{
-			Region: aws.String(region),
-		}))*/
 
 		regionEc2Client := ec2.NewFromConfig(*awsConfig, func(o *ec2.Options) {
 			o.Region = region

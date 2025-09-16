@@ -34,8 +34,8 @@ type StepModifyAMIAttributes struct {
 }
 
 func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
+	accessConfig := state.Get("access_config").(*AccessConfig)
 	awsConfig := state.Get("aws_config").(*aws.Config)
-	//session := state.Get("awsSession").(*session.Session)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	if s.AMISkipCreateImage {
@@ -204,12 +204,13 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	// Modifying image attributes
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Modifying attributes on AMI (%s)...", ami))
-		regionEc2Client := ec2.NewFromConfig(*awsConfig, func(o *ec2.Options) {
-			o.Region = region
-		})
-		//regionConn := ec2.New(session, &aws.Config{
-		//	Region: aws.String(region),
-		//})
+		regionEc2Client, err := GetRegionConn(ctx, accessConfig, region)
+		if err != nil {
+			err := fmt.Errorf("Error getting region connection for modify AMI attributes: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
 		for name, input := range options {
 			ui.Say(fmt.Sprintf("Modifying: %s", name))
 			input.ImageId = &ami
