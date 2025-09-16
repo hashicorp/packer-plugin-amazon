@@ -323,7 +323,7 @@ func WaitForVolumeToBeAttached(client clients.Ec2Client, ctx context.Context, in
 
 			// Check for attaching state
 			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttaching {
-				log.Printf("volume %s is in attaching state, retrying...", volume.VolumeId)
+				log.Printf("volume %s is in attaching state, retrying...", *volume.VolumeId)
 			}
 			// Check for success state
 			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttached {
