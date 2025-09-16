@@ -47,6 +47,12 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 		ui.Say(fmt.Sprintf("Adding tags to AMI (%s)...", ami))
 
 		regionEc2Client, err := GetRegionConn(ctx, accessConfig, region)
+		if err != nil {
+			err := fmt.Errorf("Error getting region connection for tagging: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
 
 		// Retrieve image list for given AMI
 		resourceIds := []string{ami}

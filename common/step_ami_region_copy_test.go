@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+
+	//ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -30,7 +31,6 @@ type mockEC2Conn struct {
 	describeImagesCount  int
 	deregisterImageCount int
 	deleteSnapshotCount  int
-	waitCount            int
 
 	lock sync.Mutex
 }
@@ -68,8 +68,8 @@ func (m *mockEC2Conn) DeleteSnapshot(ctx context.Context, params *ec2.DeleteSnap
 
 func (m *mockEC2Conn) DescribeImages(ctx context.Context, params *ec2.DescribeImagesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
 	m.lock.Lock()
-	defer m.lock.Unlock()
 	m.describeImagesCount++
+	defer m.lock.Unlock()
 
 	return &ec2.DescribeImagesOutput{
 		Images: []ec2types.Image{
@@ -81,24 +81,10 @@ func (m *mockEC2Conn) DescribeImages(ctx context.Context, params *ec2.DescribeIm
 	}, nil
 }
 
-type mockImageAvailableWaiter struct {
-	mockConn *mockEC2Conn
-}
-
-func (m *mockImageAvailableWaiter) Wait(ctx context.Context, params *ec2.DescribeImagesInput, maxWaitDur time.Duration, optFns ...func(*ec2.ImageAvailableWaiterOptions)) error {
-	// Increment the wait counter
-	m.mockConn.lock.Lock()
-	m.mockConn.waitCount++
-	m.mockConn.lock.Unlock()
-
-	return nil
-}
-
 func getMockConn(ctx context.Context, config *AccessConfig, target string) (clients.Ec2Client, error) {
 	mockConn := &mockEC2Conn{
 		Config: aws.NewConfig(),
 	}
-
 	return mockConn, nil
 }
 
@@ -112,7 +98,7 @@ func tState() multistep.StateBag {
 	state.Put("amis", map[string]string{"us-east-1": "ami-12345"})
 	state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
 	conn, _ := getMockConn(context.TODO(), &AccessConfig{}, "us-east-2")
-	state.Put("ec2", conn)
+	state.Put("ec2v2", conn)
 	return state
 }
 
@@ -134,7 +120,7 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	}
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
-
+	// 👇 Override PollingConfig to use mock waiter
 	state := tState()
 	state.Put("intermediary_image", true)
 	stepAMIRegionCopy.Run(context.Background(), state)

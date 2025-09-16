@@ -185,9 +185,7 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 
 	if len(s.ProductCodes) > 0 {
 		codes := make([]string, len(s.ProductCodes))
-		for i, c := range s.ProductCodes {
-			codes[i] = c
-		}
+		copy(codes, s.ProductCodes)
 		options["product codes"] = &ec2.ModifyImageAttributeInput{
 			ProductCodes: codes,
 		}
