@@ -179,3 +179,59 @@ jobs:
           name: "datasource_secretsmanager_failure_logs.zip"
           path: "datasource_secretsmanager_failure_logs.zip"
           retention-days: 5
+
+
+  slack-notify:
+    permissions:
+      contents: none
+    needs:
+      - get-go-version
+      - ebs-acc-tests
+      - ebssurrogate-acc-tests
+      - datasource-acc-tests
+    if: always() && (
+      needs.ebs-acc-tests.result == 'failure' ||
+      needs.ebssurrogate-acc-tests.result == 'failure' ||
+      needs.datasource-acc-tests.result == 'failure'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect failed jobs
+        id: collect-failures
+        run: |
+          failed=""
+          if [ "${{ needs.ebs-acc-tests.result }}" == "failure" ]; then
+            failed="$failed ebs-acc-tests"
+          fi
+          if [ "${{ needs.ebssurrogate-acc-tests.result }}" == "failure" ]; then
+            failed="$failed ebssurrogate-acc-tests"
+          fi
+          if [ "${{ needs.datasource-acc-tests.result }}" == "failure" ]; then
+            failed="$failed datasource-acc-tests"
+          fi
+          echo "failed-jobs=$failed" >> "$GITHUB_OUTPUT"
+
+      - name: Send slack notification on failure
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
+        with:
+          payload: |
+            {
+              "text": ":alert: The following acceptance test jobs *FAILED*: `${{ steps.collect-failures.outputs.failed-jobs }}` :alert:",
+              "attachments": [
+                {
+                  "color": "#C41E3A",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "Branch: `${{ github.ref_name }}`\nRef: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
