@@ -4,7 +4,7 @@ package ebsvolume
 
 import (
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -15,13 +15,13 @@ type FlatBlockDevice struct {
 	DeleteOnTermination *bool                 `mapstructure:"delete_on_termination" required:"false" cty:"delete_on_termination" hcl:"delete_on_termination"`
 	DeviceName          *string               `mapstructure:"device_name" required:"false" cty:"device_name" hcl:"device_name"`
 	Encrypted           *bool                 `mapstructure:"encrypted" required:"false" cty:"encrypted" hcl:"encrypted"`
-	IOPS                *int64                `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
+	IOPS                *int32                `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
 	NoDevice            *bool                 `mapstructure:"no_device" required:"false" cty:"no_device" hcl:"no_device"`
 	SnapshotId          *string               `mapstructure:"snapshot_id" required:"false" cty:"snapshot_id" hcl:"snapshot_id"`
-	Throughput          *int64                `mapstructure:"throughput" required:"false" cty:"throughput" hcl:"throughput"`
+	Throughput          *int32                `mapstructure:"throughput" required:"false" cty:"throughput" hcl:"throughput"`
 	VirtualName         *string               `mapstructure:"virtual_name" required:"false" cty:"virtual_name" hcl:"virtual_name"`
 	VolumeType          *string               `mapstructure:"volume_type" required:"false" cty:"volume_type" hcl:"volume_type"`
-	VolumeSize          *int64                `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
+	VolumeSize          *int32                `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
 	KmsKeyId            *string               `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	Tags                map[string]string     `mapstructure:"tags" required:"false" cty:"tags" hcl:"tags"`
 	Tag                 []config.FlatKeyValue `mapstructure:"tag" required:"false" cty:"tag" hcl:"tag"`

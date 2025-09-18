@@ -8,15 +8,15 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 )
 
 const sourceDeviceName = "/dev/xvdf"
 const rootDeviceName = "/dev/xvda"
 
-func newStepRegisterAMI(amiDevices, launchDevices []*ec2.BlockDeviceMapping) *StepRegisterAMI {
+func newStepRegisterAMI(amiDevices, launchDevices []ec2types.BlockDeviceMapping) *StepRegisterAMI {
 	return &StepRegisterAMI{
 		RootDevice: RootBlockDevice{
 			SourceDeviceName:    sourceDeviceName,
@@ -31,7 +31,7 @@ func newStepRegisterAMI(amiDevices, launchDevices []*ec2.BlockDeviceMapping) *St
 	}
 }
 
-func sorted(devices []*ec2.BlockDeviceMapping) []*ec2.BlockDeviceMapping {
+func sorted(devices []ec2types.BlockDeviceMapping) []ec2types.BlockDeviceMapping {
 	sort.SliceStable(devices, func(i, j int) bool {
 		return *devices[i].DeviceName < *devices[j].DeviceName
 	})
@@ -41,28 +41,28 @@ func sorted(devices []*ec2.BlockDeviceMapping) []*ec2.BlockDeviceMapping {
 func TestStepRegisterAmi_combineDevices(t *testing.T) {
 	cases := []struct {
 		snapshotIds   map[string]string
-		amiDevices    []*ec2.BlockDeviceMapping
-		launchDevices []*ec2.BlockDeviceMapping
-		allDevices    []*ec2.BlockDeviceMapping
+		amiDevices    []ec2types.BlockDeviceMapping
+		launchDevices []ec2types.BlockDeviceMapping
+		allDevices    []ec2types.BlockDeviceMapping
 	}{
 		{
 			snapshotIds:   map[string]string{},
-			amiDevices:    []*ec2.BlockDeviceMapping{},
-			launchDevices: []*ec2.BlockDeviceMapping{},
-			allDevices:    []*ec2.BlockDeviceMapping{},
+			amiDevices:    []ec2types.BlockDeviceMapping{},
+			launchDevices: []ec2types.BlockDeviceMapping{},
+			allDevices:    []ec2types.BlockDeviceMapping{},
 		},
 		{
 			snapshotIds: map[string]string{},
-			amiDevices:  []*ec2.BlockDeviceMapping{},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			amiDevices:  []ec2types.BlockDeviceMapping{},
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String(rootDeviceName),
 				},
 			},
@@ -72,16 +72,16 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 			snapshotIds: map[string]string{
 				sourceDeviceName: "snap-0123456789abcdef1",
 			},
-			amiDevices: []*ec2.BlockDeviceMapping{},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			amiDevices: []ec2types.BlockDeviceMapping{},
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef1"),
 					},
 					DeviceName: aws.String(rootDeviceName),
@@ -93,27 +93,27 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 			snapshotIds: map[string]string{
 				sourceDeviceName: "snap-0123456789abcdef1",
 			},
-			amiDevices: []*ec2.BlockDeviceMapping{
+			amiDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String("/dev/xvdg"),
 				},
 			},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef1"),
 					},
 					DeviceName: aws.String(rootDeviceName),
 				},
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String("/dev/xvdg"),
 				},
 			},
@@ -124,26 +124,26 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 				sourceDeviceName: "snap-0123456789abcdef1",
 				"/dev/xvdg":      "snap-0123456789abcdef2",
 			},
-			amiDevices: []*ec2.BlockDeviceMapping{},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			amiDevices: []ec2types.BlockDeviceMapping{},
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 				{
-					Ebs:        &ec2.EbsBlockDevice{},
+					Ebs:        &ec2types.EbsBlockDevice{},
 					DeviceName: aws.String("/dev/xvdg"),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef1"),
 					},
 					DeviceName: aws.String(rootDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef2"),
 					},
 					DeviceName: aws.String("/dev/xvdg"),
@@ -156,31 +156,31 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 				sourceDeviceName: "snap-0123456789abcdef1",
 				"/dev/xvdg":      "snap-0123456789abcdef2",
 			},
-			amiDevices: []*ec2.BlockDeviceMapping{},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			amiDevices: []ec2types.BlockDeviceMapping{},
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 					},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 					},
 					DeviceName: aws.String("/dev/xvdg"),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef1"),
 						// Encrypted: true stripped from snapshotted devices
 					},
 					DeviceName: aws.String(rootDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef2"),
 					},
 					DeviceName: aws.String("/dev/xvdg"),
@@ -193,9 +193,9 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 				sourceDeviceName: "snap-0123456789abcdef1",
 				"/dev/xvdg":      "snap-0123456789abcdef2",
 			},
-			amiDevices: []*ec2.BlockDeviceMapping{
+			amiDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 						KmsKeyId:  aws.String("keyId"),
 					},
@@ -205,36 +205,36 @@ func TestStepRegisterAmi_combineDevices(t *testing.T) {
 					DeviceName: aws.String(sourceDeviceName),
 				},
 			},
-			launchDevices: []*ec2.BlockDeviceMapping{
+			launchDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 					},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 					},
 					DeviceName: aws.String("/dev/xvdg"),
 				},
 			},
-			allDevices: []*ec2.BlockDeviceMapping{
+			allDevices: []ec2types.BlockDeviceMapping{
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						Encrypted: aws.Bool(true),
 						KmsKeyId:  aws.String("keyId"),
 					},
 					DeviceName: aws.String(sourceDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef1"),
 					},
 					DeviceName: aws.String(rootDeviceName),
 				},
 				{
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						SnapshotId: aws.String("snap-0123456789abcdef2"),
 					},
 					DeviceName: aws.String("/dev/xvdg"),
