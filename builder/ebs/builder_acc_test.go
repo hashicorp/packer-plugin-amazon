@@ -9,6 +9,7 @@ aws ec2 deregister-image --image-id $(aws ec2 describe-images --output text --fi
 package ebs
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"io"
@@ -19,12 +20,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
+	"github.com/hashicorp/packer-plugin-amazon/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -250,7 +253,7 @@ func TestAccBuilder_EbsForceDeregister(t *testing.T) {
 func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 	t.Parallel()
 	amiName := fmt.Sprintf("packer-test-dereg %d", time.Now().Unix())
-
+	ctx := context.TODO()
 	testCase := &acctest.PluginTestCase{
 		Name:     "amazon-ebs_force_delete_snapshot_part1_test",
 		Template: buildForceDeleteSnapshotConfig("false", amiName),
@@ -270,22 +273,22 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 
 	// Get image data by AMI name
-	ec2conn, _ := testEC2Conn("us-east-1")
-	describeInput := &ec2.DescribeImagesInput{Filters: []*ec2.Filter{
+	ec2Client, _ := testEC2Conn("us-east-1")
+	describeInput := &ec2.DescribeImagesInput{Filters: []ec2types.Filter{
 		{
 			Name:   aws.String("name"),
-			Values: []*string{aws.String(amiName)},
+			Values: []string{amiName},
 		},
 	}}
-	_ = ec2conn.WaitUntilImageExists(describeInput)
-	imageResp, _ := ec2conn.DescribeImages(describeInput)
+	_ = ec2.NewImageExistsWaiter(ec2Client).Wait(ctx, describeInput, 2*time.Minute)
+	imageResp, _ := ec2Client.DescribeImages(ctx, describeInput)
 	image := imageResp.Images[0]
 
 	// Get snapshot ids for image
-	snapshotIds := []*string{}
+	snapshotIds := []string{}
 	for _, device := range image.BlockDeviceMappings {
 		if device.Ebs != nil && device.Ebs.SnapshotId != nil {
-			snapshotIds = append(snapshotIds, device.Ebs.SnapshotId)
+			snapshotIds = append(snapshotIds, *device.Ebs.SnapshotId)
 		}
 	}
 
@@ -311,10 +314,11 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 	acctest.TestPlugin(t, testCase)
 }
 
-func checkSnapshotsDeleted(snapshotIds []*string) error {
+func checkSnapshotsDeleted(snapshotIds []string) error {
+	ctx := context.TODO()
 	// Verify the snapshots are gone
 	ec2conn, _ := testEC2Conn("us-east-1")
-	snapshotResp, _ := ec2conn.DescribeSnapshots(
+	snapshotResp, _ := ec2conn.DescribeSnapshots(ctx,
 		&ec2.DescribeSnapshotsInput{SnapshotIds: snapshotIds},
 	)
 
@@ -362,14 +366,15 @@ func TestAccBuilder_EbsAmiSharing(t *testing.T) {
 }
 
 func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) error {
+	ctx := context.TODO()
 	images, err := ami.GetAmi()
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
 
-	ec2conn, _ := testEC2Conn("us-east-1")
-	imageResp, err := ec2conn.DescribeImageAttribute(&ec2.DescribeImageAttributeInput{
-		Attribute: aws.String("launchPermission"),
+	ec2Client, _ := testEC2Conn("us-east-1")
+	imageResp, err := ec2Client.DescribeImageAttribute(ctx, &ec2.DescribeImageAttributeInput{
+		Attribute: "launchPermission",
 		ImageId:   images[0].ImageId,
 	})
 
@@ -396,7 +401,7 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 
 	groupFound := false
 	for _, lp := range imageResp.LaunchPermissions {
-		if lp.Group != nil && group == *lp.Group {
+		if ec2types.PermissionGroup(group) == lp.Group {
 			groupFound = true
 		}
 	}
@@ -543,11 +548,11 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
+	ctx := context.TODO()
 	// describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn(ami.Region)
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	ec2Client, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 
 	if err != nil {
@@ -669,14 +674,14 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
-	ec2conn, err := testEC2Conn(ami.Region)
+	ctx := context.TODO()
+	ec2Client, err := testEC2Conn(ami.Region)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
 	}
 
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 
 	if err != nil {
@@ -691,7 +696,7 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 		return fmt.Errorf("Failed to Enable Deprecation for AMI (%s), expected Deprecation Time (%s), got empty", ami.Name, expectTimeStr)
 	}
 
-	actualTimeStr := aws.StringValue(image.DeprecationTime)
+	actualTimeStr := aws.ToString(image.DeprecationTime)
 	actualTime, _ := time.Parse(time.RFC3339, actualTimeStr)
 	if !actualTime.Equal(expectTime) {
 		return fmt.Errorf("Wrong Deprecation Time, expected (%s), got (%s)", expectTimeStr, actualTimeStr)
@@ -1051,14 +1056,15 @@ func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
 	acctest.TestPlugin(t, testcase)
 }
 
-func testEC2Conn(region string) (*ec2.EC2, error) {
+func testEC2Conn(region string) (clients.Ec2Client, error) {
+	ctx := context.TODO()
 	access := &common.AccessConfig{RawRegion: region}
-	session, err := access.Session()
+	awsConfig, err := access.Config(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	return ec2.New(session), nil
+	ec2Client := ec2.NewFromConfig(*awsConfig)
+	return ec2Client, nil
 }
 
 func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
@@ -1090,12 +1096,8 @@ func TestAccBuilder_EbsBasicWithIMDSv2(t *testing.T) {
 			ami := amis[0]
 
 			imds := ami.ImdsSupport
-			if imds == nil {
-				return fmt.Errorf("expected AMI's IMDSSupport to be set, but is null")
-			}
-
-			if *imds != "v2.0" {
-				return fmt.Errorf("expected AMI's IMDSSupport to be v2.0, got %q", *imds)
+			if imds != ec2types.ImdsSupportValuesV20 {
+				return fmt.Errorf("expected AMI's IMDSSupport to be v2.0, got %s", imds)
 			}
 
 			return nil
@@ -1245,20 +1247,22 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 						return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
 					}
 
+					ctx := context.TODO()
 					accessConfig := &awscommon.AccessConfig{}
-					session, err := accessConfig.Session()
+					config, err := accessConfig.Config(ctx)
 					if err != nil {
-						return fmt.Errorf("Unable to create aws session %s", err.Error())
+						return fmt.Errorf("AWSAMICleanUp: Unable to create aws config %s", err.Error())
 					}
 
-					regionconn := ec2.New(session.Copy(&aws.Config{
-						Region: aws.String(currTest.ami.Region),
-					}))
+					regionEc2Client := ec2.NewFromConfig(*config, func(o *ec2.Options) {
+						o.Region = currTest.ami.Region
+					})
 
 					ami := amis[0]
 
-					fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-						ImageIds: []*string{ami.ImageId},
+					fastLaunchImages, err := regionEc2Client.DescribeFastLaunchImages(ctx, &ec2.
+						DescribeFastLaunchImagesInput{
+						ImageIds: []string{*ami.ImageId},
 					})
 
 					if err != nil {
@@ -1269,13 +1273,12 @@ func TestAccBuilder_EbsWindowsFastLaunch(t *testing.T) {
 						return fmt.Errorf("got too many fast-launch images, expected 1, got %d", len(fastLaunchImages.FastLaunchImages))
 					}
 
-					img := fastLaunchImages.FastLaunchImages[0]
-					if img.State == nil {
-						return fmt.Errorf("unexpected null fast-launch state")
+					if len(fastLaunchImages.FastLaunchImages) == 0 {
+						return fmt.Errorf("unexpected zero fast-launch images")
 					}
-
-					if *img.State != "enabled" {
-						return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+					img := fastLaunchImages.FastLaunchImages[0]
+					if img.State != ec2types.FastLaunchStateCodeEnabled {
+						return fmt.Errorf("expected fast-launch state to be enabled, but is %s: transition state was %q", img.State, *img.StateTransitionReason)
 					}
 
 					return nil
@@ -1395,21 +1398,22 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						if len(amis) != 1 {
 							return fmt.Errorf("got too many AMIs, expected 1, got %d", len(amis))
 						}
-
+						ctx := context.TODO()
 						accessConfig := &awscommon.AccessConfig{}
-						session, err := accessConfig.Session()
+						config, err := accessConfig.Config(ctx)
 						if err != nil {
-							return fmt.Errorf("Unable to create aws session %s", err.Error())
+							return fmt.Errorf("AWSAMICleanUp: Unable to create aws config %s", err.Error())
 						}
 
-						regionconn := ec2.New(session.Copy(&aws.Config{
-							Region: aws.String(ami.Region),
-						}))
+						regionEc2Client := ec2.NewFromConfig(*config, func(o *ec2.Options) {
+							o.Region = ami.Region
+						})
 
 						ami := amis[0]
 
-						fastLaunchImages, err := regionconn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-							ImageIds: []*string{ami.ImageId},
+						fastLaunchImages, err := regionEc2Client.DescribeFastLaunchImages(ctx, &ec2.
+							DescribeFastLaunchImagesInput{
+							ImageIds: []string{*ami.ImageId},
 						})
 
 						if err != nil {
@@ -1421,12 +1425,9 @@ func TestAccBuilder_EbsWindowsFastLaunchWithAMICopies(t *testing.T) {
 						}
 
 						img := fastLaunchImages.FastLaunchImages[0]
-						if img.State == nil {
-							return fmt.Errorf("unexpected null fast-launch state")
-						}
 
-						if *img.State != "enabled" {
-							return fmt.Errorf("expected fast-launch state to be enabled, but is %q: transition state was %q", *img.State, *img.StateTransitionReason)
+						if img.State != ec2types.FastLaunchStateCodeEnabled {
+							return fmt.Errorf("expected fast-launch state to be enabled, but is %s: transition state was %q", img.State, *img.StateTransitionReason)
 						}
 					}
 
@@ -1454,13 +1455,13 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
+	ctx := context.TODO()
 	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
 
 	// describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn(ami.Region)
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	ec2Client, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
@@ -1781,13 +1782,13 @@ func removeDeregistrationProtection(ami amazon_acc.AMIHelper) error {
 	if err != nil || len(images) != 1 {
 		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
-	ec2Conn, err := testEC2Conn(ami.Region)
+	ctx := context.TODO()
+	ec2Client, err := testEC2Conn(ami.Region)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
 	}
 
-	_, err = ec2Conn.DisableImageDeregistrationProtection(&ec2.DisableImageDeregistrationProtectionInput{
+	_, err = ec2Client.DisableImageDeregistrationProtection(ctx, &ec2.DisableImageDeregistrationProtectionInput{
 		ImageId: images[0].ImageId,
 	})
 	if err != nil {
@@ -1802,14 +1803,14 @@ func checkDeregistrationProtectionEnabled(ami amazon_acc.AMIHelper) error {
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("Failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
-	ec2conn, err := testEC2Conn(ami.Region)
+	ctx := context.TODO()
+	ec2Client, err := testEC2Conn(ami.Region)
 	if err != nil {
 		return fmt.Errorf("Failed to connect to AWS on region %q: %s", ami.Region, err)
 	}
 
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 
 	if err != nil {

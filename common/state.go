@@ -539,3 +539,7 @@ func (w *AWSPollingConfig) WaitUntilVolumeDetached(ctx context.Context, ec2Clien
 	return err
 
 }
+
+func (w *AWSPollingConfig) WaitUntilFastLaunchEnabled(ctx context.Context, ec2Client clients.Ec2Client, imageId string) error {
+	return nil
+}
