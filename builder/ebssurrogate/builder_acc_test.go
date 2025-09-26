@@ -172,8 +172,8 @@ func TestAccBuilder_EbssurrogateBasic_forceIMDSv2(t *testing.T) {
 
 			img := images[0]
 
-			if img.ImdsSupport != nil && *img.ImdsSupport != "v2.0" {
-				return fmt.Errorf("expected AMI to have IMDSv2 support, got %q", *img.ImdsSupport)
+			if img.ImdsSupport != ec2types.ImdsSupportValuesV20 {
+				return fmt.Errorf("expected AMI to have IMDSv2 support, got %s", img.ImdsSupport)
 			}
 
 			return nil
