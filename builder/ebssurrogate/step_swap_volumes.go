@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -21,24 +23,24 @@ import (
 type StepSwapVolumes struct {
 	PollingConfig *awscommon.AWSPollingConfig
 	RootDevice    RootBlockDevice
-	LaunchDevices []*ec2.BlockDeviceMapping
+	LaunchDevices []ec2types.BlockDeviceMapping
 	LaunchOmitMap map[string]bool
 	Ctx           interpolate.Context
 }
 
 func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(ec2types.Instance)
 
 	// Describe the instance
 	input := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{
-			aws.String(*instance.InstanceId),
+		InstanceIds: []string{
+			*instance.InstanceId,
 		},
 	}
 
-	result, err := ec2conn.DescribeInstances(input)
+	result, err := ec2Client.DescribeInstances(ctx, input)
 	if err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -61,10 +63,10 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 		omit, ok := s.LaunchOmitMap[deviceName]
 		if ok && omit {
 			ui.Say(fmt.Sprintf("Detaching Ommitted EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			err = s.detachVolume(ctx, ec2conn, deviceName, volumeID)
+			err = s.detachVolume(ctx, ec2Client, deviceName, volumeID)
 		} else if deviceName == s.RootDevice.DeviceName || deviceName == s.RootDevice.SourceDeviceName || deviceName == "/dev/sda1" {
 			ui.Say(fmt.Sprintf("Detaching Root EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
-			err = s.detachVolume(ctx, ec2conn, deviceName, volumeID)
+			err = s.detachVolume(ctx, ec2Client, deviceName, volumeID)
 		} else {
 			ui.Say(fmt.Sprintf("Skip Detach of EBS Device Name: %s, Volume ID: %s\n", deviceName, volumeID))
 		}
@@ -82,7 +84,7 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	rootDeviceName := aws.String(s.RootDevice.DeviceName)
 	ui.Say(fmt.Sprintf("Attaching Root EBS Device Name %s, Volume ID: %s", *rootDeviceName, *rootVolumeId))
 
-	_, err = ec2conn.AttachVolume(&ec2.AttachVolumeInput{
+	_, err = ec2Client.AttachVolume(ctx, &ec2.AttachVolumeInput{
 		InstanceId: instance.InstanceId,
 		VolumeId:   rootVolumeId,
 		Device:     rootDeviceName,
@@ -98,12 +100,12 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	// Restore the DeleteOnTermination attribute for the root volume
 	// When detaching and reattaching volumes, the original BlockDeviceMapping attributes are lost
 	// This explicitly sets the DeleteOnTermination flag back to its original value
-	_, err = ec2conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
+	_, err = ec2Client.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
 		InstanceId: instance.InstanceId,
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMappingSpecification{
+		BlockDeviceMappings: []ec2types.InstanceBlockDeviceMappingSpecification{
 			{
 				DeviceName: rootDeviceName,
-				Ebs: &ec2.EbsInstanceBlockDeviceSpecification{
+				Ebs: &ec2types.EbsInstanceBlockDeviceSpecification{
 					DeleteOnTermination: volumeToDeleteMap[*rootVolumeId],
 				},
 			},
@@ -117,7 +119,7 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 
 	// Wait for the volume to become attached
-	err = s.PollingConfig.WaitUntilVolumeAttached(ctx, ec2conn, *rootVolumeId)
+	err = s.PollingConfig.WaitUntilVolumeAttached(ctx, ec2Client, *rootVolumeId)
 	if err != nil {
 		err := fmt.Errorf("error waiting for volume: %s", err)
 		state.Put("error", err)
@@ -129,10 +131,10 @@ func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepSwapVolumes) detachVolume(ctx context.Context, ec2conn *ec2.EC2, deviceName string, volumeId string) error {
-	_, err := ec2conn.DetachVolume(&ec2.DetachVolumeInput{VolumeId: &volumeId})
+func (s *StepSwapVolumes) detachVolume(ctx context.Context, ec2Client clients.Ec2Client, deviceName string, volumeId string) error {
+	_, err := ec2Client.DetachVolume(ctx, &ec2.DetachVolumeInput{VolumeId: &volumeId})
 	if err == nil {
-		return s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2conn, volumeId)
+		return s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2Client, volumeId)
 	}
 
 	return err
@@ -140,18 +142,19 @@ func (s *StepSwapVolumes) detachVolume(ctx context.Context, ec2conn *ec2.EC2, de
 
 func (s *StepSwapVolumes) Cleanup(state multistep.StateBag) {
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ctx := context.TODO()
+	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(ec2types.Instance)
 	ui.Say("Cleaning up any detached volumes with delete_on_termination set to true...")
 	// Describe the instance
 	input := &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{
-			aws.String(*instance.InstanceId),
+		InstanceIds: []string{
+			*instance.InstanceId,
 		},
 	}
 
-	result, err := ec2conn.DescribeInstances(input)
+	result, err := ec2Client.DescribeInstances(ctx, input)
 	if err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -167,7 +170,7 @@ func (s *StepSwapVolumes) Cleanup(state multistep.StateBag) {
 
 	for _, volumeId := range volumesToDelete {
 		ui.Say(fmt.Sprintf("Deleting EBS Volume ID: %s", volumeId))
-		_, err := ec2conn.DeleteVolume(&ec2.DeleteVolumeInput{VolumeId: &volumeId})
+		_, err := ec2Client.DeleteVolume(ctx, &ec2.DeleteVolumeInput{VolumeId: &volumeId})
 		if err != nil {
 			err := fmt.Errorf("error deleting volume: %s", err)
 			state.Put("error", err)
