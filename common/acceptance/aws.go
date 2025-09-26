@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
@@ -21,19 +22,16 @@ type AMIHelper struct {
 }
 
 func (a *AMIHelper) CleanUpAmi() error {
-	accessConfig := &awscommon.AccessConfig{}
-	session, err := accessConfig.Session()
+	ctx := context.TODO()
+	access := &common.AccessConfig{RawRegion: a.Region}
+	awsConfig, err := access.Config(ctx)
 	if err != nil {
-		return fmt.Errorf("AWSAMICleanUp: Unable to create aws session %s", err.Error())
+		return err
 	}
-
-	regionconn := ec2.New(session.Copy(&aws.Config{
-		Region: aws.String(a.Region),
-	}))
+	regionEc2Client := ec2.NewFromConfig(*awsConfig)
 
 	var resp *ec2.DescribeImagesOutput
 
-	ctx := context.TODO()
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
@@ -41,11 +39,11 @@ func (a *AMIHelper) CleanUpAmi() error {
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		resp, err = regionconn.DescribeImages(&ec2.DescribeImagesInput{
-			Owners: aws.StringSlice([]string{"self"}),
-			Filters: []*ec2.Filter{{
+		resp, err = regionEc2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+			Owners: []string{"self"},
+			Filters: []ec2types.Filter{{
 				Name:   aws.String("name"),
-				Values: aws.StringSlice([]string{a.Name}),
+				Values: []string{a.Name},
 			}}})
 		return err
 	})
@@ -69,7 +67,7 @@ func (a *AMIHelper) CleanUpAmi() error {
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		_, err = regionconn.DeregisterImage(&ec2.DeregisterImageInput{
+		_, err = regionEc2Client.DeregisterImage(ctx, &ec2.DeregisterImageInput{
 			ImageId: image.ImageId,
 		})
 		if err != nil {
@@ -80,7 +78,7 @@ func (a *AMIHelper) CleanUpAmi() error {
 		}
 		for _, bdm := range image.BlockDeviceMappings {
 			if bdm.Ebs != nil && bdm.Ebs.SnapshotId != nil {
-				_, err = regionconn.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+				_, err = regionEc2Client.DeleteSnapshot(ctx, &ec2.DeleteSnapshotInput{
 					SnapshotId: bdm.Ebs.SnapshotId,
 				})
 				return err
@@ -97,19 +95,16 @@ func (a *AMIHelper) CleanUpAmi() error {
 	return nil
 }
 
-func (a *AMIHelper) GetAmi() ([]*ec2.Image, error) {
-	accessConfig := &awscommon.AccessConfig{}
-	session, err := accessConfig.Session()
+func (a *AMIHelper) GetAmi() ([]ec2types.Image, error) {
+	ctx := context.TODO()
+	access := &common.AccessConfig{RawRegion: a.Region}
+	awsConfig, err := access.Config(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create aws session %s", err.Error())
+		return nil, err
 	}
-
-	regionconn := ec2.New(session.Copy(&aws.Config{
-		Region: aws.String(a.Region),
-	}))
+	regionEc2Client := ec2.NewFromConfig(*awsConfig)
 
 	var resp *ec2.DescribeImagesOutput
-	ctx := context.TODO()
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
@@ -117,11 +112,11 @@ func (a *AMIHelper) GetAmi() ([]*ec2.Image, error) {
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		resp, err = regionconn.DescribeImages(&ec2.DescribeImagesInput{
-			Owners: aws.StringSlice([]string{"self"}),
-			Filters: []*ec2.Filter{{
+		resp, err = regionEc2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+			Owners: []string{"self"},
+			Filters: []ec2types.Filter{{
 				Name:   aws.String("name"),
-				Values: aws.StringSlice([]string{a.Name}),
+				Values: []string{a.Name},
 			}}})
 		return err
 	})
@@ -138,31 +133,28 @@ type VolumeHelper struct {
 }
 
 // GetVolumes retrieves all EBS volumes in the specified region that match the provided tags and are not in a deleting or deleted state.
-func (v *VolumeHelper) GetVolumes() ([]*ec2.Volume, error) {
-	accessConfig := &awscommon.AccessConfig{}
-	session, err := accessConfig.Session()
+func (v *VolumeHelper) GetVolumes() ([]ec2types.Volume, error) {
+	ctx := context.TODO()
+	access := &common.AccessConfig{RawRegion: v.Region}
+	awsConfig, err := access.Config(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create aws session %s", err.Error())
+		return nil, err
 	}
-
-	regionconn := ec2.New(session.Copy(&aws.Config{
-		Region: aws.String(v.Region),
-	}))
+	regionEc2Client := ec2.NewFromConfig(*awsConfig)
 
 	var resp *ec2.DescribeVolumesOutput
-	var filters []*ec2.Filter
-	var activeVolumes []*ec2.Volume
+	var filters []ec2types.Filter
+	var activeVolumes []ec2types.Volume
 
 	for _, tag := range v.Tags {
 		for key, value := range tag {
-			filters = append(filters, &ec2.Filter{
+			filters = append(filters, ec2types.Filter{
 				Name:   aws.String(fmt.Sprintf("tag:%s", key)),
-				Values: []*string{aws.String(value)},
+				Values: []string{value},
 			})
 		}
 	}
 
-	ctx := context.TODO()
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
@@ -170,7 +162,7 @@ func (v *VolumeHelper) GetVolumes() ([]*ec2.Volume, error) {
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		resp, err = regionconn.DescribeVolumes(&ec2.DescribeVolumesInput{
+		resp, err = regionEc2Client.DescribeVolumes(ctx, &ec2.DescribeVolumesInput{
 			Filters: filters,
 		})
 		return err
@@ -181,7 +173,7 @@ func (v *VolumeHelper) GetVolumes() ([]*ec2.Volume, error) {
 	}
 
 	for _, volume := range resp.Volumes {
-		if volume.State != nil && *volume.State != ec2.VolumeStateDeleting && *volume.State != ec2.VolumeStateDeleted {
+		if volume.State != ec2types.VolumeStateDeleting && volume.State != ec2types.VolumeStateDeleted {
 			activeVolumes = append(activeVolumes, volume)
 		}
 	}
