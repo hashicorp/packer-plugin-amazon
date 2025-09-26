@@ -4,6 +4,7 @@
 package ebssurrogate
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -11,22 +12,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
+	"github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
-func testEC2Conn(region string) (*ec2.EC2, error) {
+func testEC2Conn(region string) (clients.Ec2Client, error) {
+	ctx := context.TODO()
 	access := &common.AccessConfig{RawRegion: region}
-	session, err := access.Session()
+	awsConfig, err := access.Config(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	return ec2.New(session), nil
+	ec2Client := ec2.NewFromConfig(*awsConfig)
+	return ec2Client, nil
 }
 
 func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
@@ -34,13 +38,13 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
+	ctx := context.TODO()
 	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
 
 	// describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn(ami.Region)
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	ec2Client, _ := testEC2Conn(ami.Region)
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
@@ -326,6 +330,7 @@ func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
 		Region: "us-east-1",
 		Name:   fmt.Sprintf("ebssurrogate-deprecate-at-acctest-%d", time.Now().Unix()),
 	}
+	ctx := context.TODO()
 	testCase := &acctest.PluginTestCase{
 		Name:     "ebssurrogate - deprecate at set",
 		Template: fmt.Sprintf(testBuilderAcc_WithDeprecateAt, ami.Name, time.Now().Add(time.Hour).UTC().Format("2006-01-02T15:04:05Z")),
@@ -343,10 +348,10 @@ func TestAccBuilder_EbssurrogateWithAMIDeprecate(t *testing.T) {
 					return fmt.Errorf("failed to get connection to us-east-1: %s", err)
 				}
 
-				out, err := conn.DescribeImages(&ec2.DescribeImagesInput{
-					Filters: []*ec2.Filter{{
+				out, err := conn.DescribeImages(ctx, &ec2.DescribeImagesInput{
+					Filters: []ec2types.Filter{{
 						Name:   aws.String("name"),
-						Values: []*string{&ami.Name},
+						Values: []string{ami.Name},
 					}},
 				})
 				if err != nil {
