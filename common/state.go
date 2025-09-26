@@ -14,8 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -52,8 +54,8 @@ type overridableWaitVars struct {
 }
 
 type PollingOptions struct {
-	MaxWaitTime time.Duration
-	MinDelay    time.Duration
+	MaxWaitTime *time.Duration
+	MinDelay    *time.Duration
 }
 
 // Following are wrapper functions that use Packer's environment-variables to
@@ -95,6 +97,10 @@ type AWSPollingConfig struct {
 	// If none is set, defaults to AWS waiter default which is 15 seconds.
 	DelaySeconds int `mapstructure:"delay_seconds" required:"false"`
 }
+
+const AwsDefaultMaxWaitTimeDuration = 10 * time.Minute
+const AwsDefaultInstanceProfileExistsWaitTimeDuration = 40 * time.Second
+const AwsDefaultRoleExistsWaitTimeDuration = 20 * time.Second
 
 // This helper function uses the environment variables AWS_TIMEOUT_SECONDS and
 // AWS_POLL_DELAY_SECONDS to generate waiter options that can be passed into any
@@ -155,7 +161,7 @@ func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
 
 	// if poll delay is set, we use that as the minimum delay.
 	if envOverrides.awsPollDelaySeconds.overridden {
-		options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+		options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 	}
 
 	// If user has set max attempts, aws sdk go v2 doesn't have a direct way to set max attempts,
@@ -163,17 +169,17 @@ func applyEnvOverrides(envOverrides overridableWaitVars) *PollingOptions {
 	if envOverrides.awsMaxAttempts.overridden {
 		maxWaitTime := time.Duration(envOverrides.awsMaxAttempts.Val) * time.Duration(envOverrides.
 			awsPollDelaySeconds.Val) * time.Second
-		options.MaxWaitTime = maxWaitTime
+		options.MaxWaitTime = aws.Duration(maxWaitTime)
 		// if max attempts is set and poll delay is not set, we default to 2 seconds.
 		if !envOverrides.awsPollDelaySeconds.overridden {
-			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+			options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 		}
 
 	} else if envOverrides.awsTimeoutSeconds.overridden {
-		options.MaxWaitTime = time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second
+		options.MaxWaitTime = aws.Duration(time.Duration(envOverrides.awsTimeoutSeconds.Val) * time.Second)
 		// if timeout is set and poll delay is not set, we default to 2 seconds.
 		if !envOverrides.awsPollDelaySeconds.overridden {
-			options.MinDelay = time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second
+			options.MinDelay = aws.Duration(time.Duration(envOverrides.awsPollDelaySeconds.Val) * time.Second)
 		}
 
 	}
@@ -210,6 +216,8 @@ func getEnvOverrides() overridableWaitVars {
 
 	return envValues
 }
+
+// we have changed the return type to PollingOptions here as SDK v2 does not have request.WaiterOptions
 func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 	envOverrides := getEnvOverrides()
 
@@ -222,10 +230,9 @@ func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 		envOverrides.awsPollDelaySeconds.overridden = true
 	}
 
-	waitOpts := applyEnvOverrides(envOverrides)
-	return waitOpts
+	return applyEnvOverrides(envOverrides)
 }
-func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn Ec2Client, taskID string) error {
+func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn clients.Ec2Client, taskID string) error {
 	importInput := ec2.DescribeImportImageTasksInput{
 		ImportTaskIds: []string{taskID},
 	}
@@ -237,7 +244,7 @@ func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn Ec2C
 	return err
 }
 
-func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.DescribeImportImageTasksInput,
+func WaitForImageToBeImported(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeImportImageTasksInput,
 	opts *PollingOptions) error {
 	// we have tried to simulate here a behaviour that's similar to what we have in v1.
 	// aws sdk go v2 does not provide a builtin waiter for Import Image Tasks.
@@ -246,11 +253,11 @@ func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.
 	delay := 5 * time.Second
 
 	if opts != nil {
-		if opts.MinDelay > 0 {
-			delay = opts.MinDelay
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
 		}
 
-		if opts.MaxWaitTime > 0 {
+		if opts.MaxWaitTime != nil {
 			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
 		}
 
@@ -289,8 +296,104 @@ func WaitForImageToBeImported(client Ec2Client, ctx context.Context, input *ec2.
 
 	return fmt.Errorf("timeout waiting for image import to complete after %d attempts", maxAttempts)
 }
+func WaitForVolumeToBeAttached(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeVolumesInput,
+	opts *PollingOptions) error {
+	maxAttempts := 40
+	delay := 5 * time.Second
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
 
-func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Client, imageId string) error {
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeVolumes(ctx, input)
+		if err != nil {
+			return err
+		}
+		if len(output.Volumes) == 0 {
+			return fmt.Errorf("no volumes found")
+		}
+
+		for _, volume := range output.Volumes {
+
+			// Check for attaching state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttaching {
+				log.Printf("volume %s is in attaching state, retrying...", *volume.VolumeId)
+			}
+			// Check for success state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateAttached {
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+
+	}
+	return fmt.Errorf("timeout waiting for volume to attached after %d attempts", maxAttempts)
+}
+func WaitForVolumeToBeDetached(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeVolumesInput,
+	opts *PollingOptions) error {
+	maxAttempts := 40
+	delay := 5 * time.Second
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
+
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeVolumes(ctx, input)
+		if err != nil {
+			return err
+		}
+		if len(output.Volumes) == 0 {
+			return fmt.Errorf("no volumes found")
+		}
+
+		for _, volume := range output.Volumes {
+			if len(volume.Attachments) == 0 {
+				return nil
+			}
+
+			// Check for attaching state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateDetaching {
+				log.Printf("volume %s is in detaching state, retrying...", aws.ToString(volume.VolumeId))
+			}
+			// Check for success state
+			if len(volume.Attachments) > 0 && volume.Attachments[0].State == ec2types.VolumeAttachmentStateDetached {
+				log.Printf("Volume %s is detached", aws.ToString(volume.VolumeId))
+				return nil
+			}
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+
+	}
+	return fmt.Errorf("timeout waiting for volume to be detached after %d attempts", maxAttempts)
+}
+
+func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client clients.Ec2Client, imageId string) error {
 
 	imageInput := &ec2.DescribeImagesInput{
 		ImageIds: []string{imageId},
@@ -300,21 +403,20 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Clie
 	pollingOpts := w.getWaiterOptions()
 
 	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
-	maxWaitTime := pollingOpts.MaxWaitTime // Default to 10 minutes
 
-	if pollingOpts.MaxWaitTime == 0 {
+	if pollingOpts.MaxWaitTime == nil {
 		// Bump this default to 30 minutes because the aws default
 		// of ten minutes doesn't work for some of our long-running copies.
-		maxWaitTime = 30 * time.Minute
+		pollingOpts.MaxWaitTime = aws.Duration(30 * time.Minute)
 	}
 
-	if pollingOpts.MinDelay == 0 {
+	if pollingOpts.MinDelay == nil {
 		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
 			o.MinDelay = 5 * time.Second // Set a default 5-second delay
 		})
 	}
 
-	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, maxWaitTime, waiterOpts...)
+	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOpts.MaxWaitTime, waiterOpts...)
 
 	if err != nil {
 		// The error type for a waiter timeout is *aws.WaiterError
@@ -329,4 +431,115 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx aws.Context, client Ec2Clie
 	}
 
 	return err
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
+
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(*ec2.InstanceRunningWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.InstanceRunningWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+
+	err := ec2.NewInstanceRunningWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+}
+
+func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
+	instanceInput := ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceId},
+	}
+
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.InstanceTerminatedWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultMaxWaitTimeDuration)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.InstanceTerminatedWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+
+	err := ec2.NewInstanceTerminatedWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+}
+func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client clients.Ec2Client, snapshotID string) error {
+	snapInput := ec2.DescribeSnapshotsInput{
+		SnapshotIds: []string{snapshotID},
+	}
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.SnapshotCompletedWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+
+	err := ec2.NewSnapshotCompletedWaiter(ec2Client).Wait(ctx, &snapInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+}
+
+func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2Client clients.Ec2Client,
+	securityGroupId string) error {
+	securityGroupInput := ec2.DescribeSecurityGroupsInput{
+		GroupIds: []string{securityGroupId},
+	}
+	pollingOptions := w.getWaiterOptions()
+	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
+
+	if pollingOptions.MaxWaitTime == nil {
+		pollingOptions.MaxWaitTime = aws.Duration(200 * time.Second)
+	}
+	if pollingOptions.MinDelay != nil {
+		optFns = append(optFns, func(o *ec2.SecurityGroupExistsWaiterOptions) {
+			o.MinDelay = *pollingOptions.MinDelay
+		})
+	}
+	err := ec2.NewSecurityGroupExistsWaiter(ec2Client).Wait(ctx, &securityGroupInput, *pollingOptions.MaxWaitTime, optFns...)
+	return err
+
+}
+
+func (w *AWSPollingConfig) WaitUntilVolumeAttached(ctx context.Context, ec2Client clients.Ec2Client, volumeId string) error {
+	volumeInput := ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeId},
+	}
+
+	err := WaitForVolumeToBeAttached(ec2Client,
+		ctx,
+		&volumeInput,
+		w.getWaiterOptions())
+	return err
+}
+func (w *AWSPollingConfig) WaitUntilVolumeDetached(ctx context.Context, ec2Client clients.Ec2Client,
+	volumeId string) error {
+	volumeInput := ec2.DescribeVolumesInput{
+		VolumeIds: []string{volumeId},
+	}
+	err := WaitForVolumeToBeDetached(ec2Client,
+		ctx,
+		&volumeInput,
+		w.getWaiterOptions())
+	return err
+
+}
+
+func (w *AWSPollingConfig) WaitUntilFastLaunchEnabled(ctx context.Context, ec2Client clients.Ec2Client, imageId string) error {
+	return nil
 }

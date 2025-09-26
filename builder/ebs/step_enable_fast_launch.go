@@ -11,10 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -65,7 +66,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 	}()
 
 	for region, ami := range amis {
-		ec2connif, err := common.GetRegionConn(s.AccessConfig, region)
+		regionEc2Client, err := common.GetRegionConn(ctx, s.AccessConfig, region)
 		if err != nil {
 			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %w", region, err))
 			return multistep.ActionHalt
@@ -86,7 +87,8 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			// accepts this type, and not ec2iface.EC2API, we can safely
 			// do this here, unless the `GetRegionConn` function evolves
 			// later, in which case this will fail.
-			ec2conn := ec2connif.(*ec2.EC2)
+			// todo check this
+			//ec2conn := regionEc2Client.(*ec2.EC2)
 
 			ui.Say(fmt.Sprintf("Enabling fast boot for AMI %s in region %s", ami, region))
 
@@ -105,7 +107,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 				RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 			}.Run(timeoutCtx, func(ctx context.Context) error {
 				var err error
-				_, err = ec2conn.EnableFastLaunch(fastLaunchInput)
+				_, err = regionEc2Client.EnableFastLaunch(ctx, fastLaunchInput)
 				return err
 			})
 			if err != nil {
@@ -115,15 +117,15 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 
 			// Wait for the image to become ready
 			ui.Say(fmt.Sprintf("Waiting for fast launch to become ready on AMI %q in region %s...", ami, region))
-			waitErr := s.PollingConfig.WaitUntilFastLaunchEnabled(ctx, ec2conn, ami)
+			waitErr := s.PollingConfig.WaitUntilFastLaunchEnabled(ctx, regionEc2Client, ami)
 			if waitErr != nil {
 				errCh <- fmt.Errorf("Failed to enable fast launch: %w", waitErr)
 				return
 			}
 
-			flStatus, err := ec2conn.DescribeFastLaunchImages(&ec2.DescribeFastLaunchImagesInput{
-				ImageIds: []*string{
-					&ami,
+			flStatus, err := regionEc2Client.DescribeFastLaunchImages(ctx, &ec2.DescribeFastLaunchImagesInput{
+				ImageIds: []string{
+					ami,
 				},
 			})
 			if err != nil {
@@ -132,7 +134,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			}
 
 			for _, img := range flStatus.FastLaunchImages {
-				if *img.State != "enabled" {
+				if img.State != "enabled" {
 					errCh <- fmt.Errorf("Failed to enable fast-launch for AMI %q: %s", ami, *img.StateTransitionReason)
 					return
 				}
@@ -170,13 +172,13 @@ func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, region strin
 	}
 
 	if s.MaxInstances > 0 {
-		mi := int64(s.MaxInstances)
+		mi := int32(s.MaxInstances)
 		fastLaunchInput.MaxParallelLaunches = &mi
 	}
 
 	if s.ResourceCount > 0 {
-		rc := int64(s.ResourceCount)
-		fastLaunchInput.SnapshotConfiguration = &ec2.FastLaunchSnapshotConfigurationRequest{
+		rc := int32(s.ResourceCount)
+		fastLaunchInput.SnapshotConfiguration = &ec2types.FastLaunchSnapshotConfigurationRequest{
 			TargetResourceCount: &rc,
 		}
 	}
@@ -193,7 +195,7 @@ func (s *stepEnableFastLaunch) prepareFastLaunchRequest(ami string, region strin
 		return fastLaunchInput
 	}
 
-	fastLaunchInput.LaunchTemplate = &ec2.FastLaunchLaunchTemplateSpecificationRequest{
+	fastLaunchInput.LaunchTemplate = &ec2types.FastLaunchLaunchTemplateSpecificationRequest{
 		LaunchTemplateId: &templateConfig.TemplateID,
 		Version:          aws.String(fmt.Sprintf("%d", templateConfig.Version)),
 	}

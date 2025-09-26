@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -67,13 +68,13 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 			continue
 		}
 
-		ec2conn, err := common.GetRegionConn(s.AccessConfig, region)
+		regionEc2Client, err := common.GetRegionConn(ctx, s.AccessConfig, region)
 		if err != nil {
 			state.Put("error", fmt.Errorf("Failed to get connection to region %q: %s", region, err))
 			return multistep.ActionHalt
 		}
 
-		tmpl, err := getTemplate(ec2conn, templateSpec)
+		tmpl, err := getTemplate(ctx, regionEc2Client, templateSpec)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Failed to get launch template from region %q: %s", region, err))
 			state.Put("error", err)
@@ -110,17 +111,18 @@ func (s *stepPrepareFastLaunchTemplate) Run(ctx context.Context, state multistep
 	return multistep.ActionContinue
 }
 
-func getTemplate(ec2conn ec2iface.EC2API, templateSpec FastLaunchTemplateConfig) (*ec2.LaunchTemplate, error) {
+func getTemplate(ctx context.Context, ec2Client clients.Ec2Client, templateSpec FastLaunchTemplateConfig) (*ec2types.
+	LaunchTemplate, error) {
 	requestInput := &ec2.DescribeLaunchTemplatesInput{}
 
 	if templateSpec.LaunchTemplateID != "" {
-		requestInput.LaunchTemplateIds = []*string{&templateSpec.LaunchTemplateID}
+		requestInput.LaunchTemplateIds = []string{templateSpec.LaunchTemplateID}
 	}
 	if templateSpec.LaunchTemplateName != "" {
-		requestInput.LaunchTemplateNames = []*string{&templateSpec.LaunchTemplateName}
+		requestInput.LaunchTemplateNames = []string{templateSpec.LaunchTemplateName}
 	}
 
-	lts, err := ec2conn.DescribeLaunchTemplates(requestInput)
+	lts, err := ec2Client.DescribeLaunchTemplates(ctx, requestInput)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +136,7 @@ func getTemplate(ec2conn ec2iface.EC2API, templateSpec FastLaunchTemplateConfig)
 
 	tmpl := tmpls[0]
 
-	return tmpl, nil
+	return &tmpl, nil
 }
 
 func (s *stepPrepareFastLaunchTemplate) Cleanup(state multistep.StateBag) {}

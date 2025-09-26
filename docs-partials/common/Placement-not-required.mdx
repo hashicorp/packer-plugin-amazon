@@ -1,0 +1,13 @@
+<!-- Code generated from the comments of the Placement struct in common/run_config.go; DO NOT EDIT MANUALLY -->
+
+- `host_resource_group_arn` (string) - The ARN of the host resource group in which to launch the instances.
+
+- `host_id` (string) - The ID of the host used when Packer launches an EC2 instance.
+
+- `tenancy` (string) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
+  when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
+  
+  The default is "default", meaning shared tenancy. Allowed values are "default",
+  "dedicated" and "host".
+
+<!-- End of code generated from the comments of the Placement struct in common/run_config.go; -->
