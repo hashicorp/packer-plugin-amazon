@@ -1953,7 +1953,7 @@ const testBuilderAccRegionCopyEncryptedAndDeprecated = `
 		"ami_name": "%s",
 		"encrypt_boot": true,
 		"ami_regions": ["us-east-1", "us-west-1"],
-		"snapshot_copy_completion_duration_minutes": 15
+		"snapshot_copy_duration_minutes": 15
 	}]
 }
 `

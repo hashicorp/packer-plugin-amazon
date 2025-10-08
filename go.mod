@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.19.1
-	github.com/hashicorp/packer-plugin-sdk v0.6.2
+	github.com/hashicorp/packer-plugin-sdk v0.6.3
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.10.0
@@ -122,7 +122,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
-	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
