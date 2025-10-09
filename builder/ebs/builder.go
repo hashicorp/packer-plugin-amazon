@@ -337,6 +337,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:          b.config.ctx,
 		},
 		&awscommon.StepSecurityGroup{
+			PollingConfig:             b.config.PollingConfig,
 			SecurityGroupFilter:       b.config.SecurityGroupFilter,
 			SecurityGroupIds:          b.config.SecurityGroupIds,
 			CommConfig:                &b.config.RunConfig.Comm,
