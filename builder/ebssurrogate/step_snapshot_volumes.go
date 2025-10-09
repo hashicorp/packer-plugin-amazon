@@ -9,10 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	multierror "github.com/hashicorp/go-multierror"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -25,7 +27,7 @@ import (
 //	snapshot_ids map[string]string - IDs of the created snapshots
 type StepSnapshotVolumes struct {
 	PollingConfig       *awscommon.AWSPollingConfig
-	LaunchDevices       []*ec2.BlockDeviceMapping
+	LaunchDevices       []ec2types.BlockDeviceMapping
 	snapshotIds         map[string]string
 	snapshotMutex       sync.Mutex
 	SnapshotOmitMap     map[string]bool
@@ -35,9 +37,10 @@ type StepSnapshotVolumes struct {
 }
 
 func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName string, state multistep.StateBag) error {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
+	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 
 	var volumeId string
 	for _, volume := range instance.BlockDeviceMappings {
@@ -50,7 +53,7 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	}
 
 	ui.Say("Creating snapshot tags")
-	snapshotTags, err := awscommon.TagMap(s.SnapshotTags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+	snapshotTags, err := awscommon.TagMap(s.SnapshotTags).EC2Tags(s.Ctx, awsConfig.Region, state)
 	if err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -61,11 +64,11 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	ui.Say(fmt.Sprintf("Creating snapshot of EBS Volume %s...", volumeId))
 
 	// Collect tags for tagging on resource creation
-	var tagSpecs []*ec2.TagSpecification
+	var tagSpecs []ec2types.TagSpecification
 
 	if len(snapshotTags) > 0 {
-		snapTags := &ec2.TagSpecification{
-			ResourceType: aws.String("snapshot"),
+		snapTags := ec2types.TagSpecification{
+			ResourceType: "snapshot",
 			Tags:         snapshotTags,
 		}
 		tagSpecs = append(tagSpecs, snapTags)
@@ -74,7 +77,7 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	if description == "" {
 		description = fmt.Sprintf("Packer: %s", time.Now().String())
 	}
-	createSnapResp, err := ec2conn.CreateSnapshot(&ec2.CreateSnapshotInput{
+	createSnapResp, err := ec2conn.CreateSnapshot(ctx, &ec2.CreateSnapshotInput{
 		VolumeId:          &volumeId,
 		Description:       aws.String(description),
 		TagSpecifications: tagSpecs,
@@ -108,7 +111,7 @@ func (s *StepSnapshotVolumes) Run(ctx context.Context, state multistep.StateBag)
 		}
 
 		wg.Add(1)
-		go func(device *ec2.BlockDeviceMapping) {
+		go func(device ec2types.BlockDeviceMapping) {
 			defer wg.Done()
 			if err := s.snapshotVolume(ctx, *device.DeviceName, state); err != nil {
 				errs = multierror.Append(errs, err)
@@ -132,17 +135,17 @@ func (s *StepSnapshotVolumes) Cleanup(state multistep.StateBag) {
 	if len(s.snapshotIds) == 0 {
 		return
 	}
-
+	ctx := context.TODO()
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 
 	if cancelled || halted {
-		ec2conn := state.Get("ec2").(*ec2.EC2)
+		ec2conn := state.Get("ec2v2").(clients.Ec2Client)
 		ui := state.Get("ui").(packersdk.Ui)
 		ui.Say("Removing snapshots since we cancelled or halted...")
 		s.snapshotMutex.Lock()
 		for _, snapshotId := range s.snapshotIds {
-			_, err := ec2conn.DeleteSnapshot(&ec2.DeleteSnapshotInput{SnapshotId: &snapshotId})
+			_, err := ec2conn.DeleteSnapshot(ctx, &ec2.DeleteSnapshotInput{SnapshotId: &snapshotId})
 			if err != nil {
 				ui.Error(fmt.Sprintf("Error: %s", err))
 			}

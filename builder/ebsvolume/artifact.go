@@ -4,12 +4,14 @@
 package ebsvolume
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
@@ -33,8 +35,8 @@ type Artifact struct {
 	// to be shared with post-processors
 	StateData map[string]interface{}
 
-	// EC2 connection for performing API stuff.
-	Conn *ec2.EC2
+	// EC2 client for performing API stuff.
+	Client clients.Ec2Client
 }
 
 func (a *Artifact) BuilderId() string {
@@ -98,7 +100,7 @@ func (a *Artifact) Destroy() error {
 			input := &ec2.DeleteVolumeInput{
 				VolumeId: &volumeID,
 			}
-			if _, err := a.Conn.DeleteVolume(input); err != nil {
+			if _, err := a.Client.DeleteVolume(context.Background(), input); err != nil {
 				errors = append(errors, err)
 			}
 		}
