@@ -6,8 +6,8 @@
 package ebsvolume
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
@@ -35,8 +35,8 @@ type BlockDevice struct {
 
 type BlockDevices []BlockDevice
 
-func (bds BlockDevices) BuildEC2BlockDeviceMappings() []*ec2.BlockDeviceMapping {
-	var blockDevices []*ec2.BlockDeviceMapping
+func (bds BlockDevices) BuildEC2BlockDeviceMappings() []ec2types.BlockDeviceMapping {
+	var blockDevices []ec2types.BlockDeviceMapping
 
 	for _, blockDevice := range bds {
 		blockDevices = append(blockDevices, blockDevice.BuildEC2BlockDeviceMapping())
