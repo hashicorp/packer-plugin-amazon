@@ -74,7 +74,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		}
 		params.Filters = securityGroupFilters
 
-		log.Printf("Using SecurityGroup Filters %v", params)
+		log.Printf("Using SecurityGroup Filters %v", prettyFilter(params.Filters))
 
 		sgResp, err := ec2Client.DescribeSecurityGroups(ctx, params)
 		if err != nil {
