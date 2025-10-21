@@ -3,6 +3,18 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
 ---
+## 1.6.0 (October 21, 2025)
+
+## ✨ Features
+- **Upgrade Builder Ebs Volume to AWS SDK v2** – by @kp2099 ([#578](https://github.com/hashicorp/packer-plugin-amazon/pull/578))  
+  Modernizes the Ebs Volume Builder by migrating to AWS SDK v2.
+
+---
+
+## 📦 Dependencies
+- **Bump `github.com/hashicorp/packer-plugin-sdk`** from **0.6.3 → 0.6.4** – by @dependabot ([#622](https://github.com/hashicorp/packer-plugin-amazon/pull/622))
+
+---
 ## 1.5.0 (September 22, 2025)
 
 ## ✨ Features
