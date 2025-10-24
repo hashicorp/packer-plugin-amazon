@@ -66,7 +66,7 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 			}
 			_ = ami.CleanUpAmi()
 			ami = amazon_acc.AMIHelper{
-				Region: "us-west-2",
+				Region: "ca-west-1",
 				Name:   amiName,
 			}
 			_ = ami.CleanUpAmi()
@@ -78,7 +78,7 @@ func TestAccBuilder_EbsRegionCopy(t *testing.T) {
 					return fmt.Errorf("Bad exit code. Logfile: %s", logfile)
 				}
 			}
-			return checkRegionCopy(amiName, []string{"us-east-1", "us-west-2"})
+			return checkRegionCopy(amiName, []string{"us-east-1", "ca-west-1"})
 		},
 	}
 	acctest.TestPlugin(t, testCase)
@@ -1846,7 +1846,7 @@ const testBuilderAccRegionCopy = `
 		"source_ami": "ami-76b2a71e",
 		"ssh_username": "ubuntu",
 		"ami_name": "%s",
-		"ami_regions": ["us-east-1", "us-west-2"]
+		"ami_regions": ["us-east-1", "ca-west-1"]
 	}]
 }
 `

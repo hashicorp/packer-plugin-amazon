@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/hcl/v2/hcldec"
@@ -258,6 +259,22 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	if err != nil {
 		return nil, err
 	}
+
+	// If the AMI copies to a region that is not part of the default regions,
+	// we will switch to using regional STS endpoints for authentication, as
+	// these non-default regions only support STSv2 tokens, and by default
+	// we reach global endpoints which provide STSv1 tokens, leading to
+	// errors when copying to those non-default regional endpoints.
+	nonDefaultRegions := b.config.AMIConfig.NonDefaultRegions(&b.config.AccessConfig)
+	if nonDefaultRegions != nil &&
+		session.Config.STSRegionalEndpoint == endpoints.LegacySTSEndpoint {
+		ui.Say(fmt.Sprintf("The configuration uses non-default regions: %v\n"+
+			"This will likely fail when contacting those endpoints.\n"+
+			"To make this message disappear, AWS_STS_REGIONAL_ENDPOINTS=regional "+
+			"should be set in your environment", nonDefaultRegions))
+		session.Config.STSRegionalEndpoint = endpoints.RegionalSTSEndpoint
+	}
+
 	ec2conn := ec2.New(session)
 	iam := iam.New(session)
 
