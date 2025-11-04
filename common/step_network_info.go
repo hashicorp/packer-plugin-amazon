@@ -75,7 +75,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		params.Filters = vpcFilters
 		s.VpcFilter.Filters["state"] = "available"
 
-		log.Printf("Using VPC Filters %v", params)
+		log.Printf("Using VPC Filters %s", prettyFilter(params.Filters))
 
 		vpcResp, err := ec2Client.DescribeVpcs(ctx, params)
 		if err != nil {
@@ -115,7 +115,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			return multistep.ActionHalt
 		}
 		params.Filters = subnetFilters
-		log.Printf("Using Subnet Filters %v", params)
+		log.Printf("Using Subnet Filters %s", prettyFilter(params.Filters))
 
 		subnetsResp, err := ec2Client.DescribeSubnets(ctx, params)
 		if err != nil {

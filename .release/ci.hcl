@@ -6,7 +6,7 @@ schema = "2"
 project "packer-package-amazon" {
   team = "#proj-packer-releases"
   slack {
-    notification_channel = "C032TD9KCMQ"
+    notification_channel = "C09LD23QMPT"
   }
   github {
     organization = "hashicorp"

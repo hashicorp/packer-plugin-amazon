@@ -5,12 +5,14 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -75,4 +77,12 @@ func DestroyAMIs(imageIds []string, client clients.Ec2Client) error {
 		}
 	}
 	return nil
+}
+
+func prettyFilter(filters []types.Filter) string {
+	b, err := json.MarshalIndent(filters, "", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(b)
 }

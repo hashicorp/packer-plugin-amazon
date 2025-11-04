@@ -101,6 +101,8 @@ type AWSPollingConfig struct {
 const AwsDefaultMaxWaitTimeDuration = 10 * time.Minute
 const AwsDefaultInstanceProfileExistsWaitTimeDuration = 40 * time.Second
 const AwsDefaultRoleExistsWaitTimeDuration = 20 * time.Second
+const AwsDefaultSecurityGroupExistsWaitTimeDuration = 200 * time.Second
+const AwsDefaultSnapshotCompletedWaitTimeDuration = 30 * time.Minute
 
 // This helper function uses the environment variables AWS_TIMEOUT_SECONDS and
 // AWS_POLL_DELAY_SECONDS to generate waiter options that can be passed into any
@@ -232,6 +234,7 @@ func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 
 	return applyEnvOverrides(envOverrides)
 }
+
 func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn clients.Ec2Client, taskID string) error {
 	importInput := ec2.DescribeImportImageTasksInput{
 		ImportTaskIds: []string{taskID},
@@ -400,23 +403,23 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client cli
 	}
 	log.Printf("Waiting for AMI (%s) to be available...", imageId)
 
-	pollingOpts := w.getWaiterOptions()
+	pollingOptions := w.getWaiterOptions()
 
 	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
 
-	if pollingOpts.MaxWaitTime == nil {
+	if pollingOptions.MaxWaitTime == nil {
 		// Bump this default to 30 minutes because the aws default
 		// of ten minutes doesn't work for some of our long-running copies.
-		pollingOpts.MaxWaitTime = aws.Duration(30 * time.Minute)
+		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
 	}
 
-	if pollingOpts.MinDelay == nil {
+	if pollingOptions.MinDelay == nil {
 		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
 			o.MinDelay = 5 * time.Second // Set a default 5-second delay
 		})
 	}
 
-	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOpts.MaxWaitTime, waiterOpts...)
+	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOptions.MaxWaitTime, waiterOpts...)
 
 	if err != nil {
 		// The error type for a waiter timeout is *aws.WaiterError
