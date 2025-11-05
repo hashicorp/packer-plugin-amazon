@@ -1,0 +1,80 @@
+---
+description: |
+  Publish built AMI IDs to AWS Systems Manager Parameter Store.
+page_title: Amazon SSM Parameter - Post-Processors
+nav_title: Amazon SSM Parameter
+---
+
+# Amazon SSM Parameter post-processor
+
+Type: `amazon-ssm-parameter`
+
+This post-processor writes the AMI ID from an Amazon plugin artifact to AWS
+Systems Manager (SSM) Parameter Store. It uses the same parameter name in every
+region that has an AMI in the artifact, and writes that region's AMI ID. An EC2
+launch template can then reference the parameter name instead of a fixed AMI ID.
+Volume-only artifacts are not supported.
+
+## Example
+
+```hcl
+build {
+  sources = ["source.amazon-ebs.example"]
+
+  post-processor "amazon-ssm-parameter" {
+    parameter_name = "/golden/web/latest_ami"
+    overwrite      = true
+    tags = {
+      Purpose = "GoldenAMI"
+      Source  = "packer"
+    }
+  }
+}
+```
+
+In each region published by this example, a launch template in the same AWS
+account can set `ImageId` to `resolve:ssm:/golden/web/latest_ami`.
+
+## Configuration
+
+- `parameter_name` (string, required) - Parameter name or path used in each region.
+- `description` (string, optional) - Description of up to 1,024 characters. If omitted,
+  the post-processor generates a description that includes the AMI ID.
+- `overwrite` (bool, optional) - Update an existing parameter. Defaults to `false`.
+- `tier` (string, optional) - Either `Standard` or `Advanced`. If omitted,
+  Parameter Store uses its configured default tier.
+- `tags` (map of strings, optional) - Tags to apply to the SSM parameter in every
+  artifact region. Existing tags with matching keys are updated; other tags are
+  preserved. Omitting `tags` or providing an empty map leaves tags unchanged.
+
+The post-processor supports the plugin's [AWS authentication settings](/packer/integrations/hashicorp/amazon/latest#authentication),
+including `profile` and `assume_role`. The optional `region` setting is used to
+initialize the AWS session; it does not limit publication to one region. If it
+is omitted, the session uses a region from the AMI artifact. The credentials
+need `ssm:PutParameter`, `ssm:GetParameter`, and `ec2:DescribeImages` in each
+destination region. When setting tags, also grant `ssm:AddTagsToResource`.
+
+## Verification and cleanup
+
+The post-processor writes parameters of type `String` and data type
+`aws:ec2:image`. AWS validates the AMI asynchronously. Packer waits up to two
+minutes per region for the new version and expected AMI ID, then prints the
+confirmed parameter ARN and version in the build output.
+
+With `overwrite = false`, tags are included in the creation request. With
+`overwrite = true`, Packer applies tags after confirming the new version. If your
+IAM policy requires tags on creation (`aws:RequestTag`), create the parameter
+with `overwrite = false` on the first run. If a later tag update fails, the build
+reports the affected region and the parameter value remains published.
+
+If any region fails, the post-processor reports an error without rolling back
+writes in other regions. Once the post-processor starts publishing, Packer
+artifact cleanup retains the AMIs even if publication fails or is canceled:
+an accepted SSM write can still become visible after the build stops. If the
+connection drops before AWS acknowledges a write, do not assume the write
+failed. Check the parameter's latest version and AMI ID in that region before
+retrying or cleaning up manually.
+
+The post-processor does not share parameters or AMIs. To use a parameter across
+accounts, configure AMI access separately and share the `Advanced` parameter
+through [AWS Resource Access Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-shared-parameters.html).

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package main
@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/packer-plugin-amazon/datasource/parameterstore"
 	"github.com/hashicorp/packer-plugin-amazon/datasource/secretsmanager"
 	amazonimport "github.com/hashicorp/packer-plugin-amazon/post-processor/import"
+	"github.com/hashicorp/packer-plugin-amazon/post-processor/ssmparameter"
 	"github.com/hashicorp/packer-plugin-amazon/version"
 	"github.com/hashicorp/packer-plugin-sdk/plugin"
 )
@@ -31,6 +32,7 @@ func main() {
 	pps.RegisterDatasource("secretsmanager", new(secretsmanager.Datasource))
 	pps.RegisterDatasource("parameterstore", new(parameterstore.Datasource))
 	pps.RegisterPostProcessor("import", new(amazonimport.PostProcessor))
+	pps.RegisterPostProcessor("ssm-parameter", new(ssmparameter.PostProcessor))
 	pps.SetVersion(version.PluginVersion)
 	err := pps.Run()
 	if err != nil {

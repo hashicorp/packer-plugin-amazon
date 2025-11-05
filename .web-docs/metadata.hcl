@@ -53,4 +53,9 @@ integration {
     name = "Amazon Import"
     slug = "import"
   }
+  component {
+    type = "post-processor"
+    name = "Amazon SSM Parameter"
+    slug = "ssm-parameter"
+  }
 }
