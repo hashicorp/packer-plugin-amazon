@@ -3,6 +3,14 @@
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
 ---
+## 1.7.0 (November 11, 2025)
+
+## ✨ Features
+- **Upgrade Builder Ebs Surrogate to AWS SDK v2** – by @kp2099 ([#606](https://github.com/hashicorp/packer-plugin-amazon/pull/606))  
+  Modernizes the Ebs Surrogate Builder by migrating to AWS SDK v2.
+
+
+---
 ## 1.6.0 (October 21, 2025)
 
 ## ✨ Features
