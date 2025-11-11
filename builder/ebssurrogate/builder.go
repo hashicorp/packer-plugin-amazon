@@ -13,10 +13,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -201,8 +201,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
-	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
+	if b.config.TpmSupport != "" && ec2types.TpmSupportValues(b.config.TpmSupport) != ec2types.TpmSupportValuesV20 {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`,
+			ec2types.TpmSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
@@ -232,25 +233,28 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 }
 
 func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook) (packersdk.Artifact, error) {
-	session, err := b.config.Session()
+	client, err := b.config.NewEC2Client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ec2conn := ec2.New(session)
-	iam := iam.New(session)
+	awsConfig, err := b.config.Config(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error creating config: %w", err)
+	}
+	iamClient := iam.NewFromConfig(*awsConfig)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
 	state.Put("config", &b.config)
 	state.Put("access_config", &b.config.AccessConfig)
 	state.Put("ami_config", &b.config.AMIConfig)
-	state.Put("ec2", ec2conn)
-	state.Put("iam", iam)
-	state.Put("awsSession", session)
+	state.Put("ec2v2", client)
+	state.Put("iam", iamClient)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
-	state.Put("region", ec2conn.Config.Region)
+	state.Put("region", awsConfig.Region)
+	state.Put("aws_config", awsConfig)
 	generatedData := &packerbuilderdata.GeneratedData{State: state}
 
 	var instanceStep multistep.Step
@@ -275,7 +279,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
 			FleetTags:                         b.config.FleetTags,
-			Region:                            *ec2conn.Config.Region,
+			Region:                            awsConfig.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotPrice:                         b.config.SpotPrice,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
@@ -418,6 +422,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:          b.config.ctx,
 		},
 		&awscommon.StepSecurityGroup{
+			PollingConfig:             b.config.PollingConfig,
 			SecurityGroupFilter:       b.config.SecurityGroupFilter,
 			SecurityGroupIds:          b.config.SecurityGroupIds,
 			CommConfig:                &b.config.RunConfig.Comm,
@@ -447,8 +452,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BuildName: b.config.PackerBuildName,
 		},
 		&awscommon.StepCreateSSMTunnel{
-			AWSSession:       session,
-			Region:           *ec2conn.Config.Region,
+			AwsConfig:        *awsConfig,
+			Region:           awsConfig.Region,
 			PauseBeforeSSM:   b.config.PauseBeforeSSM,
 			LocalPortNumber:  b.config.SessionManagerPort,
 			RemotePortNumber: b.config.Comm.Port(),
@@ -458,7 +463,8 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		&communicator.StepConnect{
 			Config: &b.config.RunConfig.Comm,
 			Host: awscommon.SSHHost(
-				ec2conn,
+				ctx,
+				client,
 				b.config.SSHInterface,
 				b.config.Comm.Host(),
 			),
@@ -501,7 +507,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			RegionKeyIds:                   b.config.AMIRegionKMSKeyIDs,
 			EncryptBootVolume:              b.config.AMIEncryptBootVolume,
 			Name:                           b.config.AMIName,
-			OriginalRegion:                 *ec2conn.Config.Region,
+			OriginalRegion:                 awsConfig.Region,
 			AMISkipBuildRegion:             b.config.AMISkipBuildRegion,
 			AMISnapshotCopyDurationMinutes: b.config.AMISnapshotCopyDurationMinutes,
 		},
@@ -547,7 +553,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		artifact := &awscommon.Artifact{
 			Amis:           amis.(map[string]string),
 			BuilderIdValue: BuilderId,
-			Session:        session,
+			Config:         awsConfig,
 			StateData:      map[string]interface{}{"generated_data": state.Get("generated_data")},
 		}
 

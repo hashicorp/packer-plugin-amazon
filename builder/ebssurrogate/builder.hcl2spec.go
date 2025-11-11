@@ -4,7 +4,7 @@ package ebssurrogate
 
 import (
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -15,13 +15,13 @@ type FlatBlockDevice struct {
 	DeleteOnTermination *bool   `mapstructure:"delete_on_termination" required:"false" cty:"delete_on_termination" hcl:"delete_on_termination"`
 	DeviceName          *string `mapstructure:"device_name" required:"false" cty:"device_name" hcl:"device_name"`
 	Encrypted           *bool   `mapstructure:"encrypted" required:"false" cty:"encrypted" hcl:"encrypted"`
-	IOPS                *int64  `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
+	IOPS                *int32  `mapstructure:"iops" required:"false" cty:"iops" hcl:"iops"`
 	NoDevice            *bool   `mapstructure:"no_device" required:"false" cty:"no_device" hcl:"no_device"`
 	SnapshotId          *string `mapstructure:"snapshot_id" required:"false" cty:"snapshot_id" hcl:"snapshot_id"`
-	Throughput          *int64  `mapstructure:"throughput" required:"false" cty:"throughput" hcl:"throughput"`
+	Throughput          *int32  `mapstructure:"throughput" required:"false" cty:"throughput" hcl:"throughput"`
 	VirtualName         *string `mapstructure:"virtual_name" required:"false" cty:"virtual_name" hcl:"virtual_name"`
 	VolumeType          *string `mapstructure:"volume_type" required:"false" cty:"volume_type" hcl:"volume_type"`
-	VolumeSize          *int64  `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
+	VolumeSize          *int32  `mapstructure:"volume_size" required:"false" cty:"volume_size" hcl:"volume_size"`
 	KmsKeyId            *string `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	OmitFromArtifact    *bool   `mapstructure:"omit_from_artifact" cty:"omit_from_artifact" hcl:"omit_from_artifact"`
 }
@@ -187,6 +187,7 @@ type FlatConfig struct {
 	AMIProductCodes                           []string                                    `mapstructure:"ami_product_codes" required:"false" cty:"ami_product_codes" hcl:"ami_product_codes"`
 	AMIRegions                                []string                                    `mapstructure:"ami_regions" required:"false" cty:"ami_regions" hcl:"ami_regions"`
 	AMISkipRegionValidation                   *bool                                       `mapstructure:"skip_region_validation" required:"false" cty:"skip_region_validation" hcl:"skip_region_validation"`
+	AMISnapshotCopyDurationMinutes            *int64                                      `mapstructure:"snapshot_copy_duration_minutes" required:"false" cty:"snapshot_copy_duration_minutes" hcl:"snapshot_copy_duration_minutes"`
 	AMITags                                   map[string]string                           `mapstructure:"tags" required:"false" cty:"tags" hcl:"tags"`
 	AMITag                                    []config.FlatKeyValue                       `mapstructure:"tag" required:"false" cty:"tag" hcl:"tag"`
 	AMIENASupport                             *bool                                       `mapstructure:"ena_support" required:"false" cty:"ena_support" hcl:"ena_support"`
@@ -197,7 +198,6 @@ type FlatConfig struct {
 	AMIKmsKeyId                               *string                                     `mapstructure:"kms_key_id" required:"false" cty:"kms_key_id" hcl:"kms_key_id"`
 	AMIRegionKMSKeyIDs                        map[string]string                           `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion                        *bool                                       `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
-	AMISnapshotCopyDurationMinutes            *int64                                      `mapstructure:"snapshot_copy_duration_minutes" required:"false" cty:"snapshot_copy_duration_minutes" hcl:"snapshot_copy_duration_minutes"`
 	AMIIMDSSupport                            *string                                     `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 	DeprecationTime                           *string                                     `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	SnapshotTags                              map[string]string                           `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
@@ -361,6 +361,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ami_product_codes":              &hcldec.AttrSpec{Name: "ami_product_codes", Type: cty.List(cty.String), Required: false},
 		"ami_regions":                    &hcldec.AttrSpec{Name: "ami_regions", Type: cty.List(cty.String), Required: false},
 		"skip_region_validation":         &hcldec.AttrSpec{Name: "skip_region_validation", Type: cty.Bool, Required: false},
+		"snapshot_copy_duration_minutes": &hcldec.AttrSpec{Name: "snapshot_copy_duration_minutes", Type: cty.Number, Required: false},
 		"tags":                           &hcldec.AttrSpec{Name: "tags", Type: cty.Map(cty.String), Required: false},
 		"tag":                            &hcldec.BlockListSpec{TypeName: "tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},
 		"ena_support":                    &hcldec.AttrSpec{Name: "ena_support", Type: cty.Bool, Required: false},
@@ -371,7 +372,6 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"kms_key_id":                     &hcldec.AttrSpec{Name: "kms_key_id", Type: cty.String, Required: false},
 		"region_kms_key_ids":             &hcldec.AttrSpec{Name: "region_kms_key_ids", Type: cty.Map(cty.String), Required: false},
 		"skip_save_build_region":         &hcldec.AttrSpec{Name: "skip_save_build_region", Type: cty.Bool, Required: false},
-		"snapshot_copy_duration_minutes": &hcldec.AttrSpec{Name: "snapshot_copy_duration_minutes", Type: cty.Number, Required: false},
 		"imds_support":                   &hcldec.AttrSpec{Name: "imds_support", Type: cty.String, Required: false},
 		"deprecate_at":                   &hcldec.AttrSpec{Name: "deprecate_at", Type: cty.String, Required: false},
 		"snapshot_tags":                  &hcldec.AttrSpec{Name: "snapshot_tags", Type: cty.Map(cty.String), Required: false},

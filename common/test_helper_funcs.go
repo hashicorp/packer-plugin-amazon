@@ -16,7 +16,7 @@ import (
 )
 
 type mockEC2Client struct {
-	ec2.Client
+	clients.Ec2Client
 }
 
 func (m *mockEC2Client) DescribeRegions(ctx context.Context, params *ec2.DescribeRegionsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeRegionsOutput, error) {
