@@ -486,7 +486,7 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSnapshotCompletedWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SnapshotCompletedWaiterOptions) {
@@ -507,7 +507,7 @@ func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2
 	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(200 * time.Second)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSecurityGroupExistsWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SecurityGroupExistsWaiterOptions) {
