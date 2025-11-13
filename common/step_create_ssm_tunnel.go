@@ -77,9 +77,8 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 	ssmCtx, ssmCancel := context.WithCancel(ctx)
 	s.stopSSMCommand = ssmCancel
 	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
-	config := state.Get("config").(*aws.Config)
 
-	ssmconn := ssm.NewFromConfig(*config)
+	ssmconn := ssm.NewFromConfig(s.AwsConfig)
 	session := pssm.Session{
 		SvcClient:  ssmconn,
 		InstanceID: aws.ToString(instance.InstanceId),
