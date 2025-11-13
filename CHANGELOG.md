@@ -2,6 +2,11 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 
+## 1.7.1 (November 13, 2025)
+
+## 🐛 Bug Fixes
+- **SSM Session Manager Config Bug Fix** – by @kp2099 ([#629](https://github.com/hashicorp/packer-plugin-amazon/pull/629))
+
 ---
 ## 1.7.0 (November 11, 2025)
 
