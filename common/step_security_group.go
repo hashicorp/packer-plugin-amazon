@@ -174,7 +174,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		temporarySGSourceCidrs = []string{fmt.Sprintf("%s/%d", ip, bits)}
 	}
 
-	// map the list of temporary security group CIDRs bundled with awsConfig to
+	// map the list of temporary security group CIDRs bundled with config to
 	// types expected by EC2.
 	groupIpRanges := []ec2types.IpRange{}
 	for _, cidr := range temporarySGSourceCidrs {
