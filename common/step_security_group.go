@@ -38,7 +38,7 @@ type StepSecurityGroup struct {
 
 func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
-	config := state.Get("aws_config").(*aws.Config)
+	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	vpcId := state.Get("vpc_id").(string)
 
@@ -74,7 +74,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		}
 		params.Filters = securityGroupFilters
 
-		log.Printf("Using SecurityGroup Filters %v", params)
+		log.Printf("Using SecurityGroup Filters %s", prettyFilter(params.Filters))
 
 		sgResp, err := ec2Client.DescribeSecurityGroups(ctx, params)
 		if err != nil {
@@ -104,7 +104,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	}
 
 	if !s.IsRestricted {
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, config.Region, state)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, awsConfig.Region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging security group: %s", err)
 			state.Put("error", err)

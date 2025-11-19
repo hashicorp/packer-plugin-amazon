@@ -592,3 +592,23 @@ func TestRunConfigPrepare_EnableSpotInstanceBadSpotAllocationStrategy(t *testing
 		t.Fatalf("Should error if spot_allocation_strategy is invalid. Expected 1 error, got %d", len(err))
 	}
 }
+
+func TestRunConfigPrepare_SSHInterfaceIPv6_DefaultCIDR(t *testing.T) {
+	c := testConfig()
+	c.SSHInterface = "ipv6"
+	c.TemporarySGSourceCidrs = []string{}
+	c.TemporarySGSourcePublicIp = false
+
+	errs := c.Prepare(nil)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+
+	if len(c.TemporarySGSourceCidrs) != 1 {
+		t.Fatalf("expected 1 default CIDR, got: %v", c.TemporarySGSourceCidrs)
+	}
+
+	if c.TemporarySGSourceCidrs[0] != "::/0" {
+		t.Errorf("expected default CIDR to be '::/0', got: %s", c.TemporarySGSourceCidrs[0])
+	}
+}

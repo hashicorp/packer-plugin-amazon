@@ -54,7 +54,7 @@ func (d *AmiFilterOptions) NoOwner() bool {
 }
 
 func prettyFilters(params *ec2.DescribeImagesInput) string {
-	b, err := json.MarshalIndent(params.Filters, "", "  ")
+	b, err := json.MarshalIndent(params, "", "  ")
 	if err != nil {
 		return err.Error()
 	}

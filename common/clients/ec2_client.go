@@ -11,9 +11,9 @@ import (
 
 type Ec2Client interface {
 	ec2.DescribeImagesAPIClient
-	ec2.DescribeImportImageTasksAPIClient
 	ec2.DescribeInstancesAPIClient
 	ec2.DescribeSnapshotsAPIClient
+	ec2.DescribeImportImageTasksAPIClient
 
 	AuthorizeSecurityGroupIngress(ctx context.Context, params *ec2.AuthorizeSecurityGroupIngressInput, optFns ...func(*ec2.Options)) (*ec2.AuthorizeSecurityGroupIngressOutput, error)
 	AttachVolume(ctx context.Context, params *ec2.AttachVolumeInput, optFns ...func(*ec2.Options)) (*ec2.AttachVolumeOutput, error)

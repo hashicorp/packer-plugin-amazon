@@ -1,0 +1,27 @@
+---
+name: Backport Assistant Runner
+
+on:
+  pull_request_target:
+    types:
+      - closed
+      - labeled
+
+permissions:
+  contents: read
+
+jobs:
+  backport:
+    permissions:
+      contents: none
+    if: github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    container: hashicorpdev/backport-assistant:v0.5.8
+    steps:
+      - name: Backport changes to targeted release branch
+        run: |
+          backport-assistant backport -gh-automerge
+        env:
+          BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.\\w+)"
+          BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
+          GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

@@ -40,7 +40,7 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(*ec2types.Instance)
+	instance := state.Get("instance").(ec2types.Instance)
 
 	var volumeId string
 	for _, volume := range instance.BlockDeviceMappings {

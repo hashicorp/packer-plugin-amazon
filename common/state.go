@@ -101,6 +101,8 @@ type AWSPollingConfig struct {
 const AwsDefaultMaxWaitTimeDuration = 10 * time.Minute
 const AwsDefaultInstanceProfileExistsWaitTimeDuration = 40 * time.Second
 const AwsDefaultRoleExistsWaitTimeDuration = 20 * time.Second
+const AwsDefaultSecurityGroupExistsWaitTimeDuration = 200 * time.Second
+const AwsDefaultSnapshotCompletedWaitTimeDuration = 30 * time.Minute
 
 // This helper function uses the environment variables AWS_TIMEOUT_SECONDS and
 // AWS_POLL_DELAY_SECONDS to generate waiter options that can be passed into any
@@ -232,6 +234,7 @@ func (w *AWSPollingConfig) getWaiterOptions() *PollingOptions {
 
 	return applyEnvOverrides(envOverrides)
 }
+
 func (w *AWSPollingConfig) WaitUntilImageImported(ctx context.Context, conn clients.Ec2Client, taskID string) error {
 	importInput := ec2.DescribeImportImageTasksInput{
 		ImportTaskIds: []string{taskID},
@@ -342,6 +345,7 @@ func WaitForVolumeToBeAttached(client clients.Ec2Client, ctx context.Context, in
 	}
 	return fmt.Errorf("timeout waiting for volume to attached after %d attempts", maxAttempts)
 }
+
 func WaitForVolumeToBeDetached(client clients.Ec2Client, ctx context.Context, input *ec2.DescribeVolumesInput,
 	opts *PollingOptions) error {
 	maxAttempts := 40
@@ -393,6 +397,62 @@ func WaitForVolumeToBeDetached(client clients.Ec2Client, ctx context.Context, in
 	return fmt.Errorf("timeout waiting for volume to be detached after %d attempts", maxAttempts)
 }
 
+func WaitForFastLaunchEnabled(client clients.Ec2Client, ctx context.Context,
+	input *ec2.DescribeFastLaunchImagesInput, opts *PollingOptions) error {
+	maxAttempts := 500
+	delay := 15 * time.Second
+	if opts != nil {
+		if opts.MinDelay != nil {
+			delay = aws.ToDuration(opts.MinDelay)
+		}
+
+		if opts.MaxWaitTime != nil {
+			maxAttempts = int(opts.MaxWaitTime.Seconds() / delay.Seconds())
+		}
+
+	}
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		output, err := client.DescribeFastLaunchImages(ctx, input)
+		if err != nil {
+			return err
+		}
+
+		if len(output.FastLaunchImages) == 0 {
+			return fmt.Errorf("no fast launch images found")
+		}
+
+		// Check all images for their state
+		allEnabled := true
+		for _, image := range output.FastLaunchImages {
+			if image.State == ec2types.FastLaunchStateCodeEnablingFailed {
+				return fmt.Errorf("fast launch enabling failed for image")
+			}
+			if image.State == ec2types.FastLaunchStateCodeEnabledFailed {
+				return fmt.Errorf("fast launch enabled failed for image")
+			}
+			if image.State != ec2types.FastLaunchStateCodeEnabled {
+				allEnabled = false
+			}
+		}
+
+		// If all images are enabled, we're done
+		if allEnabled {
+			return nil
+		}
+
+		// Wait before next attempt
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+
+	}
+
+	return fmt.Errorf("timeout waiting for fast launch to be enabled after %d attempts", maxAttempts)
+}
+
 func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client clients.Ec2Client, imageId string) error {
 
 	imageInput := &ec2.DescribeImagesInput{
@@ -400,23 +460,23 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, client cli
 	}
 	log.Printf("Waiting for AMI (%s) to be available...", imageId)
 
-	pollingOpts := w.getWaiterOptions()
+	pollingOptions := w.getWaiterOptions()
 
 	waiterOpts := []func(*ec2.ImageAvailableWaiterOptions){}
 
-	if pollingOpts.MaxWaitTime == nil {
+	if pollingOptions.MaxWaitTime == nil {
 		// Bump this default to 30 minutes because the aws default
 		// of ten minutes doesn't work for some of our long-running copies.
-		pollingOpts.MaxWaitTime = aws.Duration(30 * time.Minute)
+		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
 	}
 
-	if pollingOpts.MinDelay == nil {
+	if pollingOptions.MinDelay == nil {
 		waiterOpts = append(waiterOpts, func(o *ec2.ImageAvailableWaiterOptions) {
 			o.MinDelay = 5 * time.Second // Set a default 5-second delay
 		})
 	}
 
-	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOpts.MaxWaitTime, waiterOpts...)
+	err := ec2.NewImageAvailableWaiter(client).Wait(ctx, imageInput, *pollingOptions.MaxWaitTime, waiterOpts...)
 
 	if err != nil {
 		// The error type for a waiter timeout is *aws.WaiterError
@@ -483,7 +543,7 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, ec2Client 
 	var optFns []func(options *ec2.SnapshotCompletedWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(30 * time.Minute)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSnapshotCompletedWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SnapshotCompletedWaiterOptions) {
@@ -504,7 +564,7 @@ func (w *AWSPollingConfig) WaitUntilSecurityGroupExists(ctx context.Context, ec2
 	var optFns []func(options *ec2.SecurityGroupExistsWaiterOptions)
 
 	if pollingOptions.MaxWaitTime == nil {
-		pollingOptions.MaxWaitTime = aws.Duration(200 * time.Second)
+		pollingOptions.MaxWaitTime = aws.Duration(AwsDefaultSecurityGroupExistsWaitTimeDuration)
 	}
 	if pollingOptions.MinDelay != nil {
 		optFns = append(optFns, func(o *ec2.SecurityGroupExistsWaiterOptions) {
@@ -539,7 +599,13 @@ func (w *AWSPollingConfig) WaitUntilVolumeDetached(ctx context.Context, ec2Clien
 	return err
 
 }
-
 func (w *AWSPollingConfig) WaitUntilFastLaunchEnabled(ctx context.Context, ec2Client clients.Ec2Client, imageId string) error {
-	return nil
+	fastLaunchDescribeInput := ec2.DescribeFastLaunchImagesInput{
+		ImageIds: []string{imageId},
+	}
+	err := WaitForFastLaunchEnabled(ec2Client,
+		ctx,
+		&fastLaunchDescribeInput,
+		w.getWaiterOptions())
+	return err
 }
