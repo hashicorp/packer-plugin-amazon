@@ -4,14 +4,15 @@
 package ebs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
-	amazon_acc "github.com/hashicorp/packer-plugin-amazon/builder/ebs/acceptance"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	amazon_acc "github.com/hashicorp/packer-plugin-amazon/common/acceptance"
 	"github.com/hashicorp/packer-plugin-sdk/acctest"
 )
 
@@ -59,16 +60,16 @@ func checkTags(ami amazon_acc.AMIHelper) error {
 	if err != nil || len(images) == 0 {
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
-
+	ctx := context.TODO()
 	config := TFConfig{}
 	_ = json.Unmarshal([]byte(testBuilderTagsAccBasic), &config)
 	tags := config.Builders[0].Tags
 	snapshotTags := config.Builders[0].SnapshotTags
 
 	// Describe the image, get block devices with a snapshot
-	ec2conn, _ := testEC2Conn("us-east-1")
-	imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
-		ImageIds: []*string{images[0].ImageId},
+	ec2Client, _ := testEC2Conn("us-east-1")
+	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		ImageIds: []string{*images[0].ImageId},
 	})
 
 	if err != nil {
@@ -82,15 +83,15 @@ func checkTags(ami amazon_acc.AMIHelper) error {
 	image := imageResp.Images[0]
 
 	// Check only those with a Snapshot ID, i.e. not Ephemeral
-	var snapshots []*string
+	var snapshots []string
 	for _, device := range image.BlockDeviceMappings {
 		if device.Ebs != nil && device.Ebs.SnapshotId != nil {
-			snapshots = append(snapshots, device.Ebs.SnapshotId)
+			snapshots = append(snapshots, *device.Ebs.SnapshotId)
 		}
 	}
 
 	// Grab matching snapshot info
-	resp, err := ec2conn.DescribeSnapshots(&ec2.DescribeSnapshotsInput{
+	resp, err := ec2Client.DescribeSnapshots(ctx, &ec2.DescribeSnapshotsInput{
 		SnapshotIds: snapshots,
 	})
 

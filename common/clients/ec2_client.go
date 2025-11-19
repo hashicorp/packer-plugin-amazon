@@ -36,6 +36,9 @@ type Ec2Client interface {
 	DescribeVolumes(ctx context.Context, params *ec2.DescribeVolumesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVolumesOutput, error)
 	DescribeVpcs(ctx context.Context, params *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
 	DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
+	DescribeFastLaunchImages(ctx context.Context, params *ec2.DescribeFastLaunchImagesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeFastLaunchImagesOutput, error)
+	DescribeLaunchTemplates(ctx context.Context, params *ec2.DescribeLaunchTemplatesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeLaunchTemplatesOutput, error)
+	DescribeImageAttribute(ctx context.Context, params *ec2.DescribeImageAttributeInput, optFns ...func(*ec2.Options)) (*ec2.DescribeImageAttributeOutput, error)
 
 	DeleteLaunchTemplate(ctx context.Context, params *ec2.DeleteLaunchTemplateInput, optFns ...func(*ec2.Options)) (*ec2.DeleteLaunchTemplateOutput, error)
 	DeleteVolume(ctx context.Context, params *ec2.DeleteVolumeInput, optFns ...func(*ec2.Options)) (*ec2.DeleteVolumeOutput, error)
@@ -44,9 +47,11 @@ type Ec2Client interface {
 	DeleteSnapshot(ctx context.Context, params *ec2.DeleteSnapshotInput, optFns ...func(*ec2.Options)) (*ec2.DeleteSnapshotOutput, error)
 	DeleteTags(ctx context.Context, params *ec2.DeleteTagsInput, optFns ...func(*ec2.Options)) (*ec2.DeleteTagsOutput, error)
 	DeregisterImage(ctx context.Context, params *ec2.DeregisterImageInput, optFns ...func(*ec2.Options)) (*ec2.DeregisterImageOutput, error)
+	DisableImageDeregistrationProtection(ctx context.Context, params *ec2.DisableImageDeregistrationProtectionInput, optFns ...func(*ec2.Options)) (*ec2.DisableImageDeregistrationProtectionOutput, error)
 
 	EnableImageDeprecation(ctx context.Context, params *ec2.EnableImageDeprecationInput, optFns ...func(*ec2.Options)) (*ec2.EnableImageDeprecationOutput, error)
 	EnableImageDeregistrationProtection(ctx context.Context, params *ec2.EnableImageDeregistrationProtectionInput, optFns ...func(*ec2.Options)) (*ec2.EnableImageDeregistrationProtectionOutput, error)
+	EnableFastLaunch(ctx context.Context, params *ec2.EnableFastLaunchInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastLaunchOutput, error)
 
 	GetPasswordData(ctx context.Context, params *ec2.GetPasswordDataInput, optFns ...func(*ec2.Options)) (*ec2.GetPasswordDataOutput, error)
 
