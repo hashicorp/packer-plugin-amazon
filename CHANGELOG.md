@@ -1,6 +1,14 @@
 # Latest Release
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
+---
+## 1.8.0 (November 19, 2025)
+
+## ✨ Features
+- **Upgrade Builder Ebs to AWS SDK v2** – by @kp2099 ([#618](https://github.com/hashicorp/packer-plugin-amazon/pull/618))  
+  Modernizes the Ebs Builder by migrating to AWS SDK v2.
+
+---
 
 ## 1.7.1 (November 13, 2025)
 
