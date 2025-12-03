@@ -188,7 +188,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 		sourceImage := sourceImageRaw.(*ec2types.Image)
 
-		err = retry.Config {
+		err = retry.Config{
 			Tries: 11,
 			ShouldRetry: func(err error) bool {
 				errStr := err.Error()
