@@ -175,7 +175,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 
 		// In aws sdk go v2, we noticed if there was no Wait, the spot fleet requests were failing even with retry.
-		// Running dummy instance in DryRun mode to validate that the instance profile is visible to EC2
+		// Running a dummy instance in DryRun mode to validate that the instance profile is visible to EC2
 
 		ui.Say("Waiting for the change to propagate because of eventual consistency...")
 
@@ -213,7 +213,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			})
 
 			// For dry run, we expect a DryRunOperation error if the call would succeed
-			// Any other expected error indicates the instance profile isn't visible to EC2 yet
+			// Any other error indicates the instance profile isn't visible to EC2 yet
 			if err != nil {
 				errStr := err.Error()
 				if strings.Contains(errStr, "DryRunOperation") {
