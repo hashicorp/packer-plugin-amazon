@@ -22,6 +22,8 @@ type StepIamInstanceProfile struct {
 	PollingConfig                             *AWSPollingConfig
 	IamInstanceProfile                        string
 	SkipProfileValidation                     bool
+	SSMAgentEnabled                           bool
+	IsRestricted                              bool
 	TemporaryIamInstanceProfilePolicyDocument *PolicyDocument
 	createdInstanceProfileName                string
 	createdRoleName                           string
