@@ -420,12 +420,6 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			if strings.Contains(err.Error(), "Invalid IAM Instance Profile name") {
-				// eventual consistency of the profile. PutRolePolicy &
-				// AddRoleToInstanceProfile are eventually consistent and once
-				// we can wait on those operations, this can be removed.
-				return true
-			}
 			if err.Error() == "InsufficientInstanceCapacity" {
 				return true
 			}

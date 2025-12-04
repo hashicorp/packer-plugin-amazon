@@ -8,12 +8,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/retry"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
@@ -169,12 +174,66 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionHalt
 		}
 
-		s.roleIsAttached = true
-		// Sleep to allow IAM changes to propagate
 		// In aws sdk go v2, we noticed if there was no Wait, the spot fleet requests were failing even with retry.
-		// Adding a delay here to allow IAM changes to propagate
+		// Running a dummy instance in DryRun mode to validate that the instance profile is visible to EC2
 
-		time.Sleep(5 * time.Second)
+		ui.Say("Waiting for the change to propagate because of eventual consistency...")
+
+		ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+		sourceImageRaw, exists := state.GetOk("source_image")
+		if !exists {
+			err := fmt.Errorf("source_image not available in state for IAM validation")
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		sourceImage := sourceImageRaw.(*ec2types.Image)
+
+		err = retry.Config{
+			Tries: 11,
+			ShouldRetry: func(err error) bool {
+				errStr := err.Error()
+				return strings.Contains(errStr, "Invalid IAM Instance Profile")
+			},
+			RetryDelay: (&retry.Backoff{
+				InitialBackoff: 500 * time.Millisecond,
+				MaxBackoff:     5 * time.Second,
+				Multiplier:     2,
+			}).Linear,
+		}.Run(ctx, func(ctx context.Context) error {
+
+			_, err := ec2Client.RunInstances(ctx, &ec2.RunInstancesInput{
+				ImageId:      sourceImage.ImageId,
+				MinCount:     aws.Int32(1),
+				MaxCount:     aws.Int32(1),
+				InstanceType: ec2types.InstanceTypeT3Nano,
+				DryRun:       aws.Bool(true),
+				IamInstanceProfile: &ec2types.IamInstanceProfileSpecification{
+					Name: aws.String(s.createdInstanceProfileName),
+				},
+			})
+
+			// For dry run, we expect a DryRunOperation error if the call would succeed
+			// Any other error indicates the instance profile isn't visible to EC2 yet
+			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "DryRunOperation") {
+					log.Printf("[DEBUG] EC2 can see IAM instance profile %s", s.createdInstanceProfileName)
+					return nil
+				}
+				log.Printf("[DEBUG] EC2 dry run failed: %s", errStr)
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
+			err := fmt.Errorf("timed out waiting for IAM changes to propagate to EC2: %s", err)
+			log.Printf("[DEBUG] %s", err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+
+		s.roleIsAttached = true
 		state.Put("iamInstanceProfile", aws.ToString(profileResp.InstanceProfile.InstanceProfileName))
 	}
 
