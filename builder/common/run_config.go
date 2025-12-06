@@ -180,6 +180,10 @@ type RunConfig struct {
 	// -> Note: The double quotation marks in the command are not required if
 	// your CMD shell is already in the
 	// `C:\Program Files\Amazon\EC2ConfigService\` directory.
+        //
+        // Note that when using a spot instance, Packer doesn't stop the instance,
+        // regardless of the value of this setting. Instead, it relies on the CreateImage
+        // call to stop and restart the instance.
 	DisableStopInstance bool `mapstructure:"disable_stop_instance" required:"false"`
 	// Mark instance as [EBS
 	// Optimized](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html).
