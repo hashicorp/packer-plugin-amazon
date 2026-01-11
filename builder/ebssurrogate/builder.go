@@ -284,6 +284,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			SpotPrice:                         b.config.SpotPrice,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
+			SubnetIds:                         b.config.SubnetIds,
 			SpotTags:                          b.config.SpotTags,
 			Tags:                              b.config.RunTags,
 			UserData:                          b.config.UserData,
