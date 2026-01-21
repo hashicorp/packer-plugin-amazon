@@ -153,6 +153,11 @@ type RunConfig struct {
 	// Provide the EC2 Capacity Reservation Group ARN that will be used by
 	// Packer.
 	CapacityReservationGroupArn string `mapstructure:"capacity_reservation_group_arn" required:"false"`
+	// The market type to use when launching instances with capacity reservations.
+	// Valid values are: `interruptible-capacity-reservation`, `capacity-block`, or empty string (for on-demand).
+	// Only set this when using interruptible capacity reservations or capacity blocks.
+	// Leave empty for standard on-demand capacity reservations. Defaults to empty string.
+	CapacityReservationMarketType string `mapstructure:"capacity_reservation_market_type" required:"false"`
 
 	// Packer normally stops the build instance after all provisioners have
 	// run. For Windows instances, it is sometimes desirable to [run
@@ -911,6 +916,20 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	case "", "none", "open":
 	default:
 		errs = append(errs, fmt.Errorf(`capacity_reservation_preference only accepts 'none' or 'open' values`))
+	}
+
+	// Validate capacity_reservation_market_type
+	if c.CapacityReservationMarketType != "" {
+		switch c.CapacityReservationMarketType {
+		case "interruptible-capacity-reservation", "capacity-block":
+			// Valid market types
+		default:
+			errs = append(errs, fmt.Errorf(`capacity_reservation_market_type only accepts 'interruptible-capacity-reservation' or 'capacity-block' values`))
+		}
+		// Market type should only be used with a specific capacity reservation
+		if c.CapacityReservationId == "" && c.CapacityReservationGroupArn == "" {
+			errs = append(errs, fmt.Errorf(`capacity_reservation_market_type requires either capacity_reservation_id or capacity_reservation_group_arn to be set`))
+		}
 	}
 
 	var tenancy string
