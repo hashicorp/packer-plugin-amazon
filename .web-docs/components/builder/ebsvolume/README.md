@@ -856,6 +856,12 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   subnet-12345def, where Packer will launch the EC2 instance. This field is
   required if you are using an non-default VPC.
 
+- `subnet_ids` ([]string) - A list of subnet IDs to launch the instance in. When used with
+  spot_instance_types, EC2 Fleet will try all combinations of instance
+  types and subnets, enabling automatic failover across availability zones
+  when capacity is constrained. This is mutually exclusive with subnet_id
+  and subnet_filter.
+
 - `license_specifications` ([]LicenseSpecification) - The license configurations.
   
   HCL2 example:

@@ -612,3 +612,51 @@ func TestRunConfigPrepare_SSHInterfaceIPv6_DefaultCIDR(t *testing.T) {
 		t.Errorf("expected default CIDR to be '::/0', got: %s", c.TemporarySGSourceCidrs[0])
 	}
 }
+
+func TestRunConfigPrepare_SubnetIdsWithSubnetId(t *testing.T) {
+	c := testConfig()
+	c.SubnetIds = []string{"subnet-abc123", "subnet-def456"}
+	c.SubnetId = "subnet-xyz789"
+	c.SpotInstanceTypes = []string{"t3.micro", "t3.small"}
+	c.InstanceType = ""
+
+	errs := c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for subnet_ids with subnet_id, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestRunConfigPrepare_SubnetIdsWithSubnetFilter(t *testing.T) {
+	c := testConfig()
+	c.SubnetIds = []string{"subnet-abc123", "subnet-def456"}
+	c.SubnetFilter.Filters = map[string]string{"tag:Environment": "build"}
+	c.SpotInstanceTypes = []string{"t3.micro", "t3.small"}
+	c.InstanceType = ""
+
+	errs := c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for subnet_ids with subnet_filter, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestRunConfigPrepare_SubnetIdsWithoutSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.SubnetIds = []string{"subnet-abc123", "subnet-def456"}
+
+	errs := c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for subnet_ids without spot_instance_types, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestRunConfigPrepare_SubnetIdsWithSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.SubnetIds = []string{"subnet-abc123", "subnet-def456"}
+	c.SpotInstanceTypes = []string{"t3.micro", "t3.small"}
+	c.InstanceType = ""
+
+	errs := c.Prepare(nil)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors for subnet_ids with spot_instance_types, got %d: %v", len(errs), errs)
+	}
+}
