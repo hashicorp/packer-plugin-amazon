@@ -60,6 +60,10 @@ func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host stri
 					if i.PrivateDnsName != nil {
 						host = *i.PrivateDnsName
 					}
+				case "ipv6":
+					if i.Ipv6Address != nil {
+						host = *i.Ipv6Address
+					}
 				default:
 					panic(fmt.Sprintf("Unknown interface type: %s", sshInterface))
 				}

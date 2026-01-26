@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -177,11 +178,25 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	// map the list of temporary security group CIDRs bundled with config to
 	// types expected by EC2.
 	groupIpRanges := []ec2types.IpRange{}
+	groupIpv6Ranges := []ec2types.Ipv6Range{}
 	for _, cidr := range temporarySGSourceCidrs {
-		ipRange := ec2types.IpRange{
-			CidrIp: aws.String(cidr),
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			ui.Error(err.Error())
+			state.Put("error", err)
+			return multistep.ActionHalt
 		}
-		groupIpRanges = append(groupIpRanges, ipRange)
+		if ipNet.IP.To4() != nil {
+			// IPv4 CIDR
+			groupIpRanges = append(groupIpRanges, ec2types.IpRange{
+				CidrIp: aws.String(cidr),
+			})
+		} else {
+			// IPv6 CIDR
+			groupIpv6Ranges = append(groupIpv6Ranges, ec2types.Ipv6Range{
+				CidrIpv6: aws.String(cidr),
+			})
+		}
 	}
 
 	// Set some state data for use in future steps
@@ -199,6 +214,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 			{
 				FromPort:   aws.Int32(int32(port)),
 				ToPort:     aws.Int32(int32(port)),
+				Ipv6Ranges: groupIpv6Ranges,
 				IpRanges:   groupIpRanges,
 				IpProtocol: aws.String("tcp"),
 			},
