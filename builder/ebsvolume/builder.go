@@ -228,6 +228,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Region:                            awsConfig.Region,
 			SourceAMI:                         b.config.SourceAmi,
 			SpotInstanceTypes:                 b.config.SpotInstanceTypes,
+			SubnetIds:                         b.config.SubnetIds,
 			SpotAllocationStrategy:            b.config.SpotAllocationStrategy,
 			SpotPrice:                         b.config.SpotPrice,
 			SpotTags:                          b.config.SpotTags,

@@ -52,6 +52,7 @@ type StepRunSpotInstance struct {
 	SpotPrice                         string
 	SpotTags                          map[string]string
 	SpotInstanceTypes                 []string
+	SubnetIds                         []string
 	Tags                              map[string]string
 	VolumeTags                        map[string]string
 	UserData                          string
@@ -131,17 +132,28 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 		IamInstanceProfile:    &ec2.LaunchTemplateIamInstanceProfileSpecificationRequest{Name: iamInstanceProfile},
 		ImageId:               &s.SourceAMI,
 		InstanceMarketOptions: marketOptions,
-		Placement: &ec2.LaunchTemplatePlacementRequest{
-			AvailabilityZone: &az,
-		},
-		UserData: userData,
+		UserData:              userData,
 	}
+
+	// When using SubnetIds (multi-subnet mode), don't set Placement or subnet in the template.
+	// These will be specified in the fleet overrides to enable multi-AZ failover.
+	if len(s.SubnetIds) == 0 {
+		templateData.Placement = &ec2.LaunchTemplatePlacementRequest{
+			AvailabilityZone: &az,
+		}
+	}
+
 	// Create a network interface
 	securityGroupIds := aws.StringSlice(state.Get("securityGroupIds").([]string))
 	subnetId := state.Get("subnet_id").(string)
 
-	if subnetId != "" {
-		// Set up a full network interface
+	// When using SubnetIds (multi-subnet mode), don't set subnet on the network interface.
+	// The subnet will be specified in the fleet overrides instead.
+	if len(s.SubnetIds) > 0 {
+		// Multi-subnet mode: only set security groups, subnet comes from fleet overrides
+		templateData.SetSecurityGroupIds(securityGroupIds)
+	} else if subnetId != "" {
+		// Single-subnet mode: set up a full network interface with subnet
 		networkInterface := ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 			Groups:              securityGroupIds,
 			DeleteOnTermination: aws.Bool(true),
@@ -157,7 +169,6 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 		templateData.SetNetworkInterfaces([]*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{&networkInterface})
 	} else {
 		templateData.SetSecurityGroupIds(securityGroupIds)
-
 	}
 
 	if s.IsBurstableInstanceType {
@@ -358,13 +369,30 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	launchTemplateId := createLaunchTemplateOutput.LaunchTemplate.LaunchTemplateId
 	ui.Message(fmt.Sprintf("Created Spot Fleet launch template: %s", *launchTemplateId))
 
-	// Add overrides for each user-provided instance type
+	// Build fleet overrides for instance types and optionally subnets
 	var overrides []*ec2.FleetLaunchTemplateOverridesRequest
-	for _, instanceType := range s.SpotInstanceTypes {
-		override := ec2.FleetLaunchTemplateOverridesRequest{
-			InstanceType: aws.String(instanceType),
+	if len(s.SubnetIds) > 0 {
+		// Multi-subnet mode: create Cartesian product of instance types × subnets
+		// This enables EC2 Fleet to try all combinations for multi-AZ failover
+		ui.Say(fmt.Sprintf("Creating fleet overrides for %d instance types × %d subnets",
+			len(s.SpotInstanceTypes), len(s.SubnetIds)))
+		for _, instanceType := range s.SpotInstanceTypes {
+			for _, subnetId := range s.SubnetIds {
+				override := ec2.FleetLaunchTemplateOverridesRequest{
+					InstanceType: aws.String(instanceType),
+					SubnetId:     aws.String(subnetId),
+				}
+				overrides = append(overrides, &override)
+			}
 		}
-		overrides = append(overrides, &override)
+	} else {
+		// Single-subnet mode: only specify instance types (existing behavior)
+		for _, instanceType := range s.SpotInstanceTypes {
+			override := ec2.FleetLaunchTemplateOverridesRequest{
+				InstanceType: aws.String(instanceType),
+			}
+			overrides = append(overrides, &override)
+		}
 	}
 
 	createFleetInput := &ec2.CreateFleetInput{

@@ -501,6 +501,12 @@ type RunConfig struct {
 	// subnet-12345def, where Packer will launch the EC2 instance. This field is
 	// required if you are using an non-default VPC.
 	SubnetId string `mapstructure:"subnet_id" required:"false"`
+	// A list of subnet IDs to launch the instance in. When used with
+	// spot_instance_types, EC2 Fleet will try all combinations of instance
+	// types and subnets, enabling automatic failover across availability zones
+	// when capacity is constrained. This is mutually exclusive with subnet_id
+	// and subnet_filter.
+	SubnetIds []string `mapstructure:"subnet_ids" required:"false"`
 	// The license configurations.
 	//
 	// HCL2 example:
@@ -866,6 +872,18 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		} else {
 			c.SecurityGroupIds = []string{c.SecurityGroupId}
 			c.SecurityGroupId = ""
+		}
+	}
+
+	if len(c.SubnetIds) > 0 {
+		if c.SubnetId != "" {
+			errs = append(errs, fmt.Errorf("Only one of subnet_id or subnet_ids can be specified."))
+		}
+		if !c.SubnetFilter.Empty() {
+			errs = append(errs, fmt.Errorf("Only one of subnet_ids or subnet_filter can be specified."))
+		}
+		if len(c.SpotInstanceTypes) == 0 {
+			errs = append(errs, fmt.Errorf("subnet_ids requires spot_instance_types to use EC2 Fleet for multi-AZ failover."))
 		}
 	}
 
