@@ -254,6 +254,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			CapacityReservationPreference:     b.config.CapacityReservationPreference,
 			CapacityReservationId:             b.config.CapacityReservationId,
 			CapacityReservationGroupArn:       b.config.CapacityReservationGroupArn,
+			CapacityReservationMarketType:     b.config.CapacityReservationMarketType,
 			Comm:                              &b.config.RunConfig.Comm,
 			Ctx:                               b.config.ctx,
 			Debug:                             b.config.PackerDebug,
