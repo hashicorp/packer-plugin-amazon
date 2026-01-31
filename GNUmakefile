@@ -6,6 +6,8 @@ COUNT?=1
 TEST?=$(shell go list ./...)
 HASHICORP_PACKER_PLUGIN_SDK_VERSION?=$(shell go list -m github.com/hashicorp/packer-plugin-sdk | cut -d " " -f2)
 
+PACKER_PATH?=packer
+
 .PHONY: dev
 
 build:
@@ -13,9 +15,8 @@ build:
 
 dev:
 	@go build -ldflags="-X '${PLUGIN_FQN}/version.VersionPrerelease=dev'" -o '${BINARY}'
-	packer plugins install --path ${BINARY} "$(shell echo "${PLUGIN_FQN}" | sed 's/packer-plugin-//')"
+	${PACKER_PATH} plugins install --path ${BINARY} "$(shell echo "${PLUGIN_FQN}" | sed 's/packer-plugin-//')"
 
-test:
 	@go test -race -count $(COUNT) $(TEST) -timeout=3m
 
 install-packer-sdc: ## Install packer sofware development command
