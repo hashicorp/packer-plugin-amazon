@@ -106,3 +106,37 @@ func (d *AmiFilterOptions) GetFilteredImage(ctx context.Context, params *ec2.Des
 	}
 	return &image, nil
 }
+
+// GetFilteredImages returns all images matching the filters without selecting one.
+// Returns an error if no images match. Unlike GetFilteredImage, it does not enforce
+// a single-result constraint — the caller is responsible for selection.
+func (d *AmiFilterOptions) GetFilteredImages(ctx context.Context, params *ec2.DescribeImagesInput, client clients.Ec2Client) ([]types.Image, error) {
+	if len(d.Filters) > 0 {
+		amiFilters, err := buildEc2Filters(d.Filters)
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't parse ami filters: %s", err)
+		}
+		params.Filters = amiFilters
+	}
+	if len(d.Owners) > 0 {
+		params.Owners = d.GetOwners()
+	}
+
+	params.IncludeDeprecated = &d.IncludeDeprecated
+
+	log.Printf("Using AMI Filters %s", prettyFilters(params))
+	imageResp, err := client.DescribeImages(ctx, params, func(o *ec2.Options) {
+		o.Retryer = retry.NewStandard(func(so *retry.StandardOptions) {
+			so.MaxAttempts = 11
+		})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Error querying AMI: %s", err)
+	}
+
+	if len(imageResp.Images) == 0 {
+		return nil, fmt.Errorf("No AMI was found matching filters: %v", params)
+	}
+
+	return imageResp.Images, nil
+}

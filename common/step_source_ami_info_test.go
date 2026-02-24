@@ -6,6 +6,7 @@ package common
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,4 +43,32 @@ func TestStepSourceAmiInfo_PVImageWithAMIVirtHVM(t *testing.T) {
 		VirtualizationType: types.VirtualizationTypeParavirtual,
 	})
 	assert.NoError(t, err)
+}
+
+func TestLatestByNameAmi_ReturnsLexicographicallyLast(t *testing.T) {
+	images := []types.Image{
+		{ImageId: aws.String("ami-sp7"), Name: aws.String("suse-sles-15-sp7-v20241105-hvm-ssd-x86_64")},
+		{ImageId: aws.String("ami-sp6"), Name: aws.String("suse-sles-15-sp6-v20250210-hvm-ssd-x86_64")},
+		{ImageId: aws.String("ami-sp5"), Name: aws.String("suse-sles-15-sp5-v20240101-hvm-ssd-x86_64")},
+	}
+	result := LatestByNameAmi(images)
+	assert.Equal(t, "ami-sp7", aws.ToString(result.ImageId))
+}
+
+func TestLatestByNameAmi_SingleImage(t *testing.T) {
+	images := []types.Image{
+		{ImageId: aws.String("ami-only"), Name: aws.String("my-ami")},
+	}
+	result := LatestByNameAmi(images)
+	assert.Equal(t, "ami-only", aws.ToString(result.ImageId))
+}
+
+func TestLatestByNameAmi_IdenticalNames(t *testing.T) {
+	images := []types.Image{
+		{ImageId: aws.String("ami-a"), Name: aws.String("same-name")},
+		{ImageId: aws.String("ami-b"), Name: aws.String("same-name")},
+	}
+	result := LatestByNameAmi(images)
+	name := aws.ToString(result.Name)
+	assert.Equal(t, "same-name", name)
 }

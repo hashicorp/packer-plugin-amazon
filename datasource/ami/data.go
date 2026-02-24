@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
@@ -28,6 +29,10 @@ type Config struct {
 	common.PackerConfig        `mapstructure:",squash"`
 	awscommon.AccessConfig     `mapstructure:",squash"`
 	awscommon.AmiFilterOptions `mapstructure:",squash"`
+	// Selects the AMI with the lexicographically highest name when set to `"name"`.
+	// If both `sort_by` and `most_recent` are set, `sort_by` takes precedence.
+	// Currently only `"name"` is supported.
+	SortBy string `mapstructure:"sort_by"`
 }
 
 func (d *Datasource) ConfigSpec() hcldec.ObjectSpec {
@@ -48,6 +53,11 @@ func (d *Datasource) Configure(raws ...any) error {
 	}
 	if d.config.NoOwner() {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("For security reasons, you must declare an owner."))
+	}
+
+	if d.config.SortBy != "" && d.config.SortBy != "name" {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(
+			"sort_by must be \"name\" or unset; got %q", d.config.SortBy))
 	}
 
 	if errs != nil && len(errs.Errors) > 0 {
@@ -82,9 +92,19 @@ func (d *Datasource) Execute() (cty.Value, error) {
 		return cty.NullVal(cty.EmptyObject), err
 	}
 
-	image, err := d.config.AmiFilterOptions.GetFilteredImage(ctx, &ec2.DescribeImagesInput{}, client)
-	if err != nil {
-		return cty.NullVal(cty.EmptyObject), err
+	var image *ec2types.Image
+	if d.config.SortBy == "name" {
+		images, imagesErr := d.config.AmiFilterOptions.GetFilteredImages(ctx, &ec2.DescribeImagesInput{}, client)
+		if imagesErr != nil {
+			return cty.NullVal(cty.EmptyObject), imagesErr
+		}
+		selected := awscommon.LatestByNameAmi(images)
+		image = &selected
+	} else {
+		image, err = d.config.AmiFilterOptions.GetFilteredImage(ctx, &ec2.DescribeImagesInput{}, client)
+		if err != nil {
+			return cty.NullVal(cty.EmptyObject), err
+		}
 	}
 
 	imageTags := make(map[string]string, len(image.Tags))
