@@ -41,6 +41,18 @@ func FakeAccessConfig() *AccessConfig {
 	return &accessConfig
 }
 
+// FakeAccessConfigWithEC2Client returns a fake AccessConfig that uses the provided
+// getClient function to create EC2 clients. Use this in tests that need to inject
+// a mock client with specific DescribeImages behavior.
+func FakeAccessConfigWithEC2Client(getClient func() clients.Ec2Client) *AccessConfig {
+	accessConfig := AccessConfig{
+		getEC2Client:  getClient,
+		PollingConfig: new(AWSPollingConfig),
+	}
+	accessConfig.config = mustLoadConfig(config.WithRegion("us-west-1"))
+	return &accessConfig
+}
+
 func mustLoadConfig(optFns ...func(*config.LoadOptions) error) *aws.Config {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		optFns...,

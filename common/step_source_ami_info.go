@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
@@ -46,6 +47,15 @@ func (a imageSort) Less(i, j int) bool {
 func mostRecentAmi(images []types.Image) types.Image {
 	sortedImages := images
 	sort.Sort(imageSort(sortedImages))
+	return sortedImages[len(sortedImages)-1]
+}
+
+// LatestByNameAmi returns the AMI with the lexicographically highest name.
+func LatestByNameAmi(images []types.Image) types.Image {
+	sortedImages := images
+	sort.Slice(sortedImages, func(i, j int) bool {
+		return aws.ToString(sortedImages[i].Name) < aws.ToString(sortedImages[j].Name)
+	})
 	return sortedImages[len(sortedImages)-1]
 }
 
