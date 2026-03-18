@@ -360,6 +360,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			LaunchMappings: b.config.LaunchMappings,
 		},
 		instanceStep,
+		&awscommon.StepAssociateEIP{
+			AllocationId: b.config.ElasticIpAllocationId,
+		},
 		&awscommon.StepGetPassword{
 			Debug:     b.config.PackerDebug,
 			Comm:      &b.config.RunConfig.Comm,
