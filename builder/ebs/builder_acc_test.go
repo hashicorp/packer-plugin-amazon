@@ -2093,7 +2093,7 @@ build {
 const testPrivateKeyFileWithReboot = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	ssh_username         = "ubuntu"
