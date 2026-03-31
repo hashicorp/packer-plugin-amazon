@@ -325,16 +325,30 @@ func checkSnapshotsDeleted(snapshotIds []string) error {
 	snapshotResp, err := ec2conn.DescribeSnapshots(ctx,
 		&ec2.DescribeSnapshotsInput{SnapshotIds: snapshotIds},
 	)
+
+	// In AWS SDK v2, when snapshots are deleted, DescribeSnapshots returns an error
+	// with code "InvalidSnapshot.NotFound". This is the expected behavior.
 	if err != nil {
-		return fmt.Errorf("failed to describe snapshots: %w", err)
+		// Check if the error is InvalidSnapshot.NotFound, which means snapshots are deleted
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "InvalidSnapshot.NotFound") {
+			// Snapshots are successfully deleted
+			return nil
+		}
+		// Some other error occurred
+		return fmt.Errorf("error describing snapshots: %w", err)
 	}
+
+	// If no error and response is not nil, check if snapshots still exist
 	if snapshotResp == nil {
 		return fmt.Errorf("received nil response from DescribeSnapshots")
 	}
 
 	if len(snapshotResp.Snapshots) > 0 {
-		return fmt.Errorf("Snapshots weren't successfully deleted by `force_delete_snapshot`")
+		return fmt.Errorf("Snapshots weren't successfully deleted by `force_delete_snapshot`: found %d snapshot(s)", len(snapshotResp.Snapshots))
 	}
+
+	// No error, no snapshots found - they are deleted
 	return nil
 }
 
