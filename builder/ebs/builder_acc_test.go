@@ -2093,10 +2093,10 @@ build {
 const testPrivateKeyFileWithReboot = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami           = "ami-0b5eea76982371e91" # Amazon Linux 2 AMI - kernel 5.10
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
-	ssh_username         = "ubuntu"
+	ssh_username         = "ec2-user"
 	ssh_interface        = "session_manager"
 	iam_instance_profile = "SSMInstanceProfile"
 	communicator         = "ssh"
