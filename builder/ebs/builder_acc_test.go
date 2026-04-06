@@ -317,14 +317,38 @@ func TestAccBuilder_EbsForceDeleteSnapshot(t *testing.T) {
 func checkSnapshotsDeleted(snapshotIds []string) error {
 	ctx := context.TODO()
 	// Verify the snapshots are gone
-	ec2conn, _ := testEC2Conn("us-east-1")
-	snapshotResp, _ := ec2conn.DescribeSnapshots(ctx,
+	ec2conn, err := testEC2Conn("us-east-1")
+	if err != nil {
+		return fmt.Errorf("failed to create EC2 connection: %w", err)
+	}
+
+	snapshotResp, err := ec2conn.DescribeSnapshots(ctx,
 		&ec2.DescribeSnapshotsInput{SnapshotIds: snapshotIds},
 	)
 
-	if len(snapshotResp.Snapshots) > 0 {
-		return fmt.Errorf("Snapshots weren't successfully deleted by `force_delete_snapshot`")
+	// In AWS SDK v2, when snapshots are deleted, DescribeSnapshots returns an error
+	// with code "InvalidSnapshot.NotFound". This is the expected behavior.
+	if err != nil {
+		// Check if the error is InvalidSnapshot.NotFound, which means snapshots are deleted
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "InvalidSnapshot.NotFound") {
+			// Snapshots are successfully deleted
+			return nil
+		}
+		// Some other error occurred
+		return fmt.Errorf("error describing snapshots: %w", err)
 	}
+
+	// If no error and response is not nil, check if snapshots still exist
+	if snapshotResp == nil {
+		return fmt.Errorf("received nil response from DescribeSnapshots")
+	}
+
+	if len(snapshotResp.Snapshots) > 0 {
+		return fmt.Errorf("Snapshots weren't successfully deleted by `force_delete_snapshot`: found %d snapshot(s)", len(snapshotResp.Snapshots))
+	}
+
+	// No error, no snapshots found - they are deleted
 	return nil
 }
 
@@ -372,7 +396,11 @@ func checkAMISharing(ami amazon_acc.AMIHelper, count int, uid, group string) err
 		return fmt.Errorf("failed to find ami %s at region %s", ami.Name, ami.Region)
 	}
 
-	ec2Client, _ := testEC2Conn("us-east-1")
+	ec2Client, err := testEC2Conn("us-east-1")
+	if err != nil {
+		return fmt.Errorf("failed to create EC2 connection: %w", err)
+	}
+
 	imageResp, err := ec2Client.DescribeImageAttribute(ctx, &ec2.DescribeImageAttributeInput{
 		Attribute: "launchPermission",
 		ImageId:   images[0].ImageId,
@@ -550,13 +578,20 @@ func checkBootEncrypted(ami amazon_acc.AMIHelper) error {
 	}
 	ctx := context.TODO()
 	// describe the image, get block devices with a snapshot
-	ec2Client, _ := testEC2Conn(ami.Region)
+	ec2Client, err := testEC2Conn(ami.Region)
+	if err != nil {
+		return fmt.Errorf("failed to create EC2 connection: %w", err)
+	}
+
 	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		ImageIds: []string{*images[0].ImageId},
 	})
 
 	if err != nil {
 		return fmt.Errorf("Error retrieving Image Attributes for AMI (%s) in AMI Encrypted Boot Test: %s", ami.Name, err)
+	}
+	if imageResp == nil || len(imageResp.Images) == 0 {
+		return fmt.Errorf("received nil or empty response from DescribeImages")
 	}
 
 	image := imageResp.Images[0] // Only requested a single AMI ID
@@ -686,6 +721,9 @@ func checkDeprecationEnabled(ami amazon_acc.AMIHelper, deprecationTime time.Time
 
 	if err != nil {
 		return fmt.Errorf("Error Describe Image for AMI (%s): %s", ami.Name, err)
+	}
+	if imageResp == nil || len(imageResp.Images) == 0 {
+		return fmt.Errorf("received nil or empty response from DescribeImages")
 	}
 
 	expectTime := deprecationTime.Round(time.Minute)
@@ -1459,12 +1497,19 @@ func checkAMITags(ami amazon_acc.AMIHelper, tagList map[string]string) error {
 	amiNameRegion := fmt.Sprintf("%s/%s", ami.Region, ami.Name)
 
 	// describe the image, get block devices with a snapshot
-	ec2Client, _ := testEC2Conn(ami.Region)
+	ec2Client, err := testEC2Conn(ami.Region)
+	if err != nil {
+		return fmt.Errorf("failed to create EC2 connection: %w", err)
+	}
+
 	imageResp, err := ec2Client.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		ImageIds: []string{*images[0].ImageId},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to describe AMI %q: %s", amiNameRegion, err)
+	}
+	if imageResp == nil || len(imageResp.Images) == 0 {
+		return fmt.Errorf("received nil or empty response from DescribeImages for AMI %q", amiNameRegion)
 	}
 
 	var errs error
@@ -1816,6 +1861,9 @@ func checkDeregistrationProtectionEnabled(ami amazon_acc.AMIHelper) error {
 	if err != nil {
 		return fmt.Errorf("Error Describe Image for AMI (%s): %s", ami.Name, err)
 	}
+	if imageResp == nil || len(imageResp.Images) == 0 {
+		return fmt.Errorf("received nil or empty response from DescribeImages")
+	}
 
 	image := imageResp.Images[0]
 	if image.DeregistrationProtection == nil {
@@ -1987,7 +2035,7 @@ const testBuilderAccSessionManagerInterface = `
 const testBuilderAccSSMWithReboot = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami           = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	ssh_username         = "ubuntu"
@@ -2045,10 +2093,10 @@ build {
 const testPrivateKeyFileWithReboot = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami           = "ami-0b5eea76982371e91" # Amazon Linux 2 AMI - kernel 5.10
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
-	ssh_username         = "ubuntu"
+	ssh_username         = "ec2-user"
 	ssh_interface        = "session_manager"
 	iam_instance_profile = "SSMInstanceProfile"
 	communicator         = "ssh"
@@ -2072,7 +2120,7 @@ build {
 const testIMDSv2Support = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami           = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	ssh_username         = "ubuntu"
@@ -2090,7 +2138,7 @@ build {
 const testAMIRunTagsCopyKeepRunTags = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
@@ -2115,7 +2163,7 @@ build {
 const testAMIRunTagsCopyKeepTags = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
@@ -2157,7 +2205,7 @@ build {
 const sshPasswordEnabledAMI = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-00874d747dde814fa" # Ubuntu Server 22.04 LTS
+	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
@@ -2176,7 +2224,7 @@ build {
 				"set -e",
 				"sudo su",
 				"echo 'Enabling SSH password authentication...'",
-				"sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config",
+				"sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config",
 				"sudo useradd -m -s /bin/bash user",
 				"echo 'Setting up password for user'",
 				"echo 'user:password' | sudo chpasswd ubuntu",
