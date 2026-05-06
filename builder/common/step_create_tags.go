@@ -102,7 +102,7 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 		snapshotTags.Report(ui)
 
 		// Retry creating tags for about 2.5 minutes
-		err = retry.Config{Tries: 11, ShouldRetry: func(error) bool {
+		err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidAMIID.NotFound", "") || awserrors.Matches(err, "InvalidSnapshot.NotFound", "") {
 				return true
 			}
