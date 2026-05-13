@@ -55,7 +55,7 @@ func TestCreateVolume_io1_to_io1(t *testing.T) {
 	ret, err := stepCreateVolume.buildCreateVolumeInput("test-az", testRootDevice)
 	assert.NoError(t, err)
 	assert.Equal(t, ret.VolumeType, stepCreateVolume.RootVolumeType)
-	assert.Equal(t, ret.Iops, *testRootDevice.Ebs.Iops)
+	assert.Equal(t, *ret.Iops, *testRootDevice.Ebs.Iops)
 }
 
 func TestCreateVolume_io1_to_gp2(t *testing.T) {

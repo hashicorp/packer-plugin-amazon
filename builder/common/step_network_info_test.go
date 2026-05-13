@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -21,30 +22,30 @@ import (
 type mockEC2ClientStepNetworkTests struct {
 	clients.Ec2Client
 
-	describeInstanceTypeOfferings func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
-	describeVpcs                  func(*ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
-	describeSubnets               func(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
+	describeInstanceTypeOfferings func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
+	describeVpcs                  func(ctx context.Context, in *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
+	describeSubnets               func(ctx context.Context, in *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
 }
 
-func (m *mockEC2ClientStepNetworkTests) DescribeInstanceTypeOfferings(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+func (m *mockEC2ClientStepNetworkTests) DescribeInstanceTypeOfferings(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 	if m.describeInstanceTypeOfferings != nil {
-		return m.describeInstanceTypeOfferings(in)
+		return m.describeInstanceTypeOfferings(ctx, in, optFns...)
 	}
 
 	return nil, fmt.Errorf("unimplemented: describeInstanceTypeOfferings")
 }
 
-func (m *mockEC2ClientStepNetworkTests) DescribeVpcs(in *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+func (m *mockEC2ClientStepNetworkTests) DescribeVpcs(ctx context.Context, in *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error) {
 	if m.describeVpcs != nil {
-		return m.describeVpcs(in)
+		return m.describeVpcs(ctx, in, optFns...)
 	}
 
 	return nil, fmt.Errorf("unimplemented: describeVpcs")
 }
 
-func (m *mockEC2ClientStepNetworkTests) DescribeSubnets(in *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+func (m *mockEC2ClientStepNetworkTests) DescribeSubnets(ctx context.Context, in *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
 	if m.describeSubnets != nil {
-		return m.describeSubnets(in)
+		return m.describeSubnets(ctx, in, optFns...)
 	}
 
 	return nil, fmt.Errorf("unimplemented: describeSubnets")
@@ -53,15 +54,15 @@ func (m *mockEC2ClientStepNetworkTests) DescribeSubnets(in *ec2.DescribeSubnetsI
 func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 	testcases := []struct {
 		name         string
-		describeImpl func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
-		machineType  string
+		describeImpl func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
+		machineType  ec2types.InstanceType
 		inputAZs     []string
 		expectedAZs  []string
 		expectError  bool
 	}{
 		{
 			name: "Fail: describe returns an error",
-			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			describeImpl: func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return nil, fmt.Errorf("STOP")
 			},
 			machineType: "t2.micro",
@@ -71,14 +72,14 @@ func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 		},
 		{
 			name: "Fail, no AZ match machine type",
-			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			describeImpl: func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return &ec2.DescribeInstanceTypeOfferingsOutput{
-					InstanceTypeOfferings: []*ec2.InstanceTypeOffering{
+					InstanceTypeOfferings: []ec2types.InstanceTypeOffering{
 						{
-							InstanceType: aws.String("t3.mini"),
+							InstanceType: "t3.mini",
 						},
 						{
-							InstanceType: aws.String("t2.mini"),
+							InstanceType: "t2.mini",
 						},
 					},
 				}, nil
@@ -90,11 +91,11 @@ func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 		},
 		{
 			name: "OK, found at least one AZ matching machine type",
-			describeImpl: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			describeImpl: func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 				return &ec2.DescribeInstanceTypeOfferingsOutput{
-					InstanceTypeOfferings: []*ec2.InstanceTypeOffering{
+					InstanceTypeOfferings: []ec2types.InstanceTypeOffering{
 						{
-							InstanceType: aws.String("t2.micro"),
+							InstanceType: "t2.micro",
 						},
 					},
 				}, nil
@@ -111,7 +112,7 @@ func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 			conn := &mockEC2ClientStepNetworkTests{}
 			conn.describeInstanceTypeOfferings = tt.describeImpl
 
-			retAZ, err := filterAZByMachineType(tt.inputAZs, tt.machineType, conn)
+			retAZ, err := filterAZByMachineType(t.Context(), tt.inputAZs, tt.machineType, conn)
 
 			diff := cmp.Diff(retAZ, tt.expectedAZs)
 			if diff != "" {
@@ -132,13 +133,13 @@ func TestStepNetwork_GetFilterAZByMachineType(t *testing.T) {
 func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 	testcases := []struct {
 		name       string
-		inSubnets  []*ec2.Subnet
+		inSubnets  []ec2types.Subnet
 		azs        []string
-		outSubnets []*ec2.Subnet
+		outSubnets []ec2types.Subnet
 	}{
 		{
 			name: "No subnet matching",
-			inSubnets: []*ec2.Subnet{
+			inSubnets: []ec2types.Subnet{
 				{
 					AvailabilityZone: aws.String("us-east-1-c"),
 				},
@@ -148,7 +149,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 		},
 		{
 			name: "Found subnet matching",
-			inSubnets: []*ec2.Subnet{
+			inSubnets: []ec2types.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -159,7 +160,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 				},
 			},
 			azs: []string{"us-east-1c"},
-			outSubnets: []*ec2.Subnet{
+			outSubnets: []ec2types.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -168,7 +169,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 		},
 		{
 			name: "Found multiple subnets matching",
-			inSubnets: []*ec2.Subnet{
+			inSubnets: []ec2types.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -179,7 +180,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 				},
 			},
 			azs: []string{"us-east-1c"},
-			outSubnets: []*ec2.Subnet{
+			outSubnets: []ec2types.Subnet{
 				{
 					SubnetId:         aws.String("subnet1"),
 					AvailabilityZone: aws.String("us-east-1c"),
@@ -205,7 +206,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 
 func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 	mockConn := &mockEC2ClientStepNetworkTests{
-		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+		describeVpcs: func(ctx context.Context, dvi *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error) {
 			ok := false
 			for _, filter := range dvi.Filters {
 				if *filter.Name == "is-default" {
@@ -219,22 +220,22 @@ func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 			}
 
 			return &ec2.DescribeVpcsOutput{
-				Vpcs: []*ec2.Vpc{
+				Vpcs: []ec2types.Vpc{
 					{
 						VpcId: aws.String("default-vpc"),
 					},
 				},
 			}, nil
 		},
-		describeSubnets: func(dsi *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+		describeSubnets: func(ctx context.Context, dsi *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
 			if dsi.SubnetIds != nil {
 				sub := dsi.SubnetIds[0]
-				if *sub != "subnet1" {
-					return nil, fmt.Errorf("expected selected subnet to be us-east-1a, but was %q", *sub)
+				if sub != "subnet1" {
+					return nil, fmt.Errorf("expected selected subnet to be us-east-1a, but was %s", sub)
 				}
 
 				return &ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{
+					Subnets: []ec2types.Subnet{
 						{
 							SubnetId:         aws.String("subnet1"),
 							AvailabilityZone: aws.String("us-east-1a"),
@@ -249,7 +250,7 @@ func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 				if *filter.Name != "vpc-id" {
 					continue
 				}
-				filterVal := *filter.Values[0]
+				filterVal := filter.Values[0]
 				if filterVal != "default-vpc" {
 					return nil, fmt.Errorf("expected vpc-id filter to be %q, got %q", "default-vpc", filterVal)
 				}
@@ -262,26 +263,26 @@ func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 			}
 
 			return &ec2.DescribeSubnetsOutput{
-				Subnets: []*ec2.Subnet{
+				Subnets: []ec2types.Subnet{
 					{
 						AvailabilityZone:        aws.String("us-east-1a"),
 						SubnetId:                aws.String("subnet1"),
-						AvailableIpAddressCount: aws.Int64(256),
+						AvailableIpAddressCount: aws.Int32(256),
 					},
 					{
 						AvailabilityZone:        aws.String("us-east-1b"),
 						SubnetId:                aws.String("subnet2"),
-						AvailableIpAddressCount: aws.Int64(512),
+						AvailableIpAddressCount: aws.Int32(512),
 					},
 				},
 			}, nil
 		},
-		describeInstanceTypeOfferings: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
-			if *in.LocationType != "availability-zone" {
-				return nil, fmt.Errorf("called DescribeInstanceTypeOfferings with LocationType = %q, expected availability_zone", *in.LocationType)
+		describeInstanceTypeOfferings: func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+			if in.LocationType != ec2types.LocationTypeAvailabilityZone {
+				return nil, fmt.Errorf("called DescribeInstanceTypeOfferings with LocationType = %q, expected availability_zone", in.LocationType)
 			}
 
-			var machines []*ec2.InstanceTypeOffering
+			var machines []ec2types.InstanceTypeOffering
 
 			foundLocation := false
 			for _, filter := range in.Filters {
@@ -290,24 +291,24 @@ func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 				}
 				foundLocation = true
 
-				filterVal := *filter.Values[0]
+				filterVal := filter.Values[0]
 				switch filterVal {
 				case "us-east-1a":
-					machines = []*ec2.InstanceTypeOffering{
+					machines = []ec2types.InstanceTypeOffering{
 						{
-							InstanceType: aws.String("t2.mini"),
+							InstanceType: "t2.mini",
 						},
 						{
-							InstanceType: aws.String("t3.large"),
+							InstanceType: "t3.large",
 						},
 					}
 				case "us-east-1b":
-					machines = []*ec2.InstanceTypeOffering{
+					machines = []ec2types.InstanceTypeOffering{
 						{
-							InstanceType: aws.String("t2.mini"),
+							InstanceType: "t2.mini",
 						},
 						{
-							InstanceType: aws.String("t2.micro"),
+							InstanceType: "t2.micro",
 						},
 					}
 				default:
@@ -360,7 +361,7 @@ func TestStepNetwork_WithPublicIPSetAndNoVPCOrSubnet(t *testing.T) {
 
 func TestStepNetwork_GetDefaultVPCFailDueToPermissions(t *testing.T) {
 	mockConn := &mockEC2ClientStepNetworkTests{
-		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+		describeVpcs: func(ctx context.Context, dvi *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error) {
 			return nil, fmt.Errorf("Insufficient permissions: missing ec2:DescribeVpcs")
 		},
 	}
@@ -461,7 +462,7 @@ func TestStepNetwork_SetVPCAndSubnetWithoutAssociatePublicIP(t *testing.T) {
 
 func TestStepNetwork_SetPublicIPAddressWithoutSubnetAndMissingDescribeInstanceTypeOfferings(t *testing.T) {
 	mockConn := &mockEC2ClientStepNetworkTests{
-		describeVpcs: func(dvi *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+		describeVpcs: func(ctx context.Context, dvi *ec2.DescribeVpcsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error) {
 			ok := false
 			for _, filter := range dvi.Filters {
 				if *filter.Name == "is-default" {
@@ -475,22 +476,22 @@ func TestStepNetwork_SetPublicIPAddressWithoutSubnetAndMissingDescribeInstanceTy
 			}
 
 			return &ec2.DescribeVpcsOutput{
-				Vpcs: []*ec2.Vpc{
+				Vpcs: []ec2types.Vpc{
 					{
 						VpcId: aws.String("default-vpc"),
 					},
 				},
 			}, nil
 		},
-		describeSubnets: func(dsi *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+		describeSubnets: func(ctx context.Context, dsi *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
 			if dsi.SubnetIds != nil {
 				sub := dsi.SubnetIds[0]
-				if *sub != "subnet1" {
-					return nil, fmt.Errorf("expected selected subnet to be us-east-1a, but was %q", *sub)
+				if sub != "subnet1" {
+					return nil, fmt.Errorf("expected selected subnet to be us-east-1a, but was %q", sub)
 				}
 
 				return &ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{
+					Subnets: []ec2types.Subnet{
 						{
 							SubnetId:         aws.String("subnet1"),
 							AvailabilityZone: aws.String("us-east-1a"),
@@ -505,7 +506,7 @@ func TestStepNetwork_SetPublicIPAddressWithoutSubnetAndMissingDescribeInstanceTy
 				if *filter.Name != "vpc-id" {
 					continue
 				}
-				filterVal := *filter.Values[0]
+				filterVal := filter.Values[0]
 				if filterVal != "default-vpc" {
 					return nil, fmt.Errorf("expected vpc-id filter to be %q, got %q", "default-vpc", filterVal)
 				}
@@ -518,21 +519,21 @@ func TestStepNetwork_SetPublicIPAddressWithoutSubnetAndMissingDescribeInstanceTy
 			}
 
 			return &ec2.DescribeSubnetsOutput{
-				Subnets: []*ec2.Subnet{
+				Subnets: []ec2types.Subnet{
 					{
 						AvailabilityZone:        aws.String("us-east-1a"),
 						SubnetId:                aws.String("subnet1"),
-						AvailableIpAddressCount: aws.Int64(256),
+						AvailableIpAddressCount: aws.Int32(256),
 					},
 					{
 						AvailabilityZone:        aws.String("us-east-1b"),
 						SubnetId:                aws.String("subnet2"),
-						AvailableIpAddressCount: aws.Int64(512),
+						AvailableIpAddressCount: aws.Int32(512),
 					},
 				},
 			}, nil
 		},
-		describeInstanceTypeOfferings: func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
+		describeInstanceTypeOfferings: func(ctx context.Context, in *ec2.DescribeInstanceTypeOfferingsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypeOfferingsOutput, error) {
 			return nil, fmt.Errorf("Missing permission: ec2:DescribeInstanceTypeOfferings")
 		},
 	}

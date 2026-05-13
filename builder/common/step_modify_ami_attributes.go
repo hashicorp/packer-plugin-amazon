@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
@@ -36,10 +34,8 @@ type StepModifyAMIAttributes struct {
 }
 
 func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(clients.Ec2Client)
-	session := state.Get("awsSession").(*session.Session)
+	awscfg := state.Get("awsConfig").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
-	config := state.Get("config").(*Config)
 
 	if s.AMISkipCreateImage {
 		ui.Say("Skipping AMI modify attributes...")
@@ -66,7 +62,7 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	}
 
 	var err error
-	s.Ctx.Data = extractBuildInfo(*ec2conn.Config.Region, state, s.GeneratedData)
+	s.Ctx.Data = extractBuildInfo(awscfg.Region, state, s.GeneratedData)
 	s.Description, err = interpolate.Render(s.Description, &s.Ctx)
 	if err != nil {
 		err = fmt.Errorf("Error interpolating AMI description: %s", err)
@@ -80,22 +76,22 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	options := make(map[string]*ec2.ModifyImageAttributeInput)
 	if s.Description != "" {
 		options["description"] = &ec2.ModifyImageAttributeInput{
-			Description: &ec2.AttributeValue{Value: &s.Description},
+			Description: &ec2types.AttributeValue{Value: &s.Description},
 		}
 	}
 	snapshotOptions := make(map[string]*ec2.ModifySnapshotAttributeInput)
 
 	if len(s.Groups) > 0 {
-		groups := make([]*string, len(s.Groups))
-		addsImage := make([]*ec2.LaunchPermission, len(s.Groups))
+		groups := make([]string, len(s.Groups))
+		addsImage := make([]ec2types.LaunchPermission, len(s.Groups))
 		addGroups := &ec2.ModifyImageAttributeInput{
-			LaunchPermission: &ec2.LaunchPermissionModifications{},
+			LaunchPermission: &ec2types.LaunchPermissionModifications{},
 		}
 
 		for i, g := range s.Groups {
-			groups[i] = aws.String(g)
-			addsImage[i] = &ec2.LaunchPermission{
-				Group: aws.String(g),
+			groups[i] = string(g)
+			addsImage[i] = ec2types.LaunchPermission{
+				Group: ec2types.PermissionGroup(g),
 			}
 		}
 
@@ -105,16 +101,16 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	}
 
 	if len(s.SnapshotGroups) > 0 {
-		groups := make([]*string, len(s.SnapshotGroups))
-		addsSnapshot := make([]*ec2.CreateVolumePermission, len(s.SnapshotGroups))
+		groups := make([]string, len(s.SnapshotGroups))
+		addsSnapshot := make([]ec2types.CreateVolumePermission, len(s.SnapshotGroups))
 		addSnapshotGroups := &ec2.ModifySnapshotAttributeInput{
-			CreateVolumePermission: &ec2.CreateVolumePermissionModifications{},
+			CreateVolumePermission: &ec2types.CreateVolumePermissionModifications{},
 		}
 
 		for i, g := range s.SnapshotGroups {
-			groups[i] = aws.String(g)
-			addsSnapshot[i] = &ec2.CreateVolumePermission{
-				Group: aws.String(g),
+			groups[i] = g
+			addsSnapshot[i] = ec2types.CreateVolumePermission{
+				Group: ec2types.PermissionGroup(g),
 			}
 		}
 		addSnapshotGroups.GroupNames = groups
@@ -123,73 +119,73 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	}
 
 	if len(s.Users) > 0 {
-		users := make([]*string, len(s.Users))
-		addsImage := make([]*ec2.LaunchPermission, len(s.Users))
+		users := make([]string, len(s.Users))
+		addsImage := make([]ec2types.LaunchPermission, len(s.Users))
 		for i, u := range s.Users {
-			users[i] = aws.String(u)
-			addsImage[i] = &ec2.LaunchPermission{UserId: aws.String(u)}
+			users[i] = u
+			addsImage[i] = ec2types.LaunchPermission{UserId: &u}
 		}
 
 		options["users"] = &ec2.ModifyImageAttributeInput{
 			UserIds: users,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: addsImage,
 			},
 		}
 	}
 
 	if len(s.SnapshotUsers) > 0 {
-		users := make([]*string, len(s.SnapshotUsers))
-		addsSnapshot := make([]*ec2.CreateVolumePermission, len(s.SnapshotUsers))
+		users := make([]string, len(s.SnapshotUsers))
+		addsSnapshot := make([]ec2types.CreateVolumePermission, len(s.SnapshotUsers))
 		for i, u := range s.SnapshotUsers {
-			users[i] = aws.String(u)
-			addsSnapshot[i] = &ec2.CreateVolumePermission{UserId: aws.String(u)}
+			users[i] = u
+			addsSnapshot[i] = ec2types.CreateVolumePermission{UserId: &u}
 		}
 
 		snapshotOptions["users"] = &ec2.ModifySnapshotAttributeInput{
 			UserIds: users,
-			CreateVolumePermission: &ec2.CreateVolumePermissionModifications{
+			CreateVolumePermission: &ec2types.CreateVolumePermissionModifications{
 				Add: addsSnapshot,
 			},
 		}
 	}
 
 	if len(s.OrgArns) > 0 {
-		orgArns := make([]*string, len(s.OrgArns))
-		addsImage := make([]*ec2.LaunchPermission, len(s.OrgArns))
+		orgArns := make([]string, len(s.OrgArns))
+		addsImage := make([]ec2types.LaunchPermission, len(s.OrgArns))
 		for i, u := range s.OrgArns {
-			orgArns[i] = aws.String(u)
-			addsImage[i] = &ec2.LaunchPermission{OrganizationArn: aws.String(u)}
+			orgArns[i] = u
+			addsImage[i] = ec2types.LaunchPermission{OrganizationArn: &u}
 		}
 
 		options["ami org arns"] = &ec2.ModifyImageAttributeInput{
 			OrganizationArns: orgArns,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: addsImage,
 			},
 		}
 	}
 
 	if len(s.OuArns) > 0 {
-		ouArns := make([]*string, len(s.OuArns))
-		addsImage := make([]*ec2.LaunchPermission, len(s.OuArns))
+		ouArns := make([]string, len(s.OuArns))
+		addsImage := make([]ec2types.LaunchPermission, len(s.OuArns))
 		for i, u := range s.OuArns {
-			ouArns[i] = aws.String(u)
-			addsImage[i] = &ec2.LaunchPermission{OrganizationalUnitArn: aws.String(u)}
+			ouArns[i] = u
+			addsImage[i] = ec2types.LaunchPermission{OrganizationalUnitArn: &u}
 		}
 
 		options["ami ou arns"] = &ec2.ModifyImageAttributeInput{
 			OrganizationalUnitArns: ouArns,
-			LaunchPermission: &ec2.LaunchPermissionModifications{
+			LaunchPermission: &ec2types.LaunchPermissionModifications{
 				Add: addsImage,
 			},
 		}
 	}
 
 	if len(s.ProductCodes) > 0 {
-		codes := make([]*string, len(s.ProductCodes))
+		codes := make([]string, len(s.ProductCodes))
 		for i, c := range s.ProductCodes {
-			codes[i] = &c
+			codes[i] = c
 		}
 		options["product codes"] = &ec2.ModifyImageAttributeInput{
 			ProductCodes: codes,
@@ -198,8 +194,8 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 
 	if s.IMDSSupport != "" {
 		options["imds_support"] = &ec2.ModifyImageAttributeInput{
-			ImdsSupport: &ec2.AttributeValue{
-				Value: &s.IMDSSupport,
+			ImdsSupport: &ec2types.AttributeValue{
+				Value: aws.String(string(s.IMDSSupport)),
 			},
 		}
 	}
@@ -207,13 +203,13 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	// Modifying image attributes
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Modifying attributes on AMI (%s)...", ami))
-		regionConn := ec2.New(session, &aws.Config{
-			Region: aws.String(region),
+		regionConn := ec2.NewFromConfig(awscfg.Copy(), func(o *ec2.Options) {
+			o.Region = region
 		})
 		for name, input := range options {
-			ui.Message(fmt.Sprintf("Modifying: %s", name))
+			ui.Sayf("Modifying: %s", name)
 			input.ImageId = &ami
-			_, err := regionConn.ModifyImageAttribute(input)
+			_, err := regionConn.ModifyImageAttribute(ctx, input)
 			if err != nil {
 				err := fmt.Errorf("Error modify AMI attributes: %s", err)
 				state.Put("error", err)
@@ -227,13 +223,13 @@ func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.State
 	for region, region_snapshots := range snapshots {
 		for _, snapshot := range region_snapshots {
 			ui.Say(fmt.Sprintf("Modifying attributes on snapshot (%s)...", snapshot))
-			regionConn := ec2.New(session, &aws.Config{
-				Region: aws.String(region),
+			regionConn := ec2.NewFromConfig(awscfg.Copy(), func(o *ec2.Options) {
+				o.Region = region
 			})
 			for name, input := range snapshotOptions {
-				ui.Message(fmt.Sprintf("Modifying: %s", name))
+				ui.Sayf("Modifying: %s", name)
 				input.SnapshotId = &snapshot
-				_, err := regionConn.ModifySnapshotAttribute(input)
+				_, err := regionConn.ModifySnapshotAttribute(ctx, input)
 				if err != nil {
 					err := fmt.Errorf("Error modify snapshot attributes: %s", err)
 					state.Put("error", err)

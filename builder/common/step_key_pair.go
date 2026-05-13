@@ -10,8 +10,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -69,12 +70,12 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
 	keypair := &ec2.CreateKeyPairInput{
 		KeyName: &s.Comm.SSHTemporaryKeyPairName,
-		KeyType: &s.Comm.SSHTemporaryKeyPairType,
+		KeyType: ec2types.KeyType(s.Comm.SSHTemporaryKeyPairType),
 	}
 
 	if !s.IsRestricted {
 		region := state.Get("region").(*string)
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.StringValue(region), state)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.ToString(region), state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)
@@ -82,7 +83,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 			return multistep.ActionHalt
 		}
 
-		keypair.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeKeyPair)
+		keypair.TagSpecifications = ec2Tags.TagSpecifications(ec2types.ResourceTypeKeyPair)
 	}
 
 	err := retry.Config{
@@ -90,7 +91,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
 		var err error
-		keyResp, err = ec2conn.CreateKeyPair(keypair)
+		keyResp, err = ec2conn.CreateKeyPair(ctx, keypair)
 		return err
 	})
 
@@ -139,12 +140,13 @@ func (s *StepKeyPair) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	ctx := state.Get("ctx").(context.Context)
 
 	// Remove the keypair
 	ui.Say("Deleting temporary keypair...")
-	_, err := ec2conn.DeleteKeyPair(&ec2.DeleteKeyPairInput{KeyName: &s.Comm.SSHTemporaryKeyPairName})
+	_, err := ec2conn.DeleteKeyPair(ctx, &ec2.DeleteKeyPairInput{KeyName: &s.Comm.SSHTemporaryKeyPairName})
 	if err != nil {
 		ui.Error(fmt.Sprintf(
 			"Error cleaning up keypair. Please delete the key manually: %s", s.Comm.SSHTemporaryKeyPairName))

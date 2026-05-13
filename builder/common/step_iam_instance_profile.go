@@ -6,13 +6,16 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/hashicorp/packer-plugin-sdk/retry"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 	"github.com/hashicorp/packer-plugin-sdk/uuid"
 )
@@ -31,17 +34,16 @@ type StepIamInstanceProfile struct {
 }
 
 func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	iamsvc := state.Get("iam").(*iam.IAM)
+	iamsvc := state.Get("iam").(*iam.Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	state.Put("iamInstanceProfile", "")
 
 	if len(s.IamInstanceProfile) > 0 {
 		if !s.SkipProfileValidation {
-			_, err := iamsvc.GetInstanceProfile(
-				&iam.GetInstanceProfileInput{
-					InstanceProfileName: aws.String(s.IamInstanceProfile),
-				},
+			_, err := iamsvc.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+				InstanceProfileName: aws.String(s.IamInstanceProfile),
+			},
 			)
 			if err != nil {
 				err := fmt.Errorf("Couldn't find specified instance profile: %s", err)
@@ -75,7 +77,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		profileResp, err := iamsvc.CreateInstanceProfile(&iam.CreateInstanceProfileInput{
+		profileResp, err := iamsvc.CreateInstanceProfile(ctx, &iam.CreateInstanceProfileInput{
 			InstanceProfileName: aws.String(profileName),
 			Tags:                iamProfileTags,
 		})
@@ -84,13 +86,25 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
-		s.createdInstanceProfileName = aws.StringValue(profileResp.InstanceProfile.InstanceProfileName)
+		s.createdInstanceProfileName = aws.ToString(profileResp.InstanceProfile.InstanceProfileName)
 
 		log.Printf("[DEBUG] Waiting for temporary instance profile: %s", s.createdInstanceProfileName)
-		err = iamsvc.WaitUntilInstanceProfileExists(&iam.GetInstanceProfileInput{
-			InstanceProfileName: aws.String(s.createdInstanceProfileName),
+		err = retry.Config{
+			Tries: 40,
+			ShouldRetry: func(err error) bool {
+				if err == nil {
+					return false
+				}
+				log.Printf("[DEBUG] Waiting for instance profile %s to be available: %s", s.createdInstanceProfileName, err.Error())
+				var nse *iamtypes.NoSuchEntityException
+				return errors.As(err, &nse)
+			},
+		}.Run(ctx, func(ctx context.Context) error {
+			_, err := iamsvc.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+				InstanceProfileName: aws.String(s.createdInstanceProfileName),
+			})
+			return err
 		})
-
 		if err == nil {
 			log.Printf("[DEBUG] Found instance profile %s", s.createdInstanceProfileName)
 		} else {
@@ -102,7 +116,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Say(fmt.Sprintf("Creating temporary role for this instance: %s", profileName))
 
-		roleResp, err := iamsvc.CreateRole(&iam.CreateRoleInput{
+		roleResp, err := iamsvc.CreateRole(ctx, &iam.CreateRoleInput{
 			RoleName:                 aws.String(profileName),
 			Description:              aws.String("Temporary role for Packer"),
 			AssumeRolePolicyDocument: aws.String("{\"Version\": \"2012-10-17\",\"Statement\": [{\"Effect\": \"Allow\",\"Principal\": {\"Service\": \"ec2.amazonaws.com\"},\"Action\": \"sts:AssumeRole\"}]}"),
@@ -114,16 +128,25 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionHalt
 		}
 
-		s.createdRoleName = aws.StringValue(roleResp.Role.RoleName)
+		s.createdRoleName = aws.ToString(roleResp.Role.RoleName)
 
-		log.Printf("[DEBUG] Waiting for temporary role: %s", s.createdInstanceProfileName)
-		err = iamsvc.WaitUntilRoleExistsWithContext(
-			aws.BackgroundContext(),
-			&iam.GetRoleInput{
-				RoleName: aws.String(s.createdRoleName),
+		log.Printf("[DEBUG] Waiting for temporary role: %s", s.createdRoleName)
+		err = retry.Config{
+			Tries: 20,
+			ShouldRetry: func(err error) bool {
+				if err == nil {
+					return false
+				}
+				log.Printf("[DEBUG] Waiting for temporary role %s to be available: %s", s.createdRoleName, err.Error())
+				var nse *iamtypes.NoSuchEntityException
+				return errors.As(err, &nse)
 			},
-			s.PollingConfig.getWaiterOptions()...,
-		)
+		}.Run(ctx, func(ctx context.Context) error {
+			_, err := iamsvc.GetRole(ctx, &iam.GetRoleInput{
+				RoleName: aws.String(s.createdRoleName),
+			})
+			return err
+		})
 		if err == nil {
 			log.Printf("[DEBUG] Found temporary role %s", s.createdRoleName)
 		} else {
@@ -135,7 +158,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Say(fmt.Sprintf("Attaching policy to the temporary role: %s", profileName))
 
-		_, err = iamsvc.PutRolePolicy(&iam.PutRolePolicyInput{
+		_, err = iamsvc.PutRolePolicy(ctx, &iam.PutRolePolicyInput{
 			RoleName:       roleResp.Role.RoleName,
 			PolicyName:     aws.String(profileName),
 			PolicyDocument: aws.String(string(policy)),
@@ -146,9 +169,9 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionHalt
 		}
 
-		s.createdPolicyName = aws.StringValue(roleResp.Role.RoleName)
+		s.createdPolicyName = aws.ToString(roleResp.Role.RoleName)
 
-		_, err = iamsvc.AddRoleToInstanceProfile(&iam.AddRoleToInstanceProfileInput{
+		_, err = iamsvc.AddRoleToInstanceProfile(ctx, &iam.AddRoleToInstanceProfileInput{
 			RoleName:            roleResp.Role.RoleName,
 			InstanceProfileName: profileResp.InstanceProfile.InstanceProfileName,
 		})
@@ -159,21 +182,22 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 
 		s.roleIsAttached = true
-		state.Put("iamInstanceProfile", aws.StringValue(profileResp.InstanceProfile.InstanceProfileName))
+		state.Put("iamInstanceProfile", aws.ToString(profileResp.InstanceProfile.InstanceProfileName))
 	}
 
 	return multistep.ActionContinue
 }
 
 func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
-	iamsvc := state.Get("iam").(*iam.IAM)
+	iamsvc := state.Get("iam").(*iam.Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	ctx := state.Get("ctx").(context.Context)
 	var err error
 
 	if s.roleIsAttached == true {
 		ui.Say("Detaching temporary role from instance profile...")
 
-		_, err := iamsvc.RemoveRoleFromInstanceProfile(&iam.RemoveRoleFromInstanceProfileInput{
+		_, err := iamsvc.RemoveRoleFromInstanceProfile(ctx, &iam.RemoveRoleFromInstanceProfileInput{
 			InstanceProfileName: aws.String(s.createdInstanceProfileName),
 			RoleName:            aws.String(s.createdRoleName),
 		})
@@ -185,7 +209,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 
 	if s.createdPolicyName != "" {
 		ui.Say("Removing policy from temporary role...")
-		_, _ = iamsvc.DeleteRolePolicy(&iam.DeleteRolePolicyInput{
+		_, _ = iamsvc.DeleteRolePolicy(ctx, &iam.DeleteRolePolicyInput{
 			PolicyName: aws.String(s.createdPolicyName),
 			RoleName:   aws.String(s.createdRoleName),
 		})
@@ -193,7 +217,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 	if s.createdRoleName != "" {
 		ui.Say("Deleting temporary role...")
 
-		_, err = iamsvc.DeleteRole(&iam.DeleteRoleInput{RoleName: &s.createdRoleName})
+		_, err = iamsvc.DeleteRole(ctx, &iam.DeleteRoleInput{RoleName: &s.createdRoleName})
 		if err != nil {
 			ui.Error(fmt.Sprintf(
 				"Error %s. Please delete the role manually: %s", err.Error(), s.createdRoleName))
@@ -203,7 +227,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 	if s.createdInstanceProfileName != "" {
 		ui.Say("Deleting temporary instance profile...")
 
-		_, err = iamsvc.DeleteInstanceProfile(&iam.DeleteInstanceProfileInput{
+		_, err = iamsvc.DeleteInstanceProfile(ctx, &iam.DeleteInstanceProfileInput{
 			InstanceProfileName: &s.createdInstanceProfileName})
 
 		if err != nil {

@@ -418,7 +418,7 @@ type RunConfig struct {
 	// This feature exists to help prevent situations where a Packer build fails
 	// because a particular availability zone does not have capacity for the
 	// specific instance_type requested in instance_type.
-	SpotInstanceTypes []ec2types.InstanceType `mapstructure:"spot_instance_types" required:"false"`
+	SpotInstanceTypes []string `mapstructure:"spot_instance_types" required:"false"`
 	// With Spot Instances, you pay the Spot price that's in effect for the
 	// time period your instances are running. Spot Instance prices are set by
 	// Amazon EC2 and adjust gradually based on long-term trends in supply and

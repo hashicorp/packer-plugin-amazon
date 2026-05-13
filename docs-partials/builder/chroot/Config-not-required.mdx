@@ -71,11 +71,11 @@
 
 - `root_device_name` (string) - The root device name. For example, xvda.
 
-- `root_volume_size` (int64) - The size of the root volume in GB for the chroot environment and the
+- `root_volume_size` (int32) - The size of the root volume in GB for the chroot environment and the
   resulting AMI. Default size is the snapshot size of the source_ami
   unless from_scratch is true, in which case this field must be defined.
 
-- `root_volume_type` (string) - The type of EBS volume for the chroot environment and resulting AMI. The
+- `root_volume_type` (ec2types.VolumeType) - The type of EBS volume for the chroot environment and resulting AMI. The
   default value is the type of the source_ami, unless from_scratch is
   true, in which case the default value is gp2. You can only specify io1
   if building based on top of a source_ami which is also io1.
@@ -151,10 +151,10 @@
   This field is validated by Packer, when using an alias, you will have to
   prefix `kms_key_id` with `alias/`.
 
-- `ami_architecture` (string) - what architecture to use when registering the final AMI; valid options
+- `ami_architecture` (ec2types.ArchitectureValues) - what architecture to use when registering the final AMI; valid options
   are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
 
-- `boot_mode` (string) - The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
+- `boot_mode` (ec2types.BootModeValues) - The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
   [boot modes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-boot.html) for
   more information. Defaults to `legacy-bios` when `ami_architecture` is `x86_64` and
   `uefi` when `ami_architecture` is `arm64`.
@@ -162,7 +162,7 @@
 - `uefi_data` (string) - Base64 representation of the non-volatile UEFI variable store. For more information
   see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 
-- `tpm_support` (string) - NitroTPM Support. Valid options are `v2.0`. See the documentation on
+- `tpm_support` (ec2types.TpmSupportValues) - NitroTPM Support. Valid options are `v2.0`. See the documentation on
   [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
   more information. Only enabled if a valid option is provided, otherwise ignored.
 

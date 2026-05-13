@@ -9,8 +9,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -52,11 +53,11 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 				},
 				RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 			}.Run(ctx, func(ctx context.Context) error {
-				ec2conn, err := accessconf.NewEC2Connection()
+				ec2conn, err := accessconf.NewEC2Connection(ctx)
 				if err != nil {
 					return err
 				}
-				_, err = listEC2Regions(ec2conn)
+				_, err = listEC2Regions(ctx, ec2conn)
 				return err
 			})
 
@@ -71,7 +72,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 			amiconf := amiConfig.(*AMIConfig)
 			if !amiconf.AMISkipRegionValidation {
 				regionsToValidate := append(amiconf.AMIRegions, accessconf.RawRegion)
-				err := accessconf.ValidateRegion(regionsToValidate...)
+				err := accessconf.ValidateRegion(ctx, regionsToValidate...)
 				if err != nil {
 					state.Put("error", fmt.Errorf("error validating regions: %v", err))
 					return multistep.ActionHalt
@@ -95,26 +96,27 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 		return multistep.ActionContinue
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 
 	// Validate VPC settings for non-default VPCs
 	ui.Say("Prevalidating any provided VPC information")
-	if err := s.checkVpc(ec2conn); err != nil {
+	if err := s.checkVpc(ctx, ec2conn); err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
 
 	ui.Say(fmt.Sprintf("Prevalidating AMI Name: %s", s.DestAmiName))
-	req, resp := ec2conn.DescribeImagesRequest(&ec2.DescribeImagesInput{
-		Owners: []*string{aws.String("self")},
-		Filters: []*ec2.Filter{{
+	resp, err := ec2conn.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Owners: []string{"self"},
+		Filters: []ec2types.Filter{{
 			Name:   aws.String("name"),
-			Values: []*string{aws.String(s.DestAmiName)},
-		}}})
-	req.RetryCount = 11
+			Values: []string{s.DestAmiName},
+		}}}, func(o *ec2.Options) {
+		o.RetryMaxAttempts = 11
+	})
 
-	if err := req.Send(); err != nil {
+	if err != nil {
 		err = fmt.Errorf("Error querying AMI: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -131,7 +133,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepPreValidate) checkVpc(conn clients.Ec2Client) error {
+func (s *StepPreValidate) checkVpc(ctx context.Context, conn clients.Ec2Client) error {
 	if s.VpcId == "" || (s.VpcId != "" && (s.SubnetId != "" || s.HasSubnetFilter)) {
 		// Skip validation if:
 		// * The user has not provided a VpcId.
@@ -140,13 +142,13 @@ func (s *StepPreValidate) checkVpc(conn clients.Ec2Client) error {
 		return nil
 	}
 
-	res, err := conn.DescribeVpcs(&ec2.DescribeVpcsInput{VpcIds: []*string{aws.String(s.VpcId)}})
+	res, err := conn.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{s.VpcId}})
 	if awserrors.Matches(err, "InvalidVpcID.NotFound", "") || err != nil {
 		return fmt.Errorf("Error retrieving VPC information for vpc_id %s: %s", s.VpcId, err)
 	}
 
-	if res != nil && len(res.Vpcs) == 1 && res.Vpcs[0] != nil {
-		if isDefault := aws.BoolValue(res.Vpcs[0].IsDefault); !isDefault {
+	if res != nil && len(res.Vpcs) == 1 {
+		if isDefault := aws.ToBool(res.Vpcs[0].IsDefault); !isDefault {
 			return fmt.Errorf("Error: subnet_id or subnet_filter must be provided for non-default VPCs (%s)", s.VpcId)
 		}
 	}

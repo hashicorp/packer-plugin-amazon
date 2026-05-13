@@ -38,7 +38,7 @@ func (s *StepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s) in region %q ...", ami, region))
 
-		conn, err := GetRegionConn(ctx, s.AccessConfig, region)
+		conn, err := GetEc2Client(ctx, s.AccessConfig, region)
 		if err != nil {
 			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
 			state.Put("error", err.Error())
@@ -46,7 +46,7 @@ func (s *StepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 			return multistep.ActionHalt
 		}
 
-		_, err = conn.EnableImageDeprecation(&ec2.EnableImageDeprecationInput{
+		_, err = conn.EnableImageDeprecation(ctx, &ec2.EnableImageDeprecationInput{
 			ImageId:     &ami,
 			DeprecateAt: &deprecationTime,
 		})

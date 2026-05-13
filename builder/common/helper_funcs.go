@@ -29,8 +29,6 @@ func DestroyAMIs(ctx context.Context, imageids []string, ec2conn clients.Ec2Clie
 
 	// Deregister image by name.
 	for _, i := range resp.Images {
-
-		ctx := context.TODO()
 		err = retry.Config{
 			Tries: 11,
 			ShouldRetry: func(err error) bool {

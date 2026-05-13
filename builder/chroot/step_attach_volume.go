@@ -71,20 +71,20 @@ func (s *StepAttachVolume) Run(ctx context.Context, state multistep.StateBag) mu
 }
 
 func (s *StepAttachVolume) Cleanup(state multistep.StateBag) {
-	ctx := state.Get("context").(context.Context)
 	ui := state.Get("ui").(packersdk.Ui)
-	if err := s.CleanupFunc(ctx, state); err != nil {
+	if err := s.CleanupFunc(state); err != nil {
 		ui.Error(err.Error())
 	}
 }
 
-func (s *StepAttachVolume) CleanupFunc(ctx context.Context, state multistep.StateBag) error {
+func (s *StepAttachVolume) CleanupFunc(state multistep.StateBag) error {
 	if !s.attached {
 		return nil
 	}
 
 	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	ctx := state.Get("context").(context.Context)
 
 	ui.Say("Detaching EBS volume...")
 	_, err := ec2conn.DetachVolume(ctx, &ec2.DetachVolumeInput{VolumeId: &s.volumeId})

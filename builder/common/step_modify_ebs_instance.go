@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -23,7 +24,7 @@ type StepModifyEBSBackedInstance struct {
 
 func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ec2conn := state.Get("ec2").(clients.Ec2Client)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Skip when it is a spot instance
@@ -36,9 +37,9 @@ func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.S
 	if s.EnableAMISriovNetSupport {
 		ui.Say("Enabling Enhanced Networking (SR-IOV)...")
 		simple := "simple"
-		_, err := ec2conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
+		_, err := ec2conn.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
 			InstanceId:      instance.InstanceId,
-			SriovNetSupport: &ec2.AttributeValue{Value: &simple},
+			SriovNetSupport: &ec2types.AttributeValue{Value: &simple},
 		})
 		if err != nil {
 			err := fmt.Errorf("Error enabling Enhanced Networking (SR-IOV) on %s: %s", *instance.InstanceId, err)
@@ -58,9 +59,9 @@ func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.S
 			prefix = "Dis"
 		}
 		ui.Say(fmt.Sprintf("%sabling Enhanced Networking (ENA)...", prefix))
-		_, err := ec2conn.ModifyInstanceAttribute(&ec2.ModifyInstanceAttributeInput{
+		_, err := ec2conn.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
 			InstanceId: instance.InstanceId,
-			EnaSupport: &ec2.AttributeBooleanValue{Value: s.EnableAMIENASupport.ToBoolPointer()},
+			EnaSupport: &ec2types.AttributeBooleanValue{Value: s.EnableAMIENASupport.ToBoolPointer()},
 		})
 		if err != nil {
 			err := fmt.Errorf("Error %sabling Enhanced Networking (ENA) on %s: %s", strings.ToLower(prefix), *instance.InstanceId, err)

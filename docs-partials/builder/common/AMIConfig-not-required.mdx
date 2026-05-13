@@ -5,7 +5,7 @@
   [template engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
   data](#build-template-data) for more information.
 
-- `ami_virtualization_type` (string) - The type of virtualization for the AMI
+- `ami_virtualization_type` (ec2types.VirtualizationType) - The type of virtualization for the AMI
   you are building. This option is required to register HVM images. Can be
   paravirtual (default) or hvm.
 
@@ -140,7 +140,7 @@
   
   [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
 
-- `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
+- `imds_support` (ec2types.ImdsSupportValues) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on
   [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
   for more information. Defaults to legacy.

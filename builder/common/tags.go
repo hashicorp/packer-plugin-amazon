@@ -69,12 +69,12 @@ func (t TagMap) IamTags(ictx interpolate.Context, region string, state multistep
 	return iamTags, nil
 }
 
-func (t EC2Tags) TagSpecifications(resourceType ...string) []*ec2types.TagSpecification {
-	var tagSpecs []*ec2types.TagSpecification
+func (t EC2Tags) TagSpecifications(resourceType ...ec2types.ResourceType) []ec2types.TagSpecification {
+	var tagSpecs []ec2types.TagSpecification
 	if len(t) > 0 {
 		for _, resource := range resourceType {
-			runTags := &ec2types.TagSpecification{
-				ResourceType: ec2types.ResourceType(resource),
+			runTags := ec2types.TagSpecification{
+				ResourceType: resource,
 				Tags:         t,
 			}
 			tagSpecs = append(tagSpecs, runTags)

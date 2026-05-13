@@ -52,7 +52,7 @@ type StepRunSpotInstance struct {
 	SpotAllocationStrategy            ec2types.SpotAllocationStrategy
 	SpotPrice                         string
 	SpotTags                          map[string]string
-	SpotInstanceTypes                 []ec2types.InstanceType
+	SpotInstanceTypes                 []string
 	Tags                              map[string]string
 	VolumeTags                        map[string]string
 	UserData                          string
@@ -363,7 +363,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	var overrides []ec2types.FleetLaunchTemplateOverridesRequest
 	for _, instanceType := range s.SpotInstanceTypes {
 		override := ec2types.FleetLaunchTemplateOverridesRequest{
-			InstanceType: instanceType,
+			InstanceType: ec2types.InstanceType(instanceType),
 		}
 		overrides = append(overrides, override)
 	}

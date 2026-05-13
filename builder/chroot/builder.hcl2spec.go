@@ -3,6 +3,7 @@
 package chroot
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -22,7 +23,7 @@ type FlatConfig struct {
 	PackerSensitiveVars            []string                                    `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
 	AMIName                        *string                                     `mapstructure:"ami_name" required:"true" cty:"ami_name" hcl:"ami_name"`
 	AMIDescription                 *string                                     `mapstructure:"ami_description" required:"false" cty:"ami_description" hcl:"ami_description"`
-	AMIVirtType                    *string                                     `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
+	AMIVirtType                    *types.VirtualizationType                   `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
 	AMIUsers                       []string                                    `mapstructure:"ami_users" required:"false" cty:"ami_users" hcl:"ami_users"`
 	AMIGroups                      []string                                    `mapstructure:"ami_groups" required:"false" cty:"ami_groups" hcl:"ami_groups"`
 	AMIOrgArns                     []string                                    `mapstructure:"ami_org_arns" required:"false" cty:"ami_org_arns" hcl:"ami_org_arns"`
@@ -41,7 +42,7 @@ type FlatConfig struct {
 	AMIRegionKMSKeyIDs             map[string]string                           `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion             *bool                                       `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
 	AMISnapshotCopyDurationMinutes *int64                                      `mapstructure:"snapshot_copy_duration_minutes" required:"false" cty:"snapshot_copy_duration_minutes" hcl:"snapshot_copy_duration_minutes"`
-	AMIIMDSSupport                 *string                                     `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
+	AMIIMDSSupport                 *types.ImdsSupportValues                    `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 	DeprecationTime                *string                                     `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	SnapshotTags                   map[string]string                           `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
 	SnapshotTag                    []config.FlatKeyValue                       `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
@@ -77,18 +78,18 @@ type FlatConfig struct {
 	PostMountCommands              []string                                    `mapstructure:"post_mount_commands" required:"false" cty:"post_mount_commands" hcl:"post_mount_commands"`
 	PreMountCommands               []string                                    `mapstructure:"pre_mount_commands" required:"false" cty:"pre_mount_commands" hcl:"pre_mount_commands"`
 	RootDeviceName                 *string                                     `mapstructure:"root_device_name" required:"false" cty:"root_device_name" hcl:"root_device_name"`
-	RootVolumeSize                 *int64                                      `mapstructure:"root_volume_size" required:"false" cty:"root_volume_size" hcl:"root_volume_size"`
-	RootVolumeType                 *string                                     `mapstructure:"root_volume_type" required:"false" cty:"root_volume_type" hcl:"root_volume_type"`
+	RootVolumeSize                 *int32                                      `mapstructure:"root_volume_size" required:"false" cty:"root_volume_size" hcl:"root_volume_size"`
+	RootVolumeType                 *types.VolumeType                           `mapstructure:"root_volume_type" required:"false" cty:"root_volume_type" hcl:"root_volume_type"`
 	SourceAmi                      *string                                     `mapstructure:"source_ami" required:"true" cty:"source_ami" hcl:"source_ami"`
 	SourceAmiFilter                *common.FlatAmiFilterOptions                `mapstructure:"source_ami_filter" required:"false" cty:"source_ami_filter" hcl:"source_ami_filter"`
 	RootVolumeTags                 map[string]string                           `mapstructure:"root_volume_tags" required:"false" cty:"root_volume_tags" hcl:"root_volume_tags"`
 	RootVolumeTag                  []config.FlatKeyValue                       `mapstructure:"root_volume_tag" required:"false" cty:"root_volume_tag" hcl:"root_volume_tag"`
 	RootVolumeEncryptBoot          *bool                                       `mapstructure:"root_volume_encrypt_boot" required:"false" cty:"root_volume_encrypt_boot" hcl:"root_volume_encrypt_boot"`
 	RootVolumeKmsKeyId             *string                                     `mapstructure:"root_volume_kms_key_id" required:"false" cty:"root_volume_kms_key_id" hcl:"root_volume_kms_key_id"`
-	Architecture                   *string                                     `mapstructure:"ami_architecture" required:"false" cty:"ami_architecture" hcl:"ami_architecture"`
-	BootMode                       *string                                     `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
+	Architecture                   *types.ArchitectureValues                   `mapstructure:"ami_architecture" required:"false" cty:"ami_architecture" hcl:"ami_architecture"`
+	BootMode                       *types.BootModeValues                       `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
 	UefiData                       *string                                     `mapstructure:"uefi_data" required:"false" cty:"uefi_data" hcl:"uefi_data"`
-	TpmSupport                     *string                                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
+	TpmSupport                     *types.TpmSupportValues                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
