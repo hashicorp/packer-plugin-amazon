@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/random"
@@ -19,20 +21,27 @@ import (
 // StepRegisterAMI creates the AMI.
 type StepRegisterAMI struct {
 	PollingConfig            *awscommon.AWSPollingConfig
-	RootVolumeSize           int64
+	RootVolumeSize           int32
 	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
 	AMISkipBuildRegion       bool
-	BootMode                 string
+	BootMode                 ec2types.BootModeValues
 	UefiData                 string
-	TpmSupport               string
+	TpmSupport               ec2types.TpmSupportValues
 }
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	snapshotID := state.Get("snapshot_id").(string)
 	ui := state.Get("ui").(packersdk.Ui)
+	awscfg, err := config.GetAWSConfig(ctx)
+	if err != nil {
+		err := fmt.Errorf("Error getting AWS config: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
 
 	ui.Say("Registering the AMI...")
 
@@ -59,7 +68,7 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	if config.FromScratch {
 		registerOpts = buildBaseRegisterOpts(config, nil, s.RootVolumeSize, snapshotID, amiName)
 	} else {
-		image := state.Get("source_image").(*ec2.Image)
+		image := state.Get("source_image").(*ec2types.Image)
 		registerOpts = buildBaseRegisterOpts(config, image, s.RootVolumeSize, snapshotID, amiName)
 	}
 
@@ -74,16 +83,16 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 		registerOpts.EnaSupport = aws.Bool(true)
 	}
 	if s.BootMode != "" {
-		registerOpts.BootMode = aws.String(s.BootMode)
+		registerOpts.BootMode = s.BootMode
 	}
 	if s.UefiData != "" {
 		registerOpts.UefiData = aws.String(s.UefiData)
 	}
 	if s.TpmSupport != "" {
-		registerOpts.TpmSupport = aws.String(s.TpmSupport)
+		registerOpts.TpmSupport = s.TpmSupport
 	}
 
-	registerResp, err := ec2conn.RegisterImage(registerOpts)
+	registerResp, err := ec2conn.RegisterImage(ctx, registerOpts)
 	if err != nil {
 		state.Put("error", fmt.Errorf("Error registering AMI: %s", err))
 		ui.Error(state.Get("error").(error).Error())
@@ -93,7 +102,7 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 	// Set the AMI ID in the state
 	ui.Say(fmt.Sprintf("AMI: %s", *registerResp.ImageId))
 	amis := make(map[string]string)
-	amis[*ec2conn.Config.Region] = *registerResp.ImageId
+	amis[awscfg.Region] = *registerResp.ImageId
 	state.Put("amis", amis)
 
 	ui.Say("Waiting for AMI to become ready...")
@@ -110,9 +119,9 @@ func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) mul
 func (s *StepRegisterAMI) Cleanup(state multistep.StateBag) {}
 
 // Builds the base register opts with architecture, name, root block device, mappings, virtualizationtype
-func buildBaseRegisterOpts(config *Config, sourceImage *ec2.Image, rootVolumeSize int64, snapshotID string, amiName string) *ec2.RegisterImageInput {
+func buildBaseRegisterOpts(config *Config, sourceImage *ec2types.Image, rootVolumeSize int32, snapshotID string, amiName string) *ec2.RegisterImageInput {
 	var (
-		mappings       []*ec2.BlockDeviceMapping
+		mappings       []ec2types.BlockDeviceMapping
 		rootDeviceName string
 	)
 
@@ -126,18 +135,18 @@ func buildBaseRegisterOpts(config *Config, sourceImage *ec2.Image, rootVolumeSiz
 		rootDeviceName = *sourceImage.RootDeviceName
 	}
 
-	newMappings := make([]*ec2.BlockDeviceMapping, len(mappings))
+	newMappings := make([]ec2types.BlockDeviceMapping, len(mappings))
 	for i, device := range mappings {
 		newDevice := device
 		if *newDevice.DeviceName == rootDeviceName {
 			if newDevice.Ebs != nil {
 				newDevice.Ebs.SnapshotId = aws.String(snapshotID)
 			} else {
-				newDevice.Ebs = &ec2.EbsBlockDevice{SnapshotId: aws.String(snapshotID)}
+				newDevice.Ebs = &ec2types.EbsBlockDevice{SnapshotId: aws.String(snapshotID)}
 			}
 
 			if generatingNewBlockDeviceMappings || rootVolumeSize > *newDevice.Ebs.VolumeSize {
-				newDevice.Ebs.VolumeSize = aws.Int64(rootVolumeSize)
+				newDevice.Ebs.VolumeSize = aws.Int32(rootVolumeSize)
 			}
 		}
 
@@ -153,9 +162,9 @@ func buildBaseRegisterOpts(config *Config, sourceImage *ec2.Image, rootVolumeSiz
 	if config.FromScratch {
 		return &ec2.RegisterImageInput{
 			Name:                &amiName,
-			Architecture:        aws.String(config.Architecture),
+			Architecture:        config.Architecture,
 			RootDeviceName:      aws.String(rootDeviceName),
-			VirtualizationType:  aws.String(config.AMIVirtType),
+			VirtualizationType:  aws.String(string(config.AMIVirtType)),
 			BlockDeviceMappings: newMappings,
 		}
 	}
@@ -163,17 +172,17 @@ func buildBaseRegisterOpts(config *Config, sourceImage *ec2.Image, rootVolumeSiz
 	return buildRegisterOptsFromExistingImage(config, sourceImage, newMappings, rootDeviceName, amiName)
 }
 
-func buildRegisterOptsFromExistingImage(config *Config, image *ec2.Image, mappings []*ec2.BlockDeviceMapping, rootDeviceName string, amiName string) *ec2.RegisterImageInput {
+func buildRegisterOptsFromExistingImage(config *Config, image *ec2types.Image, mappings []ec2types.BlockDeviceMapping, rootDeviceName string, amiName string) *ec2.RegisterImageInput {
 	registerOpts := &ec2.RegisterImageInput{
 		Name:                &amiName,
 		Architecture:        image.Architecture,
 		RootDeviceName:      &rootDeviceName,
 		BlockDeviceMappings: mappings,
-		VirtualizationType:  image.VirtualizationType,
+		VirtualizationType:  aws.String(string(image.VirtualizationType)),
 	}
 
 	if config.AMIVirtType != "" {
-		registerOpts.VirtualizationType = aws.String(config.AMIVirtType)
+		registerOpts.VirtualizationType = aws.String(string(config.AMIVirtType))
 	}
 
 	if config.AMIVirtType != "hvm" {

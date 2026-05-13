@@ -7,15 +7,15 @@ import (
 	"encoding/csv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 // Build a slice of EC2 (AMI/Subnet/VPC) filter options from the filters provided.
-func buildEc2Filters(input map[string]string) ([]*ec2.Filter, error) {
-	var filters []*ec2.Filter
+func buildEc2Filters(input map[string]string) ([]ec2types.Filter, error) {
+	var filters []ec2types.Filter
 
 	for k, v := range input {
-		var b []*string
+		var b []string
 
 		a := k
 		csvReader := csv.NewReader(strings.NewReader(v))
@@ -28,10 +28,10 @@ func buildEc2Filters(input map[string]string) ([]*ec2.Filter, error) {
 		}
 		for _, r := range values {
 			var value = r
-			b = append(b, &value)
+			b = append(b, value)
 		}
 
-		filters = append(filters, &ec2.Filter{
+		filters = append(filters, ec2types.Filter{
 			Name:   &a,
 			Values: b,
 		})

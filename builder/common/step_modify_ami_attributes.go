@@ -7,9 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
@@ -26,7 +28,7 @@ type StepModifyAMIAttributes struct {
 	SnapshotUsers  []string
 	SnapshotGroups []string
 	ProductCodes   []string
-	IMDSSupport    string
+	IMDSSupport    ec2types.ImdsSupportValues
 	Description    string
 	Ctx            interpolate.Context
 
@@ -34,9 +36,10 @@ type StepModifyAMIAttributes struct {
 }
 
 func (s *StepModifyAMIAttributes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	session := state.Get("awsSession").(*session.Session)
 	ui := state.Get("ui").(packersdk.Ui)
+	config := state.Get("config").(*Config)
 
 	if s.AMISkipCreateImage {
 		ui.Say("Skipping AMI modify attributes...")

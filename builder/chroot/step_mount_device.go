@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -48,12 +48,12 @@ func (s *StepMountDevice) Run(ctx context.Context, state multistep.StateBag) mul
 	}
 	wrappedCommand := state.Get("wrappedCommand").(common.CommandWrapper)
 
-	var virtualizationType string
+	var virtualizationType ec2types.VirtualizationType
 	if config.FromScratch || config.AMIVirtType != "" {
 		virtualizationType = config.AMIVirtType
 	} else {
-		image := state.Get("source_image").(*ec2.Image)
-		virtualizationType = *image.VirtualizationType
+		image := state.Get("source_image").(*ec2types.Image)
+		virtualizationType = image.VirtualizationType
 		log.Printf("Source image virtualization type is: %s", virtualizationType)
 	}
 

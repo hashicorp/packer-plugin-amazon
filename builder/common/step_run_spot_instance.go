@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -27,31 +28,31 @@ import (
 )
 
 type EC2BlockDeviceMappingsBuilder interface {
-	BuildEC2BlockDeviceMappings() []*ec2.BlockDeviceMapping
+	BuildEC2BlockDeviceMappings() []ec2types.BlockDeviceMapping
 }
 
 type StepRunSpotInstance struct {
 	PollingConfig                     *AWSPollingConfig
 	AssociatePublicIpAddress          config.Trilean
 	LaunchMappings                    EC2BlockDeviceMappingsBuilder
-	BlockDurationMinutes              int64
+	BlockDurationMinutes              int32
 	Debug                             bool
 	Comm                              *communicator.Config
 	EbsOptimized                      bool
-	ExpectedRootDevice                string
+	ExpectedRootDevice                ec2types.DeviceType
 	FleetTags                         map[string]string
-	HttpEndpoint                      string
-	HttpTokens                        string
-	HttpPutResponseHopLimit           int64
-	InstanceMetadataTags              string
+	HttpEndpoint                      ec2types.LaunchTemplateInstanceMetadataEndpointState
+	HttpTokens                        ec2types.LaunchTemplateHttpTokensState
+	HttpPutResponseHopLimit           int32
+	InstanceMetadataTags              ec2types.LaunchTemplateInstanceMetadataTagsState
 	InstanceInitiatedShutdownBehavior string
-	InstanceType                      string
+	InstanceType                      ec2types.InstanceType
 	Region                            string
 	SourceAMI                         string
-	SpotAllocationStrategy            string
+	SpotAllocationStrategy            ec2types.SpotAllocationStrategy
 	SpotPrice                         string
 	SpotTags                          map[string]string
-	SpotInstanceTypes                 []string
+	SpotInstanceTypes                 []ec2types.InstanceType
 	Tags                              map[string]string
 	VolumeTags                        map[string]string
 	UserData                          string
@@ -68,8 +69,8 @@ type StepRunSpotInstance struct {
 // nearly identical except for the struct's name and one extra field in
 // EbsBlockDeviceResuest, which unfortunately means you can't just cast one
 // into the other. THANKS AMAZON.
-func castBlockDeviceToRequest(bd *ec2.EbsBlockDevice) *ec2.LaunchTemplateEbsBlockDeviceRequest {
-	out := &ec2.LaunchTemplateEbsBlockDeviceRequest{
+func castBlockDeviceToRequest(bd *ec2types.EbsBlockDevice) *ec2types.LaunchTemplateEbsBlockDeviceRequest {
+	out := &ec2types.LaunchTemplateEbsBlockDeviceRequest{
 		DeleteOnTermination: bd.DeleteOnTermination,
 		Encrypted:           bd.Encrypted,
 		Iops:                bd.Iops,
@@ -83,16 +84,16 @@ func castBlockDeviceToRequest(bd *ec2.EbsBlockDevice) *ec2.LaunchTemplateEbsBloc
 }
 
 func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
-	state multistep.StateBag, marketOptions *ec2.LaunchTemplateInstanceMarketOptionsRequest) *ec2.RequestLaunchTemplateData {
+	state multistep.StateBag, marketOptions *ec2types.LaunchTemplateInstanceMarketOptionsRequest) *ec2types.RequestLaunchTemplateData {
 	blockDeviceMappings := s.LaunchMappings.BuildEC2BlockDeviceMappings()
 	// Convert the BlockDeviceMapping into a
 	// LaunchTemplateBlockDeviceMappingRequest. These structs are identical,
 	// except for the EBS field -- on one, that field contains a
 	// LaunchTemplateEbsBlockDeviceRequest, and on the other, it contains an
 	// EbsBlockDevice.
-	var launchMappingRequests []*ec2.LaunchTemplateBlockDeviceMappingRequest
+	var launchMappingRequests []ec2types.LaunchTemplateBlockDeviceMappingRequest
 	for _, mapping := range blockDeviceMappings {
-		launchRequest := &ec2.LaunchTemplateBlockDeviceMappingRequest{
+		launchRequest := ec2types.LaunchTemplateBlockDeviceMappingRequest{
 			DeviceName:  mapping.DeviceName,
 			Ebs:         castBlockDeviceToRequest(mapping.Ebs),
 			VirtualName: mapping.VirtualName,
@@ -110,7 +111,7 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 		log.Printf("no_ephemeral was set, so creating drives xvdca-xvdcz as empty mappings")
 		DefaultEphemeralDeviceLetters := "abcdefghijklmnopqrstuvwxyz"
 		for _, letter := range DefaultEphemeralDeviceLetters {
-			launchRequest := &ec2.LaunchTemplateBlockDeviceMappingRequest{
+			launchRequest := ec2types.LaunchTemplateBlockDeviceMappingRequest{
 				DeviceName: aws.String("xvdc" + string(letter)),
 				NoDevice:   aws.String(""),
 			}
@@ -124,70 +125,70 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 	iamInstanceProfile := aws.String(state.Get("iamInstanceProfile").(string))
 
 	// Create a launch template.
-	templateData := ec2.RequestLaunchTemplateData{
+	templateData := ec2types.RequestLaunchTemplateData{
 		BlockDeviceMappings:   launchMappingRequests,
 		DisableApiTermination: aws.Bool(false),
 		EbsOptimized:          &s.EbsOptimized,
-		IamInstanceProfile:    &ec2.LaunchTemplateIamInstanceProfileSpecificationRequest{Name: iamInstanceProfile},
+		IamInstanceProfile:    &ec2types.LaunchTemplateIamInstanceProfileSpecificationRequest{Name: iamInstanceProfile},
 		ImageId:               &s.SourceAMI,
 		InstanceMarketOptions: marketOptions,
-		Placement: &ec2.LaunchTemplatePlacementRequest{
+		Placement: &ec2types.LaunchTemplatePlacementRequest{
 			AvailabilityZone: &az,
 		},
 		UserData: userData,
 	}
 	// Create a network interface
-	securityGroupIds := aws.StringSlice(state.Get("securityGroupIds").([]string))
+	securityGroupIds := state.Get("securityGroupIds").([]string)
 	subnetId := state.Get("subnet_id").(string)
 
 	if subnetId != "" {
 		// Set up a full network interface
-		networkInterface := ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+		networkInterface := ec2types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 			Groups:              securityGroupIds,
 			DeleteOnTermination: aws.Bool(true),
-			DeviceIndex:         aws.Int64(0),
+			DeviceIndex:         aws.Int32(0),
 			SubnetId:            aws.String(subnetId),
 		}
 		if s.AssociatePublicIpAddress != config.TriUnset {
 			ui.Say(fmt.Sprintf("changing public IP address config to %t for instance on subnet %q",
 				*s.AssociatePublicIpAddress.ToBoolPointer(),
 				subnetId))
-			networkInterface.SetAssociatePublicIpAddress(*s.AssociatePublicIpAddress.ToBoolPointer())
+			networkInterface.AssociatePublicIpAddress = s.AssociatePublicIpAddress.ToBoolPointer()
 		}
-		templateData.SetNetworkInterfaces([]*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{&networkInterface})
+		templateData.NetworkInterfaces = []ec2types.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{networkInterface}
 	} else {
-		templateData.SetSecurityGroupIds(securityGroupIds)
+		templateData.SecurityGroupIds = securityGroupIds
 
 	}
 
 	if s.IsBurstableInstanceType {
-		templateData.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsStandard)}
+		templateData.CreditSpecification = &ec2types.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsStandard)}
 	}
 
 	if s.EnableUnlimitedCredits {
-		templateData.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
+		templateData.CreditSpecification = &ec2types.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
 	}
 
-	if s.HttpEndpoint == "enabled" {
-		templateData.MetadataOptions = &ec2.LaunchTemplateInstanceMetadataOptionsRequest{
-			HttpEndpoint:            &s.HttpEndpoint,
-			HttpTokens:              &s.HttpTokens,
-			HttpPutResponseHopLimit: &s.HttpPutResponseHopLimit,
+	if s.HttpEndpoint == ec2types.LaunchTemplateInstanceMetadataEndpointStateEnabled {
+		templateData.MetadataOptions = &ec2types.LaunchTemplateInstanceMetadataOptionsRequest{
+			HttpEndpoint:            s.HttpEndpoint,
+			HttpTokens:              s.HttpTokens,
+			HttpPutResponseHopLimit: aws.Int32(s.HttpPutResponseHopLimit),
 		}
 	}
 
-	if s.InstanceMetadataTags == "enabled" {
-		templateData.MetadataOptions.InstanceMetadataTags = aws.String(s.InstanceMetadataTags)
+	if s.InstanceMetadataTags == ec2types.LaunchTemplateInstanceMetadataTagsStateEnabled {
+		templateData.MetadataOptions.InstanceMetadataTags = s.InstanceMetadataTags
 	}
 
 	// If instance type is not set, we'll just pick the lowest priced instance
 	// available.
 	if s.InstanceType != "" {
-		templateData.SetInstanceType(s.InstanceType)
+		templateData.InstanceType = s.InstanceType
 	}
 
 	if s.Comm.SSHKeyPairName != "" {
-		templateData.SetKeyName(s.Comm.SSHKeyPairName)
+		templateData.KeyName = aws.String(s.Comm.SSHKeyPairName)
 	}
 
 	return &templateData
@@ -213,24 +214,24 @@ func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 }
 
 func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Launching a spot AWS instance...")
 
 	// Get and validate the source AMI
-	image, ok := state.Get("source_image").(*ec2.Image)
+	image, ok := state.Get("source_image").(*ec2types.Image)
 	if !ok {
 		state.Put("error", fmt.Errorf("source_image type assertion failed"))
 		return multistep.ActionHalt
 	}
 	s.SourceAMI = *image.ImageId
 
-	if s.ExpectedRootDevice != "" && *image.RootDeviceType != s.ExpectedRootDevice {
+	if s.ExpectedRootDevice != "" && image.RootDeviceType != s.ExpectedRootDevice {
 		state.Put("error", fmt.Errorf(
 			"The provided source AMI has an invalid root device type.\n"+
 				"Expected '%s', got '%s'.",
-			s.ExpectedRootDevice, *image.RootDeviceType))
+			s.ExpectedRootDevice, image.RootDeviceType))
 		return multistep.ActionHalt
 	}
 
@@ -265,18 +266,18 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}
 	volumeTags.Report(ui)
 
-	spotOptions := ec2.LaunchTemplateSpotMarketOptionsRequest{}
+	spotOptions := ec2types.LaunchTemplateSpotMarketOptionsRequest{}
 	// The default is to set the maximum price to the OnDemand price.
 	if s.SpotPrice != "auto" {
-		spotOptions.SetMaxPrice(s.SpotPrice)
+		spotOptions.MaxPrice = aws.String(s.SpotPrice)
 	}
 	if s.BlockDurationMinutes != 0 {
-		spotOptions.BlockDurationMinutes = &s.BlockDurationMinutes
+		spotOptions.BlockDurationMinutes = aws.Int32(s.BlockDurationMinutes)
 	}
-	marketOptions := &ec2.LaunchTemplateInstanceMarketOptionsRequest{
+	marketOptions := &ec2types.LaunchTemplateInstanceMarketOptionsRequest{
 		SpotOptions: &spotOptions,
 	}
-	marketOptions.SetMarketType(ec2.MarketTypeSpot)
+	marketOptions.MarketType = ec2types.MarketTypeSpot
 
 	spotTags, err := TagMap(s.SpotTags).EC2Tags(s.Ctx, s.Region, state)
 	if err != nil {
@@ -287,7 +288,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	// Create a launch template for the instance
-	ui.Message("Loading User Data File...")
+	ui.Say("Loading User Data File...")
 
 	// Generate a random name to avoid conflicting with other
 	// instances of packer running in this AWS account
@@ -301,7 +302,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		state.Put("error", err)
 		return multistep.ActionHalt
 	}
-	ui.Message("Creating Spot Fleet launch template...")
+	ui.Say("Creating Spot Fleet launch template...")
 	templateData := s.CreateTemplateData(&userData, az, state, marketOptions)
 	launchTemplate := &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: templateData,
@@ -311,8 +312,8 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	if len(spotTags) > 0 {
 		launchTemplate.TagSpecifications = append(
 			launchTemplate.TagSpecifications,
-			&ec2.TagSpecification{
-				ResourceType: aws.String("launch-template"),
+			ec2types.TagSpecification{
+				ResourceType: ec2types.ResourceTypeLaunchTemplate,
 				Tags:         spotTags,
 			},
 		)
@@ -321,16 +322,16 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	if len(ec2Tags) > 0 {
 		launchTemplate.LaunchTemplateData.TagSpecifications = append(
 			launchTemplate.LaunchTemplateData.TagSpecifications,
-			&ec2.LaunchTemplateTagSpecificationRequest{
-				ResourceType: aws.String("instance"),
+			ec2types.LaunchTemplateTagSpecificationRequest{
+				ResourceType: ec2types.ResourceTypeInstance,
 				Tags:         ec2Tags,
 			},
 		)
 
 		launchTemplate.LaunchTemplateData.TagSpecifications = append(
 			launchTemplate.LaunchTemplateData.TagSpecifications,
-			&ec2.LaunchTemplateTagSpecificationRequest{
-				ResourceType: aws.String("network-interface"),
+			ec2types.LaunchTemplateTagSpecificationRequest{
+				ResourceType: ec2types.ResourceTypeNetworkInterface,
 				Tags:         ec2Tags,
 			},
 		)
@@ -339,15 +340,15 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	if len(volumeTags) > 0 {
 		launchTemplate.LaunchTemplateData.TagSpecifications = append(
 			launchTemplate.LaunchTemplateData.TagSpecifications,
-			&ec2.LaunchTemplateTagSpecificationRequest{
-				ResourceType: aws.String("volume"),
+			ec2types.LaunchTemplateTagSpecificationRequest{
+				ResourceType: ec2types.ResourceTypeVolume,
 				Tags:         volumeTags,
 			},
 		)
 	}
 
 	// Tell EC2 to create the template
-	createLaunchTemplateOutput, err := ec2conn.CreateLaunchTemplate(launchTemplate)
+	createLaunchTemplateOutput, err := ec2conn.CreateLaunchTemplate(ctx, launchTemplate)
 	if err != nil {
 		err := fmt.Errorf("Error creating launch template for spot instance: %s", err)
 		state.Put("error", err)
@@ -356,21 +357,21 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	launchTemplateId := createLaunchTemplateOutput.LaunchTemplate.LaunchTemplateId
-	ui.Message(fmt.Sprintf("Created Spot Fleet launch template: %s", *launchTemplateId))
+	ui.Sayf("Created Spot Fleet launch template: %s", *launchTemplateId)
 
 	// Add overrides for each user-provided instance type
-	var overrides []*ec2.FleetLaunchTemplateOverridesRequest
+	var overrides []ec2types.FleetLaunchTemplateOverridesRequest
 	for _, instanceType := range s.SpotInstanceTypes {
-		override := ec2.FleetLaunchTemplateOverridesRequest{
-			InstanceType: aws.String(instanceType),
+		override := ec2types.FleetLaunchTemplateOverridesRequest{
+			InstanceType: instanceType,
 		}
-		overrides = append(overrides, &override)
+		overrides = append(overrides, override)
 	}
 
 	createFleetInput := &ec2.CreateFleetInput{
-		LaunchTemplateConfigs: []*ec2.FleetLaunchTemplateConfigRequest{
+		LaunchTemplateConfigs: []ec2types.FleetLaunchTemplateConfigRequest{
 			{
-				LaunchTemplateSpecification: &ec2.FleetLaunchTemplateSpecificationRequest{
+				LaunchTemplateSpecification: &ec2types.FleetLaunchTemplateSpecificationRequest{
 					LaunchTemplateName: aws.String(launchTemplateName),
 					Version:            aws.String("1"),
 				},
@@ -378,16 +379,16 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			},
 		},
 		ReplaceUnhealthyInstances: aws.Bool(false),
-		TargetCapacitySpecification: &ec2.TargetCapacitySpecificationRequest{
-			TotalTargetCapacity:       aws.Int64(1),
-			DefaultTargetCapacityType: aws.String("spot"),
+		TargetCapacitySpecification: &ec2types.TargetCapacitySpecificationRequest{
+			TotalTargetCapacity:       aws.Int32(1),
+			DefaultTargetCapacityType: ec2types.DefaultTargetCapacityTypeSpot,
 		},
-		Type: aws.String("instant"),
+		Type: ec2types.FleetTypeInstant,
 	}
 
 	if s.SpotAllocationStrategy != "" {
-		createFleetInput.SpotOptions = &ec2.SpotOptionsRequest{
-			AllocationStrategy: aws.String(s.SpotAllocationStrategy),
+		createFleetInput.SpotOptions = &ec2types.SpotOptionsRequest{
+			AllocationStrategy: s.SpotAllocationStrategy,
 		}
 	}
 
@@ -403,8 +404,8 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	if len(fleetTags) > 0 {
 		createFleetInput.TagSpecifications = append(
 			createFleetInput.TagSpecifications,
-			&ec2.TagSpecification{
-				ResourceType: aws.String("fleet"),
+			ec2types.TagSpecification{
+				ResourceType: ec2types.ResourceTypeFleet,
 				Tags:         fleetTags,
 			},
 		)
@@ -427,7 +428,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		},
 		RetryDelay: (&retry.Backoff{InitialBackoff: 500 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		createOutput, err = ec2conn.CreateFleet(createFleetInput)
+		createOutput, err = ec2conn.CreateFleet(ctx, createFleetInput)
 		if err == nil && createOutput.Errors != nil {
 			err = fmt.Errorf("errors: %v", createOutput.Errors)
 		}
@@ -459,7 +460,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		if len(createOutput.Errors) > 0 {
 			errString := fmt.Sprintf("Error waiting for fleet request (%s) to become ready:", *createOutput.FleetId)
 			for _, outErr := range createOutput.Errors {
-				errString = errString + aws.StringValue(outErr.ErrorMessage)
+				errString = errString + aws.ToString(outErr.ErrorMessage)
 			}
 			err = errors.New(errString)
 		}
@@ -468,7 +469,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		return multistep.ActionHalt
 	}
 
-	instanceId = *createOutput.Instances[0].InstanceIds[0]
+	instanceId = createOutput.Instances[0].InstanceIds[0]
 	// Set the instance ID so that the cleanup works properly
 	s.instanceId = instanceId
 	if err := waitForInstanceReadiness(ctx, instanceId, ec2conn, ui, state, s.PollingConfig.WaitUntilInstanceRunning); err != nil {
@@ -481,8 +482,8 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		Tries:      11,
 		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) error {
-		describeOutput, err = ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{
-			InstanceIds: []*string{aws.String(instanceId)},
+		describeOutput, err = ec2conn.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+			InstanceIds: []string{instanceId},
 		})
 		if len(describeOutput.Reservations) > 0 && len(describeOutput.Reservations[0].Instances) > 0 {
 			if len(s.LaunchMappings.BuildEC2BlockDeviceMappings()) > 0 && len(describeOutput.Reservations[0].Instances[0].BlockDeviceMappings) == 0 {
@@ -505,7 +506,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		spotTags.Report(ui)
 		// Use the instance ID to find out the SIR, so that we can tag the spot
 		// request associated with this instance.
-		sir := describeOutput.Reservations[0].Instances[0].SpotInstanceRequestId
+		sir := aws.ToString(describeOutput.Reservations[0].Instances[0].SpotInstanceRequestId)
 
 		// Apply tags to the spot request.
 		err = retry.Config{
@@ -513,9 +514,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			ShouldRetry: func(error) bool { return false },
 			RetryDelay:  (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-			_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
+			_, err := ec2conn.CreateTags(ctx, &ec2.CreateTagsInput{
 				Tags:      spotTags,
-				Resources: []*string{sir},
+				Resources: []string{sir},
 			})
 			return err
 		})
@@ -537,9 +538,9 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 			return nil
 		}
 
-		_, err := ec2conn.CreateTags(&ec2.CreateTagsInput{
+		_, err := ec2conn.CreateTags(ctx, &ec2.CreateTagsInput{
 			Tags:      ec2Tags,
-			Resources: []*string{instance.InstanceId},
+			Resources: []string{aws.ToString(instance.InstanceId)},
 		})
 		return err
 	})
@@ -551,16 +552,16 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		return multistep.ActionHalt
 	}
 
-	volumeIds := make([]*string, 0)
+	volumeIds := make([]string, 0)
 	for _, v := range instance.BlockDeviceMappings {
 		if ebs := v.Ebs; ebs != nil {
-			volumeIds = append(volumeIds, ebs.VolumeId)
+			volumeIds = append(volumeIds, aws.ToString(ebs.VolumeId))
 		}
 	}
 
 	if len(volumeIds) > 0 && len(s.VolumeTags) > 0 {
 		ui.Say("Adding tags to source EBS Volumes")
-		_, err = ec2conn.CreateTags(&ec2.CreateTagsInput{
+		_, err = ec2conn.CreateTags(ctx, &ec2.CreateTagsInput{
 			Resources: volumeIds,
 			Tags:      volumeTags,
 		})
@@ -597,19 +598,20 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 }
 
 func (s *StepRunSpotInstance) Cleanup(state multistep.StateBag) {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 	launchTemplateName := state.Get("launchTemplateName").(string)
+	ctx := state.Get("context").(context.Context)
 
 	// Terminate the source instance if it exists
 	if s.instanceId != "" {
 		ui.Say("Terminating the source AWS instance...")
-		if _, err := ec2conn.TerminateInstances(&ec2.TerminateInstancesInput{InstanceIds: []*string{&s.instanceId}}); err != nil {
+		if _, err := ec2conn.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{s.instanceId}}); err != nil {
 			ui.Error(fmt.Sprintf("Error terminating instance, may still be around: %s", err))
 			return
 		}
 
-		if err := s.PollingConfig.WaitUntilInstanceTerminated(aws.BackgroundContext(), ec2conn, s.instanceId); err != nil {
+		if err := s.PollingConfig.WaitUntilInstanceTerminated(ctx, ec2conn, s.instanceId); err != nil {
 			ui.Error(err.Error())
 		}
 	}
@@ -618,7 +620,7 @@ func (s *StepRunSpotInstance) Cleanup(state multistep.StateBag) {
 	deleteInput := &ec2.DeleteLaunchTemplateInput{
 		LaunchTemplateName: aws.String(launchTemplateName),
 	}
-	if _, err := ec2conn.DeleteLaunchTemplate(deleteInput); err != nil {
+	if _, err := ec2conn.DeleteLaunchTemplate(ctx, deleteInput); err != nil {
 		ui.Error(err.Error())
 	}
 }

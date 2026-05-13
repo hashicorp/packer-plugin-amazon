@@ -10,10 +10,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -21,7 +21,7 @@ import (
 
 // Define a mock struct to be used in unit tests for common aws steps.
 type mockEC2Conn struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 	Config *aws.Config
 
 	// Counters to figure out what code path was taken
@@ -34,7 +34,7 @@ type mockEC2Conn struct {
 	lock sync.Mutex
 }
 
-func (m *mockEC2Conn) CopyImage(copyInput *ec2.CopyImageInput) (*ec2.CopyImageOutput, error) {
+func (m *mockEC2Conn) CopyImage(ctx context.Context, copyInput *ec2.CopyImageInput, opts ...func(*ec2.Options)) (*ec2.CopyImageOutput, error) {
 	if !*copyInput.CopyImageTags {
 		return nil, fmt.Errorf("CopyImageTags should always be true, but was %t", *copyInput.CopyImageTags)
 	}
@@ -49,17 +49,17 @@ func (m *mockEC2Conn) CopyImage(copyInput *ec2.CopyImageInput) (*ec2.CopyImageOu
 }
 
 // functions we have to create mock responses for in order for test to run
-func (m *mockEC2Conn) DescribeImages(*ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+func (m *mockEC2Conn) DescribeImages(ctx context.Context, input *ec2.DescribeImagesInput, opts ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
 	m.lock.Lock()
 	m.describeImagesCount++
 	m.lock.Unlock()
 	output := &ec2.DescribeImagesOutput{
-		Images: []*ec2.Image{{}},
+		Images: []ec2types.Image{{}},
 	}
 	return output, nil
 }
 
-func (m *mockEC2Conn) DeregisterImage(*ec2.DeregisterImageInput) (*ec2.DeregisterImageOutput, error) {
+func (m *mockEC2Conn) DeregisterImage(ctx context.Context, input *ec2.DeregisterImageInput, opts ...func(*ec2.Options)) (*ec2.DeregisterImageOutput, error) {
 	m.lock.Lock()
 	m.deregisterImageCount++
 	m.lock.Unlock()
@@ -67,7 +67,7 @@ func (m *mockEC2Conn) DeregisterImage(*ec2.DeregisterImageInput) (*ec2.Deregiste
 	return output, nil
 }
 
-func (m *mockEC2Conn) DeleteSnapshot(*ec2.DeleteSnapshotInput) (*ec2.DeleteSnapshotOutput, error) {
+func (m *mockEC2Conn) DeleteSnapshot(ctx context.Context, input *ec2.DeleteSnapshotInput, opts ...func(*ec2.Options)) (*ec2.DeleteSnapshotOutput, error) {
 	m.lock.Lock()
 	m.deleteSnapshotCount++
 	m.lock.Unlock()
@@ -75,23 +75,31 @@ func (m *mockEC2Conn) DeleteSnapshot(*ec2.DeleteSnapshotInput) (*ec2.DeleteSnaps
 	return output, nil
 }
 
+// we don't need to mock out the waiter
+/*
 func (m *mockEC2Conn) WaitUntilImageAvailableWithContext(aws.Context, *ec2.DescribeImagesInput, ...request.WaiterOption) error {
 	m.lock.Lock()
 	m.waitCount++
 	m.lock.Unlock()
 	return nil
 }
+*/
 
-func getMockConn(config *AccessConfig, target string) (ec2iface.EC2API, error) {
+func getMockConn(ctx context.Context, config *AccessConfig, target string) (clients.Ec2Client, error) {
+	awscfg, err := config.GetAWSConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting region connection for copy: %s", err)
+	}
+	awscfg.Region = target
 	mockConn := &mockEC2Conn{
-		Config: aws.NewConfig(),
+		Config: awscfg,
 	}
 
 	return mockConn, nil
 }
 
 // Create statebag for running test
-func tState() multistep.StateBag {
+func tState(ctx context.Context) multistep.StateBag {
 	state := new(multistep.BasicStateBag)
 	state.Put("ui", &packersdk.BasicUi{
 		Reader: new(bytes.Buffer),
@@ -99,7 +107,7 @@ func tState() multistep.StateBag {
 	})
 	state.Put("amis", map[string]string{"us-east-1": "ami-12345"})
 	state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
-	conn, _ := getMockConn(&AccessConfig{}, "us-east-2")
+	conn, _ := getMockConn(ctx, &AccessConfig{}, "us-east-2")
 	state.Put("ec2", conn)
 	return state
 }
@@ -123,9 +131,10 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
-	state := tState()
+	ctx := t.Context()
+	state := tState(ctx)
 	state.Put("intermediary_image", true)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if len(stepAMIRegionCopy.Regions) != 1 {
 		t.Fatalf("Should have added original ami to Regions one time only")
@@ -145,7 +154,7 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	// mock out the region connection code
 	state.Put("intermediary_image", false)
 	stepAMIRegionCopy.getRegionConn = getMockConn
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if len(stepAMIRegionCopy.Regions) != 0 {
 		t.Fatalf("Should not have added original ami to Regions; not encrypting")
@@ -167,7 +176,7 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	// mock out the region connection code
 	state.Put("intermediary_image", false)
 	stepAMIRegionCopy.getRegionConn = getMockConn
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if len(stepAMIRegionCopy.Regions) != 0 {
 		t.Fatalf("Should not have added original ami to Regions once; not" +
@@ -193,7 +202,7 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 	state.Put("intermediary_image", true)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if len(stepAMIRegionCopy.Regions) != 3 {
 		t.Fatalf("Each AMI should have been added to Regions one time only.")
@@ -218,7 +227,7 @@ func TestStepAMIRegionCopy_duplicates(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 	state.Put("intermediary_image", false)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if len(stepAMIRegionCopy.Regions) != 2 {
 		t.Fatalf("Each AMI should have been added to Regions one time only, " +
@@ -240,9 +249,10 @@ func TestStepAmiRegionCopy_nil_encryption(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
-	state := tState()
+	ctx := t.Context()
+	state := tState(ctx)
 	state.Put("intermediary_image", false)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete != "" {
 		t.Fatalf("Shouldn't have an intermediary ami if encrypt is nil")
@@ -266,9 +276,10 @@ func TestStepAmiRegionCopy_true_encryption(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
-	state := tState()
+	ctx := t.Context()
+	state := tState(ctx)
 	state.Put("intermediary_image", true)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete == "" {
 		t.Fatalf("Should delete original AMI if encrypted=true")
@@ -292,8 +303,9 @@ func TestStepAmiRegionCopy_nil_intermediary(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
-	state := tState()
-	stepAMIRegionCopy.Run(context.Background(), state)
+	ctx := t.Context()
+	state := tState(ctx)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete != "" {
 		t.Fatalf("Should not delete original AMI if no intermediary")
@@ -320,9 +332,10 @@ func TestStepAmiRegionCopy_AMISkipBuildRegion(t *testing.T) {
 	// mock out the region connection code
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
-	state := tState()
+	ctx := t.Context()
+	state := tState(ctx)
 	state.Put("intermediary_image", true)
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete == "" {
 		t.Fatalf("Should delete original AMI if skip_save_build_region=true")
@@ -347,7 +360,7 @@ func TestStepAmiRegionCopy_AMISkipBuildRegion(t *testing.T) {
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
 	state.Put("intermediary_image", false) // not encrypted
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete != "" {
 		t.Fatalf("Shouldn't have an intermediary AMI, so dont delete original ami")
@@ -373,7 +386,7 @@ func TestStepAmiRegionCopy_AMISkipBuildRegion(t *testing.T) {
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
 	state.Put("intermediary_image", true) //encrypted
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete == "" {
 		t.Fatalf("Have to delete intermediary AMI")
@@ -399,7 +412,7 @@ func TestStepAmiRegionCopy_AMISkipBuildRegion(t *testing.T) {
 	stepAMIRegionCopy.getRegionConn = getMockConn
 
 	state.Put("intermediary_image", true) //encrypted
-	stepAMIRegionCopy.Run(context.Background(), state)
+	stepAMIRegionCopy.Run(ctx, state)
 
 	if stepAMIRegionCopy.toDelete == "" {
 		t.Fatalf("Have to delete intermediary AMI")

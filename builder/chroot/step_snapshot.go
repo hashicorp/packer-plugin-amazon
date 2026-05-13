@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -25,14 +27,15 @@ type StepSnapshot struct {
 }
 
 func (s *StepSnapshot) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
+	awscfg := state.Get("awsConfig").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	volumeId := state.Get("volume_id").(string)
 
 	ui.Say("Creating snapshot...")
 	description := fmt.Sprintf("Packer: %s", time.Now().String())
 
-	createSnapResp, err := ec2conn.CreateSnapshot(&ec2.CreateSnapshotInput{
+	createSnapResp, err := ec2conn.CreateSnapshot(ctx, &ec2.CreateSnapshotInput{
 		VolumeId:    &volumeId,
 		Description: &description,
 	})
@@ -59,7 +62,7 @@ func (s *StepSnapshot) Run(ctx context.Context, state multistep.StateBag) multis
 	state.Put("snapshot_id", s.snapshotId)
 
 	snapshots := map[string][]string{
-		*ec2conn.Config.Region: {s.snapshotId},
+		awscfg.Region: {s.snapshotId},
 	}
 	state.Put("snapshots", snapshots)
 
@@ -71,14 +74,15 @@ func (s *StepSnapshot) Cleanup(state multistep.StateBag) {
 		return
 	}
 
+	ctx := state.Get("context").(context.Context)
 	_, cancelled := state.GetOk(multistep.StateCancelled)
 	_, halted := state.GetOk(multistep.StateHalted)
 
 	if cancelled || halted {
-		ec2conn := state.Get("ec2").(*ec2.EC2)
+		ec2conn := state.Get("ec2").(clients.Ec2Client)
 		ui := state.Get("ui").(packersdk.Ui)
 		ui.Say("Removing snapshot since we cancelled or halted...")
-		_, err := ec2conn.DeleteSnapshot(&ec2.DeleteSnapshotInput{SnapshotId: &s.snapshotId})
+		_, err := ec2conn.DeleteSnapshot(ctx, &ec2.DeleteSnapshotInput{SnapshotId: &s.snapshotId})
 		if err != nil {
 			ui.Error(fmt.Sprintf("Error: %s", err))
 		}

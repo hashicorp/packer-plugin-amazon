@@ -11,8 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -131,7 +131,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepPreValidate) checkVpc(conn ec2iface.EC2API) error {
+func (s *StepPreValidate) checkVpc(conn clients.Ec2Client) error {
 	if s.VpcId == "" || (s.VpcId != "" && (s.SubnetId != "" || s.HasSubnetFilter)) {
 		// Skip validation if:
 		// * The user has not provided a VpcId.

@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -27,8 +29,8 @@ import (
 type StepCreateVolume struct {
 	PollingConfig         *awscommon.AWSPollingConfig
 	volumeId              string
-	RootVolumeSize        int64
-	RootVolumeType        string
+	RootVolumeSize        int32
+	RootVolumeType        ec2types.VolumeType
 	RootVolumeTags        map[string]string
 	RootVolumeEncryptBoot config.Trilean
 	RootVolumeKmsKeyId    string
@@ -37,11 +39,18 @@ type StepCreateVolume struct {
 
 func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	instance := state.Get("instance").(*ec2.Instance)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
-	volTags, err := awscommon.TagMap(s.RootVolumeTags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+	awscfg, err := config.GetAWSConfig(ctx)
+	if err != nil {
+		err := fmt.Errorf("Error getting AWS config: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	volTags, err := awscommon.TagMap(s.RootVolumeTags).EC2Tags(s.Ctx, awscfg.Region, state)
 	if err != nil {
 		err := fmt.Errorf("Error tagging volumes: %s", err)
 		state.Put("error", err)
@@ -50,11 +59,11 @@ func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) mu
 	}
 
 	// Collect tags for tagging on resource creation
-	var tagSpecs []*ec2.TagSpecification
+	var tagSpecs []ec2types.TagSpecification
 
 	if len(volTags) > 0 {
-		runVolTags := &ec2.TagSpecification{
-			ResourceType: aws.String("volume"),
+		runVolTags := ec2types.TagSpecification{
+			ResourceType: ec2types.ResourceTypeVolume,
 			Tags:         volTags,
 		}
 
@@ -63,8 +72,8 @@ func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) mu
 
 	var createVolume *ec2.CreateVolumeInput
 	if config.FromScratch {
-		rootVolumeType := ec2.VolumeTypeGp2
-		if s.RootVolumeType == "io1" {
+		rootVolumeType := ec2types.VolumeTypeGp2
+		if s.RootVolumeType == ec2types.VolumeTypeIo1 {
 			err := errors.New("Cannot use io1 volume when building from scratch")
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -74,18 +83,18 @@ func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) mu
 		}
 		createVolume = &ec2.CreateVolumeInput{
 			AvailabilityZone: instance.Placement.AvailabilityZone,
-			Size:             aws.Int64(s.RootVolumeSize),
-			VolumeType:       aws.String(rootVolumeType),
+			Size:             aws.Int32(s.RootVolumeSize),
+			VolumeType:       rootVolumeType,
 		}
 
 	} else {
 		// Determine the root device snapshot
-		image := state.Get("source_image").(*ec2.Image)
+		image := state.Get("source_image").(*ec2types.Image)
 		log.Printf("Searching for root device of the image (%s)", *image.RootDeviceName)
-		var rootDevice *ec2.BlockDeviceMapping
+		var rootDevice *ec2types.BlockDeviceMapping
 		for _, device := range image.BlockDeviceMappings {
-			if *device.DeviceName == *image.RootDeviceName {
-				rootDevice = device
+			if aws.ToString(device.DeviceName) == aws.ToString(image.RootDeviceName) {
+				rootDevice = &device
 				break
 			}
 		}
@@ -100,12 +109,12 @@ func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) mu
 	}
 
 	if len(tagSpecs) > 0 {
-		createVolume.SetTagSpecifications(tagSpecs)
+		createVolume.TagSpecifications = tagSpecs
 		volTags.Report(ui)
 	}
 	log.Printf("Create args: %+v", createVolume)
 
-	createVolumeResp, err := ec2conn.CreateVolume(createVolume)
+	createVolumeResp, err := ec2conn.CreateVolume(ctx, createVolume)
 	if err != nil {
 		err := fmt.Errorf("Error creating root volume: %s", err)
 		state.Put("error", err)
@@ -126,6 +135,7 @@ func (s *StepCreateVolume) Run(ctx context.Context, state multistep.StateBag) mu
 		return multistep.ActionHalt
 	}
 
+	state.Put("context", ctx)
 	state.Put("volume_id", s.volumeId)
 	return multistep.ActionContinue
 }
@@ -135,17 +145,18 @@ func (s *StepCreateVolume) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deleting the created EBS volume...")
-	_, err := ec2conn.DeleteVolume(&ec2.DeleteVolumeInput{VolumeId: &s.volumeId})
+	ctx := state.Get("context").(context.Context)
+	_, err := ec2conn.DeleteVolume(ctx, &ec2.DeleteVolumeInput{VolumeId: &s.volumeId})
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error deleting EBS volume: %s", err))
 	}
 }
 
-func (s *StepCreateVolume) buildCreateVolumeInput(az string, rootDevice *ec2.BlockDeviceMapping) (*ec2.CreateVolumeInput, error) {
+func (s *StepCreateVolume) buildCreateVolumeInput(az string, rootDevice *ec2types.BlockDeviceMapping) (*ec2.CreateVolumeInput, error) {
 	if rootDevice == nil {
 		return nil, fmt.Errorf("Couldn't find root device!")
 	}
@@ -159,7 +170,7 @@ func (s *StepCreateVolume) buildCreateVolumeInput(az string, rootDevice *ec2.Blo
 		KmsKeyId:         rootDevice.Ebs.KmsKeyId,
 	}
 	if s.RootVolumeSize > *rootDevice.Ebs.VolumeSize {
-		createVolumeInput.Size = aws.Int64(s.RootVolumeSize)
+		createVolumeInput.Size = aws.Int32(s.RootVolumeSize)
 	}
 
 	if s.RootVolumeEncryptBoot.True() {
@@ -170,15 +181,15 @@ func (s *StepCreateVolume) buildCreateVolumeInput(az string, rootDevice *ec2.Blo
 		createVolumeInput.KmsKeyId = aws.String(s.RootVolumeKmsKeyId)
 	}
 
-	if s.RootVolumeType == "" || s.RootVolumeType == *rootDevice.Ebs.VolumeType {
+	if s.RootVolumeType == "" || s.RootVolumeType == rootDevice.Ebs.VolumeType {
 		return createVolumeInput, nil
 	}
 
 	if s.RootVolumeType == "io1" {
-		return nil, fmt.Errorf("Root volume type cannot be io1, because existing root volume type was %s", *rootDevice.Ebs.VolumeType)
+		return nil, fmt.Errorf("Root volume type cannot be io1, because existing root volume type was %s", rootDevice.Ebs.VolumeType)
 	}
 
-	createVolumeInput.VolumeType = aws.String(s.RootVolumeType)
+	createVolumeInput.VolumeType = s.RootVolumeType
 	// non io1 cannot set iops
 	createVolumeInput.Iops = nil
 

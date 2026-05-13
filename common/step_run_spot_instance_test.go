@@ -148,7 +148,7 @@ func TestCreateTemplateData_NoEphemeral(t *testing.T) {
 }
 
 type runSpotEC2ConnMock struct {
-	//ec2iface.EC2API
+	//clients.Ec2Client
 	clients.Ec2Client
 
 	CreateLaunchTemplateParams []*ec2.CreateLaunchTemplateInput

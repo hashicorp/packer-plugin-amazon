@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2instanceconnect"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	pssm "github.com/hashicorp/packer-plugin-amazon/builder/common/ssm"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/communicator/sshkey"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
@@ -24,7 +24,7 @@ import (
 )
 
 type StepCreateSSMTunnel struct {
-	AWSSession       *session.Session
+	AwsConfig        aws.Config
 	Region           string
 	LocalPortNumber  int
 	RemotePortNumber int
@@ -37,7 +37,7 @@ type StepCreateSSMTunnel struct {
 // Run executes the Packer build step that creates a session tunnel.
 func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
-
+	awscfg := state.Get("awsConfig").(*aws.Config)
 	if !s.SSMAgentEnabled {
 		return multistep.ActionContinue
 	}
@@ -62,7 +62,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 	}
 
 	// Get instance information
-	instance, ok := state.Get("instance").(*ec2.Instance)
+	instance, ok := state.Get("instance").(*ec2types.Instance)
 	if !ok {
 		err := fmt.Errorf("error encountered in obtaining target instance id for session tunnel")
 		ui.Error(err.Error())
@@ -74,12 +74,12 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 
 	ssmCtx, ssmCancel := context.WithCancel(ctx)
 	s.stopSSMCommand = ssmCancel
-	ec2Conn := state.Get("ec2").(*ec2.EC2)
+	ec2Conn := state.Get("ec2").(clients.Ec2Client)
 
-	ssmconn := ssm.New(s.AWSSession)
+	ssmconn := ssm.NewFromConfig(awscfg.Copy())
 	session := pssm.Session{
 		SvcClient:  ssmconn,
-		InstanceID: aws.StringValue(instance.InstanceId),
+		InstanceID: aws.ToString(instance.InstanceId),
 		RemotePort: s.RemotePortNumber,
 		LocalPort:  s.LocalPortNumber,
 		Region:     s.Region,
@@ -90,7 +90,7 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 	return multistep.ActionContinue
 }
 
-func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui packersdk.Ui, session *pssm.Session, instance *ec2.Instance) {
+func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui packersdk.Ui, session *pssm.Session, instance *ec2types.Instance) {
 	sessionChan := make(chan struct{})
 
 	go func() {
@@ -99,7 +99,7 @@ func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui
 		for range sessionChan {
 			if len(s.SSHConfig.SSHPrivateKey) != 0 && s.SSHConfig.SSHKeyPairName == "" {
 				ui.Say("Uploading SSH public key to instance")
-				err := s.sendUserSSHPublicKey(instance, s.SSHConfig.SSHPrivateKey)
+				err := s.sendUserSSHPublicKey(ctx, instance, s.SSHConfig.SSHPrivateKey)
 				if err != nil {
 					ui.Error(err.Error())
 				}
@@ -114,14 +114,15 @@ func (s *StepCreateSSMTunnel) CreatePersistentSSMSession(ctx context.Context, ui
 }
 
 func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
-	instance *ec2.Instance,
+	ctx context.Context,
+	instance *ec2types.Instance,
 	privateKey []byte,
 ) error {
 	publicKey, err := sshkey.PublicKeyFromPrivate(privateKey)
 	if err != nil {
 		return fmt.Errorf("Error getting public key from private key: %s", err)
 	}
-	svc := ec2instanceconnect.New(s.AWSSession)
+	svc := ec2instanceconnect.NewFromConfig(s.AwsConfig)
 	input := &ec2instanceconnect.SendSSHPublicKeyInput{
 		AvailabilityZone: aws.String(*instance.Placement.AvailabilityZone),
 		InstanceId:       aws.String(*instance.InstanceId),
@@ -129,7 +130,7 @@ func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
 		SSHPublicKey:     aws.String(strings.TrimSuffix(string(publicKey), "\n")),
 	}
 	log.Printf("Sending public key to instance: %s", *input.InstanceId)
-	result, err := svc.SendSSHPublicKey(input)
+	result, err := svc.SendSSHPublicKey(ctx, input)
 	if err != nil {
 		err := fmt.Errorf(`
         error encountered in sending public key to instance: %s
@@ -137,7 +138,7 @@ func (s *StepCreateSSMTunnel) sendUserSSHPublicKey(
       https://docs.aws.amazon.com/ec2-instance-connect/latest/APIReference/API_SendSSHPublicKey.html`, err)
 		return err
 	} else {
-		if *result.Success {
+		if result.Success {
 			return nil
 		}
 	}

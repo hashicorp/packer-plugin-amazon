@@ -5,10 +5,13 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
 type AmiFilterOptions struct {
@@ -31,11 +34,11 @@ type AmiFilterOptions struct {
 	IncludeDeprecated bool `mapstructure:"include_deprecated"`
 }
 
-func (d *AmiFilterOptions) GetOwners() []*string {
-	res := make([]*string, 0, len(d.Owners))
+func (d *AmiFilterOptions) GetOwners() []string {
+	res := make([]string, 0, len(d.Owners))
 	for _, owner := range d.Owners {
 		i := owner
-		res = append(res, &i)
+		res = append(res, i)
 	}
 	return res
 }
@@ -48,7 +51,7 @@ func (d *AmiFilterOptions) NoOwner() bool {
 	return len(d.Owners) == 0
 }
 
-func (d *AmiFilterOptions) GetFilteredImage(params *ec2.DescribeImagesInput, ec2conn *ec2.EC2) (*ec2.Image, error) {
+func (d *AmiFilterOptions) GetFilteredImage(ctx context.Context, params *ec2.DescribeImagesInput, ec2conn clients.Ec2Client) (*ec2types.Image, error) {
 	// We have filters to apply
 	if len(d.Filters) > 0 {
 		amiFilters, err := buildEc2Filters(d.Filters)
@@ -65,10 +68,10 @@ func (d *AmiFilterOptions) GetFilteredImage(params *ec2.DescribeImagesInput, ec2
 	params.IncludeDeprecated = &d.IncludeDeprecated
 
 	log.Printf("Using AMI Filters %v", params)
-	req, imageResp := ec2conn.DescribeImagesRequest(params)
-	req.RetryCount = 11
+	imageResp, err := ec2conn.DescribeImages(ctx, params, func(o *ec2.Options) {
+		o.RetryMaxAttempts = 11
+	})
 
-	err := req.Send()
 	if err != nil {
 		err := fmt.Errorf("Error querying AMI: %s", err)
 		return nil, err
@@ -84,11 +87,11 @@ func (d *AmiFilterOptions) GetFilteredImage(params *ec2.DescribeImagesInput, ec2
 		return nil, err
 	}
 
-	var image *ec2.Image
+	var image ec2types.Image
 	if d.MostRecent {
 		image = mostRecentAmi(imageResp.Images)
 	} else {
 		image = imageResp.Images[0]
 	}
-	return image, nil
+	return &image, nil
 }

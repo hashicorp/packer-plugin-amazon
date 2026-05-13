@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -22,7 +22,7 @@ type StepModifyEBSBackedInstance struct {
 }
 
 func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	instance := state.Get("instance").(*ec2.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 

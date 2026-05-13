@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -19,15 +19,23 @@ import (
 type StepInstanceInfo struct{}
 
 func (s *StepInstanceInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	session := state.Get("awsSession").(*session.Session)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	config := state.Get("config").(*Config)
+
+	awscfg, err := config.GetAWSConfig(ctx)
+	if err != nil {
+		err := fmt.Errorf("Error getting AWS config: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
 
 	// Get our own instance ID
 	ui.Say("Gathering information about this EC2 instance...")
 
-	ec2meta := ec2metadata.New(session)
-	identity, err := ec2meta.GetInstanceIdentityDocument()
+	idmsconn := imds.NewFromConfig(*awscfg)
+	identity, err := idmsconn.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		err := fmt.Errorf(
 			"Error retrieving the ID of the instance Packer is running on.\n" +
@@ -39,7 +47,7 @@ func (s *StepInstanceInfo) Run(ctx context.Context, state multistep.StateBag) mu
 	log.Printf("Instance ID: %s", identity.InstanceID)
 
 	// Query the entire instance metadata
-	instancesResp, err := ec2conn.DescribeInstances(&ec2.DescribeInstancesInput{InstanceIds: []*string{&identity.InstanceID}})
+	instancesResp, err := ec2conn.DescribeInstances(ctx, &ec2.DescribeInstancesInput{InstanceIds: []string{identity.InstanceID}})
 	if err != nil {
 		err := fmt.Errorf("Error getting instance data: %s", err)
 		state.Put("error", err)

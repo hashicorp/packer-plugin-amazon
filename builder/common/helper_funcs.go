@@ -9,15 +9,16 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 )
 
 // DestroyAMIs deregisters the AWS machine images in imageids from an active AWS account
-func DestroyAMIs(imageids []*string, ec2conn *ec2.EC2) error {
-	resp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+func DestroyAMIs(ctx context.Context, imageids []string, ec2conn clients.Ec2Client) error {
+	resp, err := ec2conn.DescribeImages(ctx, &ec2.DescribeImagesInput{
 		ImageIds: imageids,
 	})
 
@@ -37,7 +38,7 @@ func DestroyAMIs(imageids []*string, ec2conn *ec2.EC2) error {
 			},
 			RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-			_, err := ec2conn.DeregisterImage(&ec2.DeregisterImageInput{
+			_, err := ec2conn.DeregisterImage(ctx, &ec2.DeregisterImageInput{
 				ImageId: i.ImageId,
 			})
 			return err
@@ -51,7 +52,7 @@ func DestroyAMIs(imageids []*string, ec2conn *ec2.EC2) error {
 
 		// Delete snapshot(s) by image
 		for _, b := range i.BlockDeviceMappings {
-			if b.Ebs != nil && aws.StringValue(b.Ebs.SnapshotId) != "" {
+			if b.Ebs != nil && aws.ToString(b.Ebs.SnapshotId) != "" {
 
 				err = retry.Config{
 					Tries: 11,
@@ -60,7 +61,7 @@ func DestroyAMIs(imageids []*string, ec2conn *ec2.EC2) error {
 					},
 					RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 				}.Run(ctx, func(ctx context.Context) error {
-					_, err := ec2conn.DeleteSnapshot(&ec2.DeleteSnapshotInput{
+					_, err := ec2conn.DeleteSnapshot(ctx, &ec2.DeleteSnapshotInput{
 						SnapshotId: b.Ebs.SnapshotId,
 					})
 					return err

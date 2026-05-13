@@ -11,15 +11,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	confighelper "github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 type mockEC2ClientStepNetworkTests struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 
 	describeInstanceTypeOfferings func(in *ec2.DescribeInstanceTypeOfferingsInput) (*ec2.DescribeInstanceTypeOfferingsOutput, error)
 	describeVpcs                  func(*ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)

@@ -8,9 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -27,8 +26,7 @@ type StepCreateTags struct {
 }
 
 func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	session := state.Get("awsSession").(*session.Session)
+	awscfg := state.Get("awsConfig").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	if s.AMISkipCreateImage {
@@ -46,13 +44,13 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Adding tags to AMI (%s)...", ami))
 
-		regionConn := ec2.New(session, &aws.Config{
-			Region: aws.String(region),
+		regionConn := ec2.NewFromConfig(*awscfg, func(o *ec2.Options) {
+			o.Region = region
 		})
 
 		// Retrieve image list for given AMI
-		resourceIds := []*string{&ami}
-		imageResp, err := regionConn.DescribeImages(&ec2.DescribeImagesInput{
+		resourceIds := []string{ami}
+		imageResp, err := regionConn.DescribeImages(ctx, &ec2.DescribeImagesInput{
 			ImageIds: resourceIds,
 		})
 
@@ -71,20 +69,20 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 		}
 
 		image := imageResp.Images[0]
-		snapshotIds := []*string{}
+		snapshotIds := []string{}
 
 		// Add only those with a Snapshot ID, i.e. not Ephemeral
 		for _, device := range image.BlockDeviceMappings {
 			if device.Ebs != nil && device.Ebs.SnapshotId != nil {
 				ui.Say(fmt.Sprintf("Tagging snapshot: %s", *device.Ebs.SnapshotId))
-				resourceIds = append(resourceIds, device.Ebs.SnapshotId)
-				snapshotIds = append(snapshotIds, device.Ebs.SnapshotId)
+				resourceIds = append(resourceIds, aws.ToString(device.Ebs.SnapshotId))
+				snapshotIds = append(snapshotIds, aws.ToString(device.Ebs.SnapshotId))
 			}
 		}
 
 		// Convert tags to ec2.Tag format
 		ui.Say("Creating AMI tags")
-		amiTags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		amiTags, err := TagMap(s.Tags).EC2Tags(s.Ctx, awscfg.Region, state)
 		if err != nil {
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -93,7 +91,7 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 		amiTags.Report(ui)
 
 		ui.Say("Creating snapshot tags")
-		snapshotTags, err := TagMap(s.SnapshotTags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		snapshotTags, err := TagMap(s.SnapshotTags).EC2Tags(s.Ctx, awscfg.Region, state)
 		if err != nil {
 			state.Put("error", err)
 			ui.Error(err.Error())
@@ -114,7 +112,7 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 
 			var err error
 			if len(amiTags) > 0 {
-				_, err = regionConn.CreateTags(&ec2.CreateTagsInput{
+				_, err = regionConn.CreateTags(ctx, &ec2.CreateTagsInput{
 					Resources: resourceIds,
 					Tags:      amiTags,
 				})
@@ -125,7 +123,7 @@ func (s *StepCreateTags) Run(ctx context.Context, state multistep.StateBag) mult
 
 			// Override tags on snapshots
 			if len(snapshotTags) > 0 {
-				_, err = regionConn.CreateTags(&ec2.CreateTagsInput{
+				_, err = regionConn.CreateTags(ctx, &ec2.CreateTagsInput{
 					Resources: snapshotIds,
 					Tags:      snapshotTags,
 				})

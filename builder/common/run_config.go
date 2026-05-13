@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -75,7 +75,7 @@ type Placement struct {
 	//
 	// The default is "default", meaning shared tenancy. Allowed values are "default",
 	// "dedicated" and "host".
-	Tenancy string `mapstructure:"tenancy" required:"false"`
+	Tenancy ec2types.Tenancy `mapstructure:"tenancy" required:"false"`
 }
 
 func (p Placement) Prepare() []error {
@@ -87,7 +87,7 @@ func (p Placement) Prepare() []error {
 
 	if p.HostId != "" || p.HostResourceGroupArn != "" {
 		switch p.Tenancy {
-		case "", "host":
+		case "", ec2types.TenancyHost:
 		default:
 			errs = append(errs, fmt.Errorf("The tenancy should be `host` if either the `host_id` or `host_resource_group_arn` attributes are specified."))
 		}
@@ -146,10 +146,10 @@ type RunConfig struct {
 	// duration. Note: This parameter is no longer available to new customers
 	// from July 1, 2021. [See Amazon's
 	//documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
-	BlockDurationMinutes int64 `mapstructure:"block_duration_minutes" required:"false"`
+	BlockDurationMinutes int32 `mapstructure:"block_duration_minutes" required:"false"`
 	// Set the preference for using a capacity reservation if one exists.
 	// Either will be `open` or `none`. Defaults to `none`
-	CapacityReservationPreference string `mapstructure:"capacity_reservation_preference" required:"false"`
+	CapacityReservationPreference ec2types.CapacityReservationPreference `mapstructure:"capacity_reservation_preference" required:"false"`
 	// Provide the specific EC2 Capacity Reservation ID that will be used
 	// by Packer.
 	CapacityReservationId string `mapstructure:"capacity_reservation_id" required:"false"`
@@ -284,7 +284,7 @@ type RunConfig struct {
 	InstanceInitiatedShutdownBehavior string `mapstructure:"shutdown_behavior" required:"false"`
 	// The EC2 instance type to use while building the
 	// AMI, such as t2.small.
-	InstanceType string `mapstructure:"instance_type" required:"true"`
+	InstanceType ec2types.InstanceType `mapstructure:"instance_type" required:"true"`
 	// Filters used to populate the `security_group_ids` field.
 	//
 	// HCL2 Example:
@@ -408,7 +408,7 @@ type RunConfig struct {
 	// across the Spot Instance pools specified by the EC2 Fleet launch configuration.
 	// If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
 	// For more information, see [Amazon EC2 User Guide] (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html)
-	SpotAllocationStrategy string `mapstructure:"spot_allocation_strategy" required:"false"`
+	SpotAllocationStrategy ec2types.SpotAllocationStrategy `mapstructure:"spot_allocation_strategy" required:"false"`
 	// a list of acceptable instance
 	// types to run your build on. We will request a spot instance using the max
 	// price of spot_price and the allocation strategy of "lowest price".
@@ -418,7 +418,7 @@ type RunConfig struct {
 	// This feature exists to help prevent situations where a Packer build fails
 	// because a particular availability zone does not have capacity for the
 	// specific instance_type requested in instance_type.
-	SpotInstanceTypes []string `mapstructure:"spot_instance_types" required:"false"`
+	SpotInstanceTypes []ec2types.InstanceType `mapstructure:"spot_instance_types" required:"false"`
 	// With Spot Instances, you pay the Spot price that's in effect for the
 	// time period your instances are running. Spot Instance prices are set by
 	// Amazon EC2 and adjust gradually based on long-term trends in supply and
@@ -568,7 +568,7 @@ type RunConfig struct {
 	// Refer to the [Placement docs](#placement-configuration) for more information on the supported attributes for placement configuration.
 	Placement Placement `mapstructure:"placement" required:"false"`
 	// Deprecated: Use Placement Tenancy instead.
-	Tenancy string `mapstructure:"tenancy" required:"false"`
+	Tenancy ec2types.Tenancy `mapstructure:"tenancy" required:"false"`
 	// A list of IPv4/IPv6 CIDR blocks to be authorized access to the instance, when
 	// packer is creating a temporary security group.
 	//
@@ -848,7 +848,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		}
 	}
 
-	if c.SpotAllocationStrategy != "" && !slices.Contains(ec2.SpotAllocationStrategy_Values(),
+	if c.SpotAllocationStrategy != "" && !slices.Contains(c.SpotAllocationStrategy.Values(),
 		c.SpotAllocationStrategy) {
 		errs = append(errs, fmt.Errorf(
 			"Unknown spot_allocation_strategy: %s", c.SpotAllocationStrategy))
@@ -896,7 +896,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 			errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
 		}
 
-		if c.SpotPrice != "" && regexp.MustCompile(`^t2\.`).MatchString(c.InstanceType) {
+		if c.SpotPrice != "" && regexp.MustCompile(`^t2\.`).MatchString(string(c.InstanceType)) {
 			errs = append(errs, fmt.Errorf("Error: Unlimited credits cannot be used in conjunction with Spot Instances"))
 		}
 
@@ -924,8 +924,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, fmt.Errorf(`capacity_reservation_preference only accepts 'none' or 'open' values`))
 	}
 
-	var tenancy string
-	tenancies := []string{c.Placement.Tenancy, c.Tenancy}
+	var tenancy ec2types.Tenancy
+	tenancies := []ec2types.Tenancy{c.Placement.Tenancy, c.Tenancy}
 
 	for i := range tenancies {
 		if tenancies[i] != "" {
@@ -950,7 +950,7 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 			errs = append(errs, fmt.Errorf("Error: Nitro Enclave cannot be used in conjunction with Spot Instances"))
 		}
 		// check if we have an instance in the t-line (burstable instances)
-		if strings.HasPrefix(c.InstanceType, "t") {
+		if strings.HasPrefix(string(c.InstanceType), "t") {
 			errs = append(errs, fmt.Errorf("Error: Nitro Enclaves cannot be used in conjunction with burstable instance types: %s", c.InstanceType))
 		}
 	}
@@ -971,5 +971,5 @@ func (c *RunConfig) SSMAgentEnabled() bool {
 // of the following types T2, T3a, T3, T4g
 func (c *RunConfig) IsBurstableInstanceType() bool {
 	r := `^t(:?2|3a?|4g)\.`
-	return regexp.MustCompile(r).MatchString(c.InstanceType)
+	return regexp.MustCompile(r).MatchString(string(c.InstanceType))
 }

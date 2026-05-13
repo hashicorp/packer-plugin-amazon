@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -29,9 +30,9 @@ type StepAttachVolume struct {
 }
 
 func (s *StepAttachVolume) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	device := state.Get("device").(string)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 	volumeId := state.Get("volume_id").(string)
 
@@ -39,7 +40,7 @@ func (s *StepAttachVolume) Run(ctx context.Context, state multistep.StateBag) mu
 	attachVolume := strings.Replace(device, "/xvd", "/sd", 1)
 
 	ui.Say(fmt.Sprintf("Attaching the root volume to %s", attachVolume))
-	_, err := ec2conn.AttachVolume(&ec2.AttachVolumeInput{
+	_, err := ec2conn.AttachVolume(ctx, &ec2.AttachVolumeInput{
 		InstanceId: instance.InstanceId,
 		VolumeId:   &volumeId,
 		Device:     &attachVolume,
@@ -64,27 +65,29 @@ func (s *StepAttachVolume) Run(ctx context.Context, state multistep.StateBag) mu
 		return multistep.ActionHalt
 	}
 
+	state.Put("context", ctx)
 	state.Put("attach_cleanup", s)
 	return multistep.ActionContinue
 }
 
 func (s *StepAttachVolume) Cleanup(state multistep.StateBag) {
+	ctx := state.Get("context").(context.Context)
 	ui := state.Get("ui").(packersdk.Ui)
-	if err := s.CleanupFunc(state); err != nil {
+	if err := s.CleanupFunc(ctx, state); err != nil {
 		ui.Error(err.Error())
 	}
 }
 
-func (s *StepAttachVolume) CleanupFunc(state multistep.StateBag) error {
+func (s *StepAttachVolume) CleanupFunc(ctx context.Context, state multistep.StateBag) error {
 	if !s.attached {
 		return nil
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Detaching EBS volume...")
-	_, err := ec2conn.DetachVolume(&ec2.DetachVolumeInput{VolumeId: &s.volumeId})
+	_, err := ec2conn.DetachVolume(ctx, &ec2.DetachVolumeInput{VolumeId: &s.volumeId})
 	if err != nil {
 		return fmt.Errorf("Error detaching EBS volume: %s", err)
 	}
@@ -92,7 +95,7 @@ func (s *StepAttachVolume) CleanupFunc(state multistep.StateBag) error {
 	s.attached = false
 
 	// Wait for the volume to detach
-	err = s.PollingConfig.WaitUntilVolumeDetached(aws.BackgroundContext(), ec2conn, s.volumeId)
+	err = s.PollingConfig.WaitUntilVolumeDetached(ctx, ec2conn, s.volumeId)
 	if err != nil {
 		return fmt.Errorf("Error waiting for volume: %s", err)
 	}

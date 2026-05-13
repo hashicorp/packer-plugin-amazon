@@ -4,10 +4,12 @@
 package common
 
 import (
+	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
@@ -85,9 +87,9 @@ func testSSHHost(t *testing.T, allowTries int, vpcId string, sshInterface string
 		ipv6:       ipv6,
 	}
 
-	f := SSHHost(e, sshInterface, sshHostOverride)
+	f := SSHHost(t.Context(), e, sshInterface, sshHostOverride)
 	st := &multistep.BasicStateBag{}
-	st.Put("instance", &ec2.Instance{
+	st.Put("instance", &ec2types.Instance{
 		InstanceId: aws.String("instance-id"),
 	})
 
@@ -118,10 +120,10 @@ type fakeEC2Describer struct {
 	ipv6                                       string
 }
 
-func (d *fakeEC2Describer) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (d *fakeEC2Describer) DescribeInstances(ctx context.Context, in *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	d.tries++
 
-	instance := &ec2.Instance{
+	instance := ec2types.Instance{
 		InstanceId: aws.String("instance-id"),
 	}
 
@@ -138,9 +140,9 @@ func (d *fakeEC2Describer) DescribeInstances(in *ec2.DescribeInstancesInput) (*e
 	}
 
 	out := &ec2.DescribeInstancesOutput{
-		Reservations: []*ec2.Reservation{
+		Reservations: []ec2types.Reservation{
 			{
-				Instances: []*ec2.Instance{instance},
+				Instances: []ec2types.Instance{instance},
 			},
 		},
 	}

@@ -11,14 +11,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type mockEC2KeyPairConn struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 
 	CreateKeyPairCount int
 	CreateKeyPairArgs  []ec2.CreateKeyPairInput
@@ -38,7 +38,7 @@ func (m *mockEC2KeyPairConn) CreateKeyPair(keyPairInput *ec2.CreateKeyPairInput)
 	return output, nil
 }
 
-func getKeyPairMockConn() ec2iface.EC2API {
+func getKeyPairMockConn() clients.Ec2Client {
 	return &mockEC2KeyPairConn{}
 }
 

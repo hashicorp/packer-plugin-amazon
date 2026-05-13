@@ -6,18 +6,17 @@ package chroot
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	amazon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/common"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-func testImage() ec2.Image {
-	return ec2.Image{
+func testImage() ec2types.Image {
+	return ec2types.Image{
 		ImageId:      aws.String("ami-abcd1234"),
 		Name:         aws.String("ami_test_name"),
-		Architecture: aws.String("x86_64"),
+		Architecture: ec2types.ArchitectureValuesX8664,
 		KernelId:     aws.String("aki-abcd1234"),
 	}
 }
@@ -31,11 +30,11 @@ func TestStepRegisterAmi_buildRegisterOpts_pv(t *testing.T) {
 
 	image := testImage()
 
-	blockDevices := []*ec2.BlockDeviceMapping{}
+	blockDevices := []ec2types.BlockDeviceMapping{}
 
 	opts := buildRegisterOptsFromExistingImage(&config, &image, blockDevices, rootDeviceName, config.AMIName)
 
-	expected := config.AMIVirtType
+	expected := string(config.AMIVirtType)
 	if *opts.VirtualizationType != expected {
 		t.Fatalf("Unexpected VirtType value: expected %s got %s\n", expected, *opts.VirtualizationType)
 	}
@@ -65,11 +64,11 @@ func TestStepRegisterAmi_buildRegisterOpts_hvm(t *testing.T) {
 
 	image := testImage()
 
-	blockDevices := []*ec2.BlockDeviceMapping{}
+	blockDevices := []ec2types.BlockDeviceMapping{}
 
 	opts := buildRegisterOptsFromExistingImage(&config, &image, blockDevices, rootDeviceName, config.AMIName)
 
-	expected := config.AMIVirtType
+	expected := string(config.AMIVirtType)
 	if *opts.VirtualizationType != expected {
 		t.Fatalf("Unexpected VirtType value: expected %s got %s\n", expected, *opts.VirtualizationType)
 	}
@@ -121,13 +120,13 @@ func TestStepRegisterAmi_buildRegisterOptFromExistingImage(t *testing.T) {
 		FromScratch:  false,
 		PackerConfig: common.PackerConfig{},
 	}
-	sourceImage := ec2.Image{
+	sourceImage := ec2types.Image{
 		RootDeviceName: &rootDeviceName,
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+		BlockDeviceMappings: []ec2types.BlockDeviceMapping{
 			{
 				DeviceName: &rootDeviceName,
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(10),
+				Ebs: &ec2types.EbsBlockDevice{
+					VolumeSize: aws.Int32(10),
 				},
 			},
 			// Throw in an ephemeral device, it seems like all devices in the return struct in a source AMI have
@@ -135,8 +134,8 @@ func TestStepRegisterAmi_buildRegisterOptFromExistingImage(t *testing.T) {
 			{
 				DeviceName:  aws.String("/dev/sdb"),
 				VirtualName: aws.String("ephemeral0"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(0),
+				Ebs: &ec2types.EbsBlockDevice{
+					VolumeSize: aws.Int32(0),
 				},
 			},
 		},
@@ -179,13 +178,13 @@ func TestStepRegisterAmi_buildRegisterOptFromExistingImageWithBlockDeviceMapping
 	}
 
 	// Intentionally try to use a different root devicename
-	sourceImage := ec2.Image{
+	sourceImage := ec2types.Image{
 		RootDeviceName: aws.String(oldRootDevice),
-		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
+		BlockDeviceMappings: []ec2types.BlockDeviceMapping{
 			{
 				DeviceName: aws.String(oldRootDevice),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(10),
+				Ebs: &ec2types.EbsBlockDevice{
+					VolumeSize: aws.Int32(10),
 				},
 			},
 			// Throw in an ephemeral device, it seems like all devices in the return struct in a source AMI have
@@ -193,8 +192,8 @@ func TestStepRegisterAmi_buildRegisterOptFromExistingImageWithBlockDeviceMapping
 			{
 				DeviceName:  aws.String("/dev/sdb"),
 				VirtualName: aws.String("ephemeral0"),
-				Ebs: &ec2.EbsBlockDevice{
-					VolumeSize: aws.Int64(0),
+				Ebs: &ec2types.EbsBlockDevice{
+					VolumeSize: aws.Int32(0),
 				},
 			},
 		},

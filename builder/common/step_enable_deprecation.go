@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -38,7 +38,7 @@ func (s *StepEnableDeprecation) Run(ctx context.Context, state multistep.StateBa
 	for region, ami := range amis {
 		ui.Say(fmt.Sprintf("Enabling deprecation on AMI (%s) in region %q ...", ami, region))
 
-		conn, err := GetRegionConn(s.AccessConfig, region)
+		conn, err := GetRegionConn(ctx, s.AccessConfig, region)
 		if err != nil {
 			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
 			state.Put("error", err.Error())

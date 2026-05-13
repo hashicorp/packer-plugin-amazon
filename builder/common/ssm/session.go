@@ -12,29 +12,29 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
 	"github.com/hashicorp/packer-plugin-sdk/shell-local/localexec"
 )
 
 type Session struct {
-	SvcClient             ssmiface.SSMAPI
+	SvcClient             *ssm.Client
 	Region                string
 	InstanceID            string
 	LocalPort, RemotePort int
-	Ec2Conn               *ec2.EC2
+	Ec2Conn               clients.Ec2Client
 }
 
 func (s Session) buildTunnelInput() *ssm.StartSessionInput {
 	portNumber, localPortNumber := strconv.Itoa(s.RemotePort), strconv.Itoa(s.LocalPort)
-	params := map[string][]*string{
-		"portNumber":      []*string{aws.String(portNumber)},
-		"localPortNumber": []*string{aws.String(localPortNumber)},
+	params := map[string][]string{
+		"portNumber":      []string{portNumber},
+		"localPortNumber": []string{localPortNumber},
 	}
 
 	return &ssm.StartSessionInput{
@@ -53,7 +53,7 @@ func (s Session) getCommand(ctx context.Context) ([]string, string, error) {
 		ShouldRetry: func(err error) bool { return awserrors.Matches(err, "TargetNotConnected", "") },
 		RetryDelay:  (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
 	}.Run(ctx, func(ctx context.Context) (err error) {
-		session, err = s.SvcClient.StartSessionWithContext(ctx, input)
+		session, err = s.SvcClient.StartSession(ctx, input)
 		return err
 	})
 
@@ -91,9 +91,9 @@ func (s Session) getCommand(ctx context.Context) ([]string, string, error) {
 
 // terminate an interactive Systems Manager session with a remote instance via the
 // AWS session-manager-plugin. Session cannot be resumed after termination.
-func (s Session) terminateSession(sessionID string, ui packersdk.Ui) {
+func (s Session) terminateSession(ctx context.Context, sessionID string, ui packersdk.Ui) {
 	log.Printf("ssm: Terminating PortForwarding session %q", sessionID)
-	_, err := s.SvcClient.TerminateSession(&ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
+	_, err := s.SvcClient.TerminateSession(ctx, &ssm.TerminateSessionInput{SessionId: aws.String(sessionID)})
 	if err != nil {
 		ui.Error(fmt.Sprintf("Error terminating SSM Session %q, this does not affect the built AMI. Please terminate the session manually: %s", sessionID, err))
 	}
@@ -125,22 +125,22 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 					// session will be terminated but exitSession is not set to true
 					// because the instance is still running and we might want to do a reconnect
 					case <-sessionFinished:
-						s.terminateSession(sessionID, ui)
+						s.terminateSession(ctx, sessionID, ui)
 						return
 					case <-timer.C: // wait for the session to be created
-						instanceState, err := s.Ec2Conn.DescribeInstanceStatus(&ec2.DescribeInstanceStatusInput{
-							InstanceIds: []*string{aws.String(s.InstanceID)},
+						instanceState, err := s.Ec2Conn.DescribeInstanceStatus(ctx, &ec2.DescribeInstanceStatusInput{
+							InstanceIds: []string{s.InstanceID},
 						})
 						if err != nil {
 							log.Printf("ssm: Error describing instance status: %s", err)
 						} else if instanceState != nil && len(instanceState.InstanceStatuses) == 0 {
 							// if no instance status is returned, the instance is terminated
 							exitSession = true
-							s.terminateSession(sessionID, ui)
+							s.terminateSession(ctx, sessionID, ui)
 							return
 						}
 					case <-ctx.Done():
-						s.terminateSession(sessionID, ui)
+						s.terminateSession(ctx, sessionID, ui)
 						return
 					}
 				}
@@ -153,7 +153,7 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 		sessionChan <- struct{}{}
 		cmd := exec.CommandContext(ctx, "session-manager-plugin", args...)
 
-		ui.Message(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
+		ui.Sayf("Starting portForwarding session %q.", sessionID)
 		err = localexec.RunAndStream(cmd, ui, nil)
 		sessionFinished <- struct{}{}
 		if err != nil {

@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -69,7 +68,7 @@ func TestCreateTemplateData(t *testing.T) {
 	state := tStateSpot()
 	stepRunSpotInstance := getBasicStep()
 	template := stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
-		&ec2.LaunchTemplateInstanceMarketOptionsRequest{})
+		&ec2types.LaunchTemplateInstanceMarketOptionsRequest{})
 
 	// expected := []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 	// 	&ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
@@ -91,7 +90,7 @@ func TestCreateTemplateData(t *testing.T) {
 	// Rerun, this time testing that we set security group IDs
 	state.Put("subnet_id", "")
 	template = stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
-		&ec2.LaunchTemplateInstanceMarketOptionsRequest{})
+		&ec2types.LaunchTemplateInstanceMarketOptionsRequest{})
 	if template.NetworkInterfaces != nil {
 		t.Fatalf("Template shouldn't contain network interfaces object if subnet_id is unset.")
 	}
@@ -99,7 +98,7 @@ func TestCreateTemplateData(t *testing.T) {
 	// Rerun, this time testing that instance doesn't have instance profile is iamInstanceProfile is unset
 	state.Put("iamInstanceProfile", "")
 	template = stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
-		&ec2.LaunchTemplateInstanceMarketOptionsRequest{})
+		&ec2types.LaunchTemplateInstanceMarketOptionsRequest{})
 	fmt.Println(template.IamInstanceProfile)
 	if *template.IamInstanceProfile.Name != "" {
 		t.Fatalf("Template shouldn't contain instance profile if iamInstanceProfile is unset.")
@@ -111,7 +110,7 @@ func TestCreateTemplateData_NoEphemeral(t *testing.T) {
 	stepRunSpotInstance := getBasicStep()
 	stepRunSpotInstance.NoEphemeral = true
 	template := stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
-		&ec2.LaunchTemplateInstanceMarketOptionsRequest{})
+		&ec2types.LaunchTemplateInstanceMarketOptionsRequest{})
 	if len(template.BlockDeviceMappings) != 26 {
 		t.Fatalf("Should have created 26 mappings to keep ephemeral drives from appearing.")
 	}
@@ -146,55 +145,56 @@ func TestCreateTemplateData_NoEphemeral(t *testing.T) {
 }
 
 type runSpotEC2ConnMock struct {
-	ec2iface.EC2API
-
 	CreateLaunchTemplateParams []*ec2.CreateLaunchTemplateInput
-	CreateLaunchTemplateFn     func(*ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error)
+	CreateLaunchTemplateFn     func(context.Context, *ec2.CreateLaunchTemplateInput, ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error)
 
 	CreateFleetParams []*ec2.CreateFleetInput
-	CreateFleetFn     func(*ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error)
+	CreateFleetFn     func(context.Context, *ec2.CreateFleetInput, ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error)
 
 	CreateTagsParams []*ec2.CreateTagsInput
-	CreateTagsFn     func(*ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
+	CreateTagsFn     func(context.Context, *ec2.CreateTagsInput, ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
 
 	DescribeInstancesParams []*ec2.DescribeInstancesInput
-	DescribeInstancesFn     func(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+	DescribeInstancesFn     func(context.Context, *ec2.DescribeInstancesInput, ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 }
 
-func (m *runSpotEC2ConnMock) CreateLaunchTemplate(req *ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error) {
+func (m *runSpotEC2ConnMock) CreateLaunchTemplate(ctx context.Context, req *ec2.CreateLaunchTemplateInput, opts ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error) {
 	m.CreateLaunchTemplateParams = append(m.CreateLaunchTemplateParams, req)
-	resp, err := m.CreateLaunchTemplateFn(req)
+	resp, err := m.CreateLaunchTemplateFn(ctx, req, opts...)
 	return resp, err
 }
 
-func (m *runSpotEC2ConnMock) CreateFleet(req *ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
+func (m *runSpotEC2ConnMock) CreateFleet(ctx context.Context, req *ec2.CreateFleetInput, opts ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error) {
 	m.CreateFleetParams = append(m.CreateFleetParams, req)
 	if m.CreateFleetFn != nil {
-		resp, err := m.CreateFleetFn(req)
+		resp, err := m.CreateFleetFn(ctx, req, opts...)
 		return resp, err
 	} else {
 		return nil, nil
 	}
 }
 
-func (m *runSpotEC2ConnMock) DescribeInstances(req *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (m *runSpotEC2ConnMock) DescribeInstances(ctx context.Context, req *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	m.DescribeInstancesParams = append(m.DescribeInstancesParams, req)
 	if m.DescribeInstancesFn != nil {
-		resp, err := m.DescribeInstancesFn(req)
+		resp, err := m.DescribeInstancesFn(ctx, req, opts...)
 		return resp, err
 	} else {
 		return nil, nil
 	}
 }
 
+// we don't need this method to be mocked as in aws sdk v2, we use InstanceRunningWaiter
+/*
 func (m *runSpotEC2ConnMock) WaitUntilInstanceRunningWithContext(ctx context.Context, _ *ec2.DescribeInstancesInput, opts ...request.WaiterOption) error {
 	return nil
 }
+*/
 
-func (m *runSpotEC2ConnMock) CreateTags(req *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
+func (m *runSpotEC2ConnMock) CreateTags(ctx context.Context, req *ec2.CreateTagsInput, opts ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
 	m.CreateTagsParams = append(m.CreateTagsParams, req)
 	if m.CreateTagsFn != nil {
-		resp, err := m.CreateTagsFn(req)
+		resp, err := m.CreateTagsFn(ctx, req, opts...)
 		return resp, err
 	} else {
 		return nil, nil
@@ -202,43 +202,43 @@ func (m *runSpotEC2ConnMock) CreateTags(req *ec2.CreateTagsInput) (*ec2.CreateTa
 }
 
 func defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId *string) *runSpotEC2ConnMock {
-	instance := &ec2.Instance{
+	instance := ec2types.Instance{
 		InstanceId:            instanceId,
 		SpotInstanceRequestId: spotRequestId,
-		BlockDeviceMappings: []*ec2.InstanceBlockDeviceMapping{
+		BlockDeviceMappings: []ec2types.InstanceBlockDeviceMapping{
 			{
-				Ebs: &ec2.EbsInstanceBlockDevice{
+				Ebs: &ec2types.EbsInstanceBlockDevice{
 					VolumeId: volumeId,
 				},
 			},
 		},
 	}
 	return &runSpotEC2ConnMock{
-		CreateLaunchTemplateFn: func(in *ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error) {
+		CreateLaunchTemplateFn: func(ctx context.Context, in *ec2.CreateLaunchTemplateInput, opts ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error) {
 			return &ec2.CreateLaunchTemplateOutput{
-				LaunchTemplate: &ec2.LaunchTemplate{
+				LaunchTemplate: &ec2types.LaunchTemplate{
 					LaunchTemplateId: launchTemplateId,
 				},
 				Warning: nil,
 			}, nil
 		},
-		CreateFleetFn: func(*ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
+		CreateFleetFn: func(ctx context.Context, in *ec2.CreateFleetInput, opts ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error) {
 			return &ec2.CreateFleetOutput{
 				Errors:  nil,
 				FleetId: nil,
-				Instances: []*ec2.CreateFleetInstance{
+				Instances: []ec2types.CreateFleetInstance{
 					{
-						InstanceIds: []*string{instanceId},
+						InstanceIds: []string{*instanceId},
 					},
 				},
 			}, nil
 		},
-		DescribeInstancesFn: func(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+		DescribeInstancesFn: func(ctx context.Context, in *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 			return &ec2.DescribeInstancesOutput{
 				NextToken: nil,
-				Reservations: []*ec2.Reservation{
+				Reservations: []ec2types.Reservation{
 					{
-						Instances: []*ec2.Instance{instance},
+						Instances: []ec2types.Instance{instance},
 					},
 				},
 			}, nil
@@ -251,7 +251,7 @@ func TestRun(t *testing.T) {
 	spotRequestId := aws.String("spot-id")
 	volumeId := aws.String("volume-id")
 	launchTemplateId := aws.String("launchTemplateId")
-	spotAllocationStrategy := aws.String("price-capacity-optimized")
+	spotAllocationStrategy := ec2types.SpotAllocationStrategyPriceCapacityOptimized
 	ec2Mock := defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId)
 
 	uiMock := packersdk.TestUi(t)
@@ -293,7 +293,7 @@ func TestRun(t *testing.T) {
 	if len(ec2Mock.CreateLaunchTemplateParams[0].TagSpecifications) != 1 {
 		t.Fatalf("exactly one launch template tag specification expected")
 	}
-	if *ec2Mock.CreateLaunchTemplateParams[0].TagSpecifications[0].ResourceType != "launch-template" {
+	if ec2Mock.CreateLaunchTemplateParams[0].TagSpecifications[0].ResourceType != "launch-template" {
 		t.Fatalf("resource type 'launch-template' expected")
 	}
 	if len(ec2Mock.CreateLaunchTemplateParams[0].TagSpecifications[0].Tags) != 1 {
@@ -308,10 +308,10 @@ func TestRun(t *testing.T) {
 	if len(ec2Mock.CreateFleetParams) != 1 {
 		t.Fatalf("createFleet should be invoked once, but invoked %v", len(ec2Mock.CreateLaunchTemplateParams))
 	}
-	if *ec2Mock.CreateFleetParams[0].TargetCapacitySpecification.DefaultTargetCapacityType != "spot" {
+	if ec2Mock.CreateFleetParams[0].TargetCapacitySpecification.DefaultTargetCapacityType != "spot" {
 		t.Fatalf("capacity type should be spot")
 	}
-	if *ec2Mock.CreateFleetParams[0].TargetCapacitySpecification.TotalTargetCapacity != 1 {
+	if aws.ToInt32(ec2Mock.CreateFleetParams[0].TargetCapacitySpecification.TotalTargetCapacity) != 1 {
 		t.Fatalf("target capacity should be 1")
 	}
 	if len(ec2Mock.CreateFleetParams[0].LaunchTemplateConfigs) != 1 {
@@ -320,7 +320,7 @@ func TestRun(t *testing.T) {
 	if *ec2Mock.CreateFleetParams[0].LaunchTemplateConfigs[0].LaunchTemplateSpecification.LaunchTemplateName != *launchTemplateName {
 		t.Fatalf("launchTemplateName should match in createLaunchTemplate and createFleet requests")
 	}
-	if *ec2Mock.CreateFleetParams[0].SpotOptions.AllocationStrategy != *spotAllocationStrategy {
+	if ec2Mock.CreateFleetParams[0].SpotOptions.AllocationStrategy != spotAllocationStrategy {
 		t.Fatalf("AllocationStrategy in CreateFleet request should match with spotAllocationStrategy param.")
 	}
 
@@ -332,7 +332,7 @@ func TestRun(t *testing.T) {
 	if len(ec2Mock.DescribeInstancesParams) != 1 {
 		t.Fatalf("describeInstancesParams should be invoked once, but invoked %v", len(ec2Mock.DescribeInstancesParams))
 	}
-	if *ec2Mock.DescribeInstancesParams[0].InstanceIds[0] != *instanceId {
+	if ec2Mock.DescribeInstancesParams[0].InstanceIds[0] != *instanceId {
 		t.Fatalf("instanceId should match from createFleet response")
 	}
 
@@ -340,13 +340,13 @@ func TestRun(t *testing.T) {
 	if len(ec2Mock.CreateTagsParams) != 3 {
 		t.Fatalf("createTags should be invoked 3 times")
 	}
-	if len(ec2Mock.CreateTagsParams[0].Resources) != 1 || *ec2Mock.CreateTagsParams[0].Resources[0] != *spotRequestId {
+	if len(ec2Mock.CreateTagsParams[0].Resources) != 1 || ec2Mock.CreateTagsParams[0].Resources[0] != *spotRequestId {
 		t.Fatalf("should create tags for spot request")
 	}
-	if len(ec2Mock.CreateTagsParams[1].Resources) != 1 || *ec2Mock.CreateTagsParams[1].Resources[0] != *instanceId {
+	if len(ec2Mock.CreateTagsParams[1].Resources) != 1 || ec2Mock.CreateTagsParams[1].Resources[0] != *instanceId {
 		t.Fatalf("should create tags for instance")
 	}
-	if len(ec2Mock.CreateTagsParams[2].Resources) != 1 || ec2Mock.CreateTagsParams[2].Resources[0] != volumeId {
+	if len(ec2Mock.CreateTagsParams[2].Resources) != 1 || ec2Mock.CreateTagsParams[2].Resources[0] != *volumeId {
 		t.Fatalf("should create tags for volume")
 	}
 }
