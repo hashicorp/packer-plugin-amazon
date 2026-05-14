@@ -5,8 +5,6 @@ package common
 
 import (
 	"testing"
-
-	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 func TestIsValidBuildMode(t *testing.T) {
@@ -39,7 +37,7 @@ func TestIsValidBuildMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := IsValidBootMode(ec2types.BootModeValues(tt.value))
+			err := IsValidBootMode(tt.value)
 			if (err != nil) != tt.expectError {
 				t.Errorf("error mismatch, expected %t, got %t", tt.expectError, err != nil)
 				if err != nil {

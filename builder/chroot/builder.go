@@ -118,7 +118,7 @@ type Config struct {
 	// default value is the type of the source_ami, unless from_scratch is
 	// true, in which case the default value is gp2. You can only specify io1
 	// if building based on top of a source_ami which is also io1.
-	RootVolumeType ec2types.VolumeType `mapstructure:"root_volume_type" required:"false"`
+	RootVolumeType string `mapstructure:"root_volume_type" required:"false"`
 	// The source AMI whose root volume will be copied and provisioned on the
 	// currently running instance. This must be an EBS-backed AMI with a root
 	// volume snapshot that you have access to. Note: this is not used when
@@ -197,19 +197,19 @@ type Config struct {
 	RootVolumeKmsKeyId string `mapstructure:"root_volume_kms_key_id" required:"false"`
 	// what architecture to use when registering the final AMI; valid options
 	// are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac". Defaults to "x86_64".
-	Architecture ec2types.ArchitectureValues `mapstructure:"ami_architecture" required:"false"`
+	Architecture string `mapstructure:"ami_architecture" required:"false"`
 	// The boot mode. Valid options are `legacy-bios` and `uefi`. See the documentation on
 	// [boot modes](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ami-boot.html) for
 	// more information. Defaults to `legacy-bios` when `ami_architecture` is `x86_64` and
 	// `uefi` when `ami_architecture` is `arm64`.
-	BootMode ec2types.BootModeValues `mapstructure:"boot_mode" required:"false"`
+	BootMode string `mapstructure:"boot_mode" required:"false"`
 	// Base64 representation of the non-volatile UEFI variable store. For more information
 	// see [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/uefi-secure-boot-optionB.html).
 	UefiData string `mapstructure:"uefi_data" required:"false"`
 	// NitroTPM Support. Valid options are `v2.0`. See the documentation on
 	// [NitroTPM Support](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enable-nitrotpm-support-on-ami.html) for
 	// more information. Only enabled if a valid option is provided, otherwise ignored.
-	TpmSupport ec2types.TpmSupportValues `mapstructure:"tpm_support" required:"false"`
+	TpmSupport string `mapstructure:"tpm_support" required:"false"`
 
 	ctx interpolate.Context
 }
@@ -371,7 +371,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 
 	}
 	valid := false
-	for _, validArch := range []ec2types.ArchitectureValues{ec2types.ArchitectureValuesArm64, ec2types.ArchitectureValuesArm64Mac, ec2types.ArchitectureValuesX8664, ec2types.ArchitectureValuesX8664Mac} {
+	for _, validArch := range []string{"arm64", "arm64_mac", "i386", "x86_64", "x86_64_mac"} {
 		if validArch == b.config.Architecture {
 			valid = true
 			break
@@ -381,7 +381,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
-	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2types.TpmSupportValuesV20 {
+	if b.config.TpmSupport != "" && b.config.TpmSupport != string(ec2types.TpmSupportValuesV20) {
 		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2types.TpmSupportValuesV20))
 	}
 
@@ -393,9 +393,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	}
 
 	if b.config.UefiData != "" {
-		if b.config.BootMode == ec2types.BootModeValuesLegacyBios {
+		if b.config.BootMode == "legacy-bios" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You can't use uefi_data with boot_mode set to "legacy-bios".`))
-		} else if b.config.BootMode == "" && b.config.Architecture != ec2types.ArchitectureValuesArm64 {
+		} else if b.config.BootMode == "" && b.config.Architecture != string(ec2types.ArchitectureValuesArm64) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You need boot_mode set to "uefi" to use uefi_data, `+
 				`"%s" architecture defaults to "legacy-bios".`, b.config.Architecture))
 		}
@@ -470,7 +470,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		&StepCreateVolume{
 			PollingConfig:         b.config.PollingConfig,
-			RootVolumeType:        b.config.RootVolumeType,
+			RootVolumeType:        ec2types.VolumeType(b.config.RootVolumeType),
 			RootVolumeSize:        b.config.RootVolumeSize,
 			RootVolumeTags:        b.config.RootVolumeTags,
 			RootVolumeEncryptBoot: b.config.RootVolumeEncryptBoot,
@@ -519,9 +519,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMIENASupport:      b.config.AMIENASupport,
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
-			BootMode:                 b.config.BootMode,
+			BootMode:                 ec2types.BootModeValues(b.config.BootMode),
 			UefiData:                 b.config.UefiData,
-			TpmSupport:               b.config.TpmSupport,
+			TpmSupport:               ec2types.TpmSupportValues(b.config.TpmSupport),
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:                   &b.config.AccessConfig,

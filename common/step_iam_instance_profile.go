@@ -179,7 +179,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 
 		ui.Say("Waiting for the change to propagate because of eventual consistency...")
 
-		ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+		ec2Client := state.Get("ec2").(clients.Ec2Client)
 		sourceImageRaw, exists := state.GetOk("source_image")
 		if !exists {
 			err := fmt.Errorf("source_image not available in state for IAM validation")

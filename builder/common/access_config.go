@@ -214,7 +214,7 @@ type AccessConfig struct {
 func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws.Config, error) {
 
 	// Reload values into the config used by the Packer-Terraform shared SDK
-	assumeRoles := []awsbase.AssumeRole{}
+	var assumeRoles []awsbase.AssumeRole
 	if c.AssumeRole.AssumeRoleARN != "" {
 		awsbaseAssumeRole := awsbase.AssumeRole{
 			RoleARN:           c.AssumeRole.AssumeRoleARN,
@@ -355,6 +355,7 @@ func (c *AccessConfig) Prepare(packerConfig *common.PackerConfig) []error {
 		c.PollingConfig = new(AWSPollingConfig)
 	}
 	c.PollingConfig.LogEnvOverrideWarnings()
+	c.PollingConfig.Prepare()
 
 	// Default MaxRetries to 10, to make throttling issues less likely. The
 	// Aws sdk defaults this to 3, which regularly gets tripped by users.

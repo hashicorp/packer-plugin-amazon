@@ -158,7 +158,7 @@ func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) m
 }
 
 func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	if len(s.toDelete) == 0 {

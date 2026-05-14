@@ -63,7 +63,7 @@ func (s *StepInstanceInfo) Run(ctx context.Context, state multistep.StateBag) mu
 	}
 
 	instance := instancesResp.Reservations[0].Instances[0]
-	state.Put("instance", instance)
+	state.Put("instance", &instance)
 
 	return multistep.ActionContinue
 }

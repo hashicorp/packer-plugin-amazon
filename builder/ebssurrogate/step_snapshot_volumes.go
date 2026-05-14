@@ -37,7 +37,7 @@ type StepSnapshotVolumes struct {
 }
 
 func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName string, state multistep.StateBag) error {
-	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	instance := state.Get("instance").(ec2types.Instance)
@@ -140,7 +140,7 @@ func (s *StepSnapshotVolumes) Cleanup(state multistep.StateBag) {
 	_, halted := state.GetOk(multistep.StateHalted)
 
 	if cancelled || halted {
-		ec2conn := state.Get("ec2v2").(clients.Ec2Client)
+		ec2conn := state.Get("ec2").(clients.Ec2Client)
 		ui := state.Get("ui").(packersdk.Ui)
 		ui.Say("Removing snapshots since we cancelled or halted...")
 		s.snapshotMutex.Lock()

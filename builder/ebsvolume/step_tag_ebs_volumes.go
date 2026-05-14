@@ -24,7 +24,7 @@ type stepTagEBSVolumes struct {
 }
 
 func (s *stepTagEBSVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	instance := state.Get("instance").(ec2types.Instance)
 	region := state.Get("region").(string)
 	ui := state.Get("ui").(packersdk.Ui)

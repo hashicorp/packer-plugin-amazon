@@ -23,7 +23,7 @@ import (
 //
 // Produces:
 //
-//	source_image *ec2.Image - the source AMI info
+//	source_image *ec2types.Image - the source AMI info
 type StepSourceAMIInfo struct {
 	SourceAmi                string
 	EnableAMISriovNetSupport bool

@@ -104,7 +104,7 @@ type BlockDevice struct {
 	// The volume type. gp2 & gp3 for General Purpose (SSD) volumes, io1 & io2
 	// for Provisioned IOPS (SSD) volumes, st1 for Throughput Optimized HDD,
 	// sc1 for Cold HDD, and standard for Magnetic volumes.
-	VolumeType ec2types.VolumeType `mapstructure:"volume_type" required:"false"`
+	VolumeType string `mapstructure:"volume_type" required:"false"`
 	// The size of the volume, in GiB. Required if not specifying a
 	// snapshot_id.
 	VolumeSize int32 `mapstructure:"volume_size" required:"false"`
@@ -152,20 +152,20 @@ func (blockDevice BlockDevice) BuildEC2BlockDeviceMapping() ec2types.BlockDevice
 	}
 
 	if blockDevice.VolumeType != "" {
-		ebsBlockDevice.VolumeType = blockDevice.VolumeType
+		ebsBlockDevice.VolumeType = ec2types.VolumeType(blockDevice.VolumeType)
 	}
 
 	if blockDevice.VolumeSize > 0 {
 		ebsBlockDevice.VolumeSize = aws.Int32(blockDevice.VolumeSize)
 	}
 
-	switch blockDevice.VolumeType {
+	switch ec2types.VolumeType(blockDevice.VolumeType) {
 	case ec2types.VolumeTypeIo1, ec2types.VolumeTypeIo2, ec2types.VolumeTypeGp3:
 		ebsBlockDevice.Iops = blockDevice.IOPS
 	}
 
 	// Throughput is only valid for gp3 types
-	if blockDevice.VolumeType == ec2types.VolumeTypeGp3 {
+	if ec2types.VolumeType(blockDevice.VolumeType) == ec2types.VolumeTypeGp3 {
 		ebsBlockDevice.Throughput = blockDevice.Throughput
 	}
 
@@ -201,7 +201,7 @@ func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
 			"true` when setting a kms_key_id.", b.DeviceName)
 	}
 
-	if ratio, ok := iopsRatios[b.VolumeType]; b.VolumeSize != 0 && ok {
+	if ratio, ok := iopsRatios[ec2types.VolumeType(b.VolumeType)]; b.VolumeSize != 0 && ok {
 		if b.IOPS != nil && (*b.IOPS/b.VolumeSize > ratio) {
 			return fmt.Errorf("%s: the maximum ratio of provisioned IOPS to requested volume size "+
 				"(in GiB) is %v:1 for %s volumes", b.DeviceName, ratio, b.VolumeType)
@@ -213,7 +213,7 @@ func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
 		}
 	}
 
-	if b.VolumeType == "gp3" {
+	if ec2types.VolumeType(b.VolumeType) == ec2types.VolumeTypeGp3 {
 		if b.Throughput != nil && (*b.Throughput < minThroughput || *b.Throughput > maxThroughput) {
 			return fmt.Errorf("Throughput must be between %d and %d for device %s",
 				minThroughput, maxThroughput, b.DeviceName)

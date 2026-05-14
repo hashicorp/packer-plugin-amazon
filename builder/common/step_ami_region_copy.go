@@ -225,8 +225,18 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	target, source, keyId string, encrypt *bool) (string, []string, error) {
 	snapshotIds := []string{}
 
-	var amiImageId string
-	regionconn, err := GetEc2Client(ctx, config, target)
+	var (
+		amiImageId string
+		regionconn clients.Ec2Client
+		err        error
+	)
+
+	if s.getRegionConn != nil {
+		regionconn, err = s.getRegionConn(ctx, config, target)
+	} else {
+		// Get the EC2 connection for the target region
+		regionconn, err = GetEc2Client(ctx, config, target)
+	}
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
 	}

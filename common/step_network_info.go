@@ -59,7 +59,7 @@ func mostFreeSubnet(subnets []ec2types.Subnet) ec2types.Subnet {
 }
 
 func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Set VpcID if none was specified but filters are defined in the template.

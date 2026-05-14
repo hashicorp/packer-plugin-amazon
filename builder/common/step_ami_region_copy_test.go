@@ -54,7 +54,11 @@ func (m *mockEC2Conn) DescribeImages(ctx context.Context, input *ec2.DescribeIma
 	m.describeImagesCount++
 	m.lock.Unlock()
 	output := &ec2.DescribeImagesOutput{
-		Images: []ec2types.Image{{}},
+		Images: []ec2types.Image{ec2types.Image{
+			ImageId:        aws.String("ami-12345"),
+			State:          ec2types.ImageStateAvailable,
+			RootDeviceName: aws.String("/dev/sda1"),
+		}},
 	}
 	return output, nil
 }
@@ -107,7 +111,8 @@ func tState(ctx context.Context) multistep.StateBag {
 	})
 	state.Put("amis", map[string]string{"us-east-1": "ami-12345"})
 	state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
-	conn, _ := getMockConn(ctx, &AccessConfig{}, "us-east-2")
+	accessConfig := FakeAccessConfig()
+	conn, _ := getMockConn(ctx, accessConfig, "us-east-2")
 	state.Put("ec2", conn)
 	return state
 }

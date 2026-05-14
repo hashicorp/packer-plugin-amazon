@@ -69,10 +69,10 @@ func tState(t *testing.T) multistep.StateBag {
 	// state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
 	conn, _ := getMockConn(&common.AccessConfig{}, "us-east-2")
 
-	state.Put("ec2v2", conn)
+	state.Put("ec2", conn)
 	// Store a fake instance that contains a block device that matches the
 	// volumes defined in the config above
-	state.Put("instance", ec2types.Instance{
+	state.Put("instance", &ec2types.Instance{
 		InstanceId: aws.String("instance-id"),
 		BlockDeviceMappings: []ec2types.InstanceBlockDeviceMapping{
 			{

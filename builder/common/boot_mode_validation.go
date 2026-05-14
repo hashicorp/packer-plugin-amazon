@@ -10,11 +10,11 @@ import (
 )
 
 // IsValidBootMode checks that the bootmode is a value supported by AWS
-func IsValidBootMode(bootmode ec2types.BootModeValues) error {
+func IsValidBootMode(bootmode string) error {
 	validModes := []ec2types.BootModeValues{ec2types.BootModeValuesLegacyBios, ec2types.BootModeValuesUefi, ec2types.BootModeValuesUefiPreferred}
 
 	for _, mode := range validModes {
-		if bootmode == mode {
+		if bootmode == string(mode) {
 			return nil
 		}
 	}

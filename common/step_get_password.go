@@ -104,7 +104,7 @@ WaitLoop:
 func (s *StepGetPassword) Cleanup(multistep.StateBag) {}
 
 func (s *StepGetPassword) waitForPassword(ctx context.Context, state multistep.StateBag) (string, error) {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	instance := state.Get("instance").(ec2types.Instance)
 	privateKey := s.Comm.SSHPrivateKey
 

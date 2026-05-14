@@ -10,11 +10,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
-
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
-
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -152,21 +150,21 @@ type runSpotEC2ConnMock struct {
 	clients.Ec2Client
 
 	CreateLaunchTemplateParams []*ec2.CreateLaunchTemplateInput
-	CreateLaunchTemplateFn     func(*ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error)
+	CreateLaunchTemplateFn     func(context.Context, *ec2.CreateLaunchTemplateInput, ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error)
 
 	CreateFleetParams []*ec2.CreateFleetInput
-	CreateFleetFn     func(*ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error)
+	CreateFleetFn     func(context.Context, *ec2.CreateFleetInput, ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error)
 
 	CreateTagsParams []*ec2.CreateTagsInput
-	CreateTagsFn     func(*ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
+	CreateTagsFn     func(context.Context, *ec2.CreateTagsInput, ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error)
 
 	DescribeInstancesParams []*ec2.DescribeInstancesInput
-	DescribeInstancesFn     func(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+	DescribeInstancesFn     func(context.Context, *ec2.DescribeInstancesInput, ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 }
 
 func (m *runSpotEC2ConnMock) CreateLaunchTemplate(ctx context.Context, params *ec2.CreateLaunchTemplateInput, optFns ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error) {
 	m.CreateLaunchTemplateParams = append(m.CreateLaunchTemplateParams, params)
-	resp, err := m.CreateLaunchTemplateFn(params)
+	resp, err := m.CreateLaunchTemplateFn(ctx, params, optFns...)
 	return resp, err
 }
 
@@ -174,7 +172,7 @@ func (m *runSpotEC2ConnMock) CreateFleet(ctx context.Context, params *ec2.Create
 	optFns ...func(options *ec2.Options)) (*ec2.CreateFleetOutput, error) {
 	m.CreateFleetParams = append(m.CreateFleetParams, params)
 	if m.CreateFleetFn != nil {
-		resp, err := m.CreateFleetFn(params)
+		resp, err := m.CreateFleetFn(ctx, params, optFns...)
 		return resp, err
 	} else {
 		return nil, nil
@@ -184,7 +182,7 @@ func (m *runSpotEC2ConnMock) CreateFleet(ctx context.Context, params *ec2.Create
 func (m *runSpotEC2ConnMock) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	m.DescribeInstancesParams = append(m.DescribeInstancesParams, params)
 	if m.DescribeInstancesFn != nil {
-		resp, err := m.DescribeInstancesFn(params)
+		resp, err := m.DescribeInstancesFn(ctx, params, optFns...)
 		return resp, err
 	} else {
 		return nil, nil
@@ -199,7 +197,7 @@ func (m *runSpotEC2ConnMock) DescribeInstances(ctx context.Context, params *ec2.
 func (m *runSpotEC2ConnMock) CreateTags(ctx context.Context, params *ec2.CreateTagsInput, optFns ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
 	m.CreateTagsParams = append(m.CreateTagsParams, params)
 	if m.CreateTagsFn != nil {
-		resp, err := m.CreateTagsFn(params)
+		resp, err := m.CreateTagsFn(ctx, params, optFns...)
 		return resp, err
 	} else {
 		return nil, nil
@@ -222,7 +220,7 @@ func defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId *strin
 		},
 	}
 	return &runSpotEC2ConnMock{
-		CreateLaunchTemplateFn: func(in *ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error) {
+		CreateLaunchTemplateFn: func(ctx context.Context, in *ec2.CreateLaunchTemplateInput, optFns ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error) {
 			return &ec2.CreateLaunchTemplateOutput{
 				LaunchTemplate: &ec2types.LaunchTemplate{
 					LaunchTemplateId: launchTemplateId,
@@ -230,7 +228,7 @@ func defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId *strin
 				Warning: nil,
 			}, nil
 		},
-		CreateFleetFn: func(*ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
+		CreateFleetFn: func(ctx context.Context, in *ec2.CreateFleetInput, optFns ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error) {
 			return &ec2.CreateFleetOutput{
 				Errors:  nil,
 				FleetId: nil,
@@ -241,7 +239,7 @@ func defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId *strin
 				},
 			}, nil
 		},
-		DescribeInstancesFn: func(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+		DescribeInstancesFn: func(ctx context.Context, input *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 			return &ec2.DescribeInstancesOutput{
 				NextToken: nil,
 				Reservations: []ec2types.Reservation{
@@ -265,7 +263,7 @@ func TestRun(t *testing.T) {
 	uiMock := packersdk.TestUi(t)
 
 	state := tStateSpot()
-	state.Put("ec2v2", ec2Mock)
+	state.Put("ec2", ec2Mock)
 	state.Put("ui", uiMock)
 	state.Put("source_image", testImage())
 
@@ -374,7 +372,7 @@ func TestRun_NoSpotTags(t *testing.T) {
 	uiMock := packersdk.TestUi(t)
 
 	state := tStateSpot()
-	state.Put("ec2v2", ec2Mock)
+	state.Put("ec2", ec2Mock)
 	state.Put("ui", uiMock)
 	state.Put("source_image", testImage())
 

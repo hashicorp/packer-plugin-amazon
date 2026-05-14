@@ -79,17 +79,17 @@ type FlatConfig struct {
 	PreMountCommands               []string                                    `mapstructure:"pre_mount_commands" required:"false" cty:"pre_mount_commands" hcl:"pre_mount_commands"`
 	RootDeviceName                 *string                                     `mapstructure:"root_device_name" required:"false" cty:"root_device_name" hcl:"root_device_name"`
 	RootVolumeSize                 *int32                                      `mapstructure:"root_volume_size" required:"false" cty:"root_volume_size" hcl:"root_volume_size"`
-	RootVolumeType                 *types.VolumeType                           `mapstructure:"root_volume_type" required:"false" cty:"root_volume_type" hcl:"root_volume_type"`
+	RootVolumeType                 *string                                     `mapstructure:"root_volume_type" required:"false" cty:"root_volume_type" hcl:"root_volume_type"`
 	SourceAmi                      *string                                     `mapstructure:"source_ami" required:"true" cty:"source_ami" hcl:"source_ami"`
 	SourceAmiFilter                *common.FlatAmiFilterOptions                `mapstructure:"source_ami_filter" required:"false" cty:"source_ami_filter" hcl:"source_ami_filter"`
 	RootVolumeTags                 map[string]string                           `mapstructure:"root_volume_tags" required:"false" cty:"root_volume_tags" hcl:"root_volume_tags"`
 	RootVolumeTag                  []config.FlatKeyValue                       `mapstructure:"root_volume_tag" required:"false" cty:"root_volume_tag" hcl:"root_volume_tag"`
 	RootVolumeEncryptBoot          *bool                                       `mapstructure:"root_volume_encrypt_boot" required:"false" cty:"root_volume_encrypt_boot" hcl:"root_volume_encrypt_boot"`
 	RootVolumeKmsKeyId             *string                                     `mapstructure:"root_volume_kms_key_id" required:"false" cty:"root_volume_kms_key_id" hcl:"root_volume_kms_key_id"`
-	Architecture                   *types.ArchitectureValues                   `mapstructure:"ami_architecture" required:"false" cty:"ami_architecture" hcl:"ami_architecture"`
-	BootMode                       *types.BootModeValues                       `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
+	Architecture                   *string                                     `mapstructure:"ami_architecture" required:"false" cty:"ami_architecture" hcl:"ami_architecture"`
+	BootMode                       *string                                     `mapstructure:"boot_mode" required:"false" cty:"boot_mode" hcl:"boot_mode"`
 	UefiData                       *string                                     `mapstructure:"uefi_data" required:"false" cty:"uefi_data" hcl:"uefi_data"`
-	TpmSupport                     *types.TpmSupportValues                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
+	TpmSupport                     *string                                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.

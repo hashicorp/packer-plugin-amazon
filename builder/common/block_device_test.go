@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
@@ -16,18 +17,18 @@ import (
 func TestBlockDevice(t *testing.T) {
 	cases := []struct {
 		Config *BlockDevice
-		Result *ec2types.BlockDeviceMapping
+		Result ec2types.BlockDeviceMapping
 	}{
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
 				SnapshotId:          "snap-1234",
-				VolumeType:          "standard",
+				VolumeType:          string(ec2types.VolumeTypeStandard),
 				VolumeSize:          8,
 				DeleteOnTermination: true,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					SnapshotId:          aws.String("snap-1234"),
@@ -43,7 +44,7 @@ func TestBlockDevice(t *testing.T) {
 				VolumeSize: 8,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeSize:          aws.Int32(8),
@@ -54,13 +55,13 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "io1",
+				VolumeType:          string(ec2types.VolumeTypeIo1),
 				VolumeSize:          8,
 				DeleteOnTermination: true,
 				IOPS:                aws.Int32(1000),
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeIo1,
@@ -73,13 +74,13 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "io2",
+				VolumeType:          string(ec2types.VolumeTypeIo2),
 				VolumeSize:          8,
 				DeleteOnTermination: true,
 				IOPS:                aws.Int32(1000),
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeIo2,
@@ -92,13 +93,13 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "gp2",
+				VolumeType:          string(ec2types.VolumeTypeGp2),
 				VolumeSize:          8,
 				DeleteOnTermination: true,
 				Encrypted:           config.TriTrue,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeGp2,
@@ -111,14 +112,14 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "gp2",
+				VolumeType:          string(ec2types.VolumeTypeGp2),
 				VolumeSize:          8,
 				DeleteOnTermination: true,
 				Encrypted:           config.TriTrue,
 				KmsKeyId:            "2Fa48a521f-3aff-4b34-a159-376ac5d37812",
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeGp2,
@@ -132,11 +133,11 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "standard",
+				VolumeType:          string(ec2types.VolumeTypeStandard),
 				DeleteOnTermination: true,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeStandard,
@@ -150,7 +151,7 @@ func TestBlockDevice(t *testing.T) {
 				VirtualName: "ephemeral0",
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName:  aws.String("/dev/sdb"),
 				VirtualName: aws.String("ephemeral0"),
 			},
@@ -161,7 +162,7 @@ func TestBlockDevice(t *testing.T) {
 				NoDevice:   true,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				NoDevice:   aws.String(""),
 			},
@@ -169,7 +170,7 @@ func TestBlockDevice(t *testing.T) {
 		{
 			Config: &BlockDevice{
 				DeviceName:          "/dev/sdb",
-				VolumeType:          "gp3",
+				VolumeType:          string(ec2types.VolumeTypeGp3),
 				VolumeSize:          8,
 				Throughput:          aws.Int32(125),
 				IOPS:                aws.Int32(3000),
@@ -177,7 +178,7 @@ func TestBlockDevice(t *testing.T) {
 				Encrypted:           config.TriTrue,
 			},
 
-			Result: &ec2types.BlockDeviceMapping{
+			Result: ec2types.BlockDeviceMapping{
 				DeviceName: aws.String("/dev/sdb"),
 				Ebs: &ec2types.EbsBlockDevice{
 					VolumeType:          ec2types.VolumeTypeGp3,
@@ -196,18 +197,26 @@ func TestBlockDevice(t *testing.T) {
 
 		var launchBlockDevices BlockDevices = []BlockDevice{*tc.Config}
 
-		expected := []*ec2types.BlockDeviceMapping{tc.Result}
+		expected := []ec2types.BlockDeviceMapping{tc.Result}
 
 		amiResults := amiBlockDevices.BuildEC2BlockDeviceMappings()
-		if diff := cmp.Diff(expected, amiResults); diff != "" {
+		if diff := cmp.Diff(expected, amiResults, cmpopts.IgnoreUnexported(ec2types.BlockDeviceMapping{}, ec2types.EbsBlockDevice{})); diff != "" {
 			t.Fatalf("Bad block device: %s", diff)
 		}
 
 		launchResults := launchBlockDevices.BuildEC2BlockDeviceMappings()
-		if diff := cmp.Diff(expected, launchResults); diff != "" {
+		if diff := cmp.Diff(expected, launchResults, cmpopts.IgnoreUnexported(ec2types.BlockDeviceMapping{}, ec2types.EbsBlockDevice{})); diff != "" {
 			t.Fatalf("Bad block device: %s", diff)
 		}
 	}
+}
+
+func pointerSlice[T any](s []T) []*T {
+	result := make([]*T, len(s))
+	for i := range s {
+		result[i] = &s[i]
+	}
+	return result
 }
 
 func TestIOPSValidation(t *testing.T) {
@@ -221,7 +230,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io1",
+				VolumeType: string(ec2types.VolumeTypeIo1),
 				IOPS:       aws.Int32(1000),
 			},
 			ok: true,
@@ -229,7 +238,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io2",
+				VolumeType: string(ec2types.VolumeTypeIo2),
 				IOPS:       aws.Int32(1000),
 			},
 			ok: true,
@@ -238,7 +247,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io1",
+				VolumeType: string(ec2types.VolumeTypeIo1),
 				VolumeSize: 50,
 				IOPS:       aws.Int32(1000),
 			},
@@ -247,7 +256,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io2",
+				VolumeType: string(ec2types.VolumeTypeIo2),
 				VolumeSize: 100,
 				IOPS:       aws.Int32(1000),
 			},
@@ -257,7 +266,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io1",
+				VolumeType: string(ec2types.VolumeTypeIo1),
 				VolumeSize: 10,
 				IOPS:       aws.Int32(2000),
 			},
@@ -267,7 +276,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io2",
+				VolumeType: string(ec2types.VolumeTypeIo2),
 				VolumeSize: 50,
 				IOPS:       aws.Int32(30000),
 			},
@@ -278,7 +287,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io2",
+				VolumeType: string(ec2types.VolumeTypeIo2),
 				VolumeSize: 500,
 				IOPS:       aws.Int32(99999),
 			},
@@ -289,7 +298,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "io2",
+				VolumeType: string(ec2types.VolumeTypeIo2),
 				VolumeSize: 50,
 				IOPS:       aws.Int32(10),
 			},
@@ -300,7 +309,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "gp3",
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				VolumeSize: 50,
 				Throughput: aws.Int32(125),
 				IOPS:       aws.Int32(99999),
@@ -312,7 +321,7 @@ func TestIOPSValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: "gp3",
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				VolumeSize: 50,
 				Throughput: aws.Int32(125),
 				IOPS:       aws.Int32(10),
@@ -348,7 +357,7 @@ func TestThroughputValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: ec2types.VolumeTypeGp3,
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				Throughput: aws.Int32(125),
 				IOPS:       aws.Int32(3000),
 			},
@@ -357,7 +366,7 @@ func TestThroughputValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: ec2types.VolumeTypeGp3,
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				Throughput: aws.Int32(1000),
 				IOPS:       aws.Int32(3000),
 			},
@@ -367,7 +376,7 @@ func TestThroughputValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: ec2types.VolumeTypeGp3,
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				Throughput: aws.Int32(1001),
 				IOPS:       aws.Int32(3000),
 			},
@@ -378,7 +387,7 @@ func TestThroughputValidation(t *testing.T) {
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
-				VolumeType: ec2types.VolumeTypeGp3,
+				VolumeType: string(ec2types.VolumeTypeGp3),
 				Throughput: aws.Int32(124),
 				IOPS:       aws.Int32(3000),
 			},

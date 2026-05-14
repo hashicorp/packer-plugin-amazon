@@ -97,7 +97,7 @@ func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host stri
 				return "", fmt.Errorf("instance not found: %s", *i.InstanceId)
 			}
 
-			state.Put("instance", r.Reservations[0].Instances[0])
+			state.Put("instance", &r.Reservations[0].Instances[0])
 			time.Sleep(sshHostSleepDuration)
 		}
 

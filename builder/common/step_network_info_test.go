@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -196,7 +197,7 @@ func TestStepNetwork_FilterSubnetsByAZ(t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			subnets := filterSubnetsByAZ(tt.inSubnets, tt.azs)
-			diff := cmp.Diff(subnets, tt.outSubnets)
+			diff := cmp.Diff(subnets, tt.outSubnets, cmpopts.IgnoreUnexported(ec2types.Subnet{}, ec2types.BlockPublicAccessStates{}, ec2types.SubnetIpv6CidrBlockAssociation{}))
 			if diff != "" {
 				t.Errorf("subnet mismatch between computed and expected: %s", diff)
 			}

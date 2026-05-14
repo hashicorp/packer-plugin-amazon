@@ -94,14 +94,9 @@ func (w *AWSPollingConfig) WaitUntilAMIAvailable(ctx context.Context, conn clien
 		ImageIds: []string{imageId},
 	}
 	log.Printf("Waiting for AMI (%s) to be available...", imageId)
-	waitOpts := w.getWaiterOptions()
-	if len(waitOpts) == 0 {
-		// Bump this default to 30 minutes because the aws default
-		// of ten minutes doesn't work for some of our long-running copies.
-		waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
-	}
 	waiter := ec2.NewImageAvailableWaiter(conn)
-	err := waiter.Wait(ctx, &imageInput, time.Duration(w.MaxTimeout)*time.Second)
+	maxTimeout := w.WithMaxAttempts(120).MaxTimeout
+	err := waiter.Wait(ctx, &imageInput, time.Duration(maxTimeout)*time.Second)
 	if err != nil {
 		if strings.Contains(err.Error(), request.WaiterResourceNotReadyErrorCode) {
 			err = fmt.Errorf("Failed with ResourceNotReady error, which can "+
@@ -162,15 +157,9 @@ func (w *AWSPollingConfig) WaitUntilSnapshotDone(ctx context.Context, conn clien
 		SnapshotIds: []string{snapshotID},
 	}
 
-	waitOpts := w.getWaiterOptions()
-	if len(waitOpts) == 0 {
-		// Bump this default to 30 minutes.
-		// Large snapshots can take a long time for the copy to s3
-		waitOpts = append(waitOpts, request.WithWaiterMaxAttempts(120))
-	}
-
+	maxTimeout := w.WithMaxAttempts(120).MaxTimeout
 	waiter := ec2.NewSnapshotCompletedWaiter(conn)
-	err := waiter.Wait(ctx, &snapInput, time.Duration(w.MaxTimeout)*time.Second)
+	err := waiter.Wait(ctx, &snapInput, time.Duration(maxTimeout)*time.Second)
 	return err
 }
 
@@ -810,20 +799,41 @@ type overridableWaitVars struct {
 	awsTimeoutSeconds   envInfo
 }
 
-func (w *AWSPollingConfig) getWaiterOptions() []request.WaiterOption {
+func (w *AWSPollingConfig) Prepare() *AWSPollingConfig {
 	envOverrides := getEnvOverrides()
 
-	if w.MaxAttempts != 0 {
-		envOverrides.awsMaxAttempts.Val = w.MaxAttempts
-		envOverrides.awsMaxAttempts.overridden = true
+	if w.MaxAttempts == 0 {
+		if envOverrides.awsMaxAttempts.overridden {
+			w.MaxAttempts = envOverrides.awsMaxAttempts.Val
+		} else {
+			w.MaxAttempts = 40
+		}
 	}
-	if w.DelaySeconds != 0 {
-		envOverrides.awsPollDelaySeconds.Val = w.DelaySeconds
-		envOverrides.awsPollDelaySeconds.overridden = true
+	if w.DelaySeconds == 0 {
+		if envOverrides.awsPollDelaySeconds.overridden {
+			w.DelaySeconds = envOverrides.awsPollDelaySeconds.Val
+		} else {
+			w.DelaySeconds = 15
+		}
 	}
+	if w.MaxTimeout == 0 {
+		if envOverrides.awsTimeoutSeconds.overridden {
+			w.MaxTimeout = envOverrides.awsTimeoutSeconds.Val
+		} else {
+			w.MaxTimeout = w.MaxAttempts * w.DelaySeconds
+			if w.MaxTimeout == 0 {
+				w.MaxTimeout = 600
+			}
+		}
+	}
+	return w
+}
 
-	waitOpts := applyEnvOverrides(envOverrides)
-	return waitOpts
+func (w *AWSPollingConfig) WithMaxAttempts(maxAttempts int) *AWSPollingConfig {
+	copy := *w
+	copy.MaxAttempts = maxAttempts
+	copy.MaxTimeout = maxAttempts * copy.DelaySeconds
+	return &copy
 }
 
 func getOverride(varInfo envInfo) envInfo {

@@ -17,7 +17,11 @@ func FakeAccessConfig() *AccessConfig {
 		getEC2Connection: func() clients.Ec2Client {
 			return &mockEC2Client{}
 		},
-		PollingConfig: new(AWSPollingConfig),
+		AccessKey:           "AKIA12SOME345EXAMPLE",
+		SecretKey:           "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		Token:               "accesstoken",
+		SkipCredsValidation: true,
+		PollingConfig:       new(AWSPollingConfig).Prepare(),
 	}
 	accessConfig.awsConfig = &aws.Config{
 		Region: "us-east-1",

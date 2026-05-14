@@ -217,7 +217,7 @@ func (s *StepRunSpotInstance) LoadUserData() (string, error) {
 }
 
 func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Launching a spot AWS instance...")
@@ -593,7 +593,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		}
 	}
 
-	state.Put("instance", instance)
+	state.Put("instance", &instance)
 	// instance_id is the generic term used so that users can have access to the
 	// instance id inside of the provisioners, used in step_provision.
 	state.Put("instance_id", instance.InstanceId)
@@ -602,7 +602,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 }
 
 func (s *StepRunSpotInstance) Cleanup(state multistep.StateBag) {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 	launchTemplateName := state.Get("launchTemplateName").(string)
 

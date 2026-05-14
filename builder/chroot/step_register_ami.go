@@ -162,7 +162,7 @@ func buildBaseRegisterOpts(config *Config, sourceImage *ec2types.Image, rootVolu
 	if config.FromScratch {
 		return &ec2.RegisterImageInput{
 			Name:                &amiName,
-			Architecture:        config.Architecture,
+			Architecture:        ec2types.ArchitectureValues(config.Architecture),
 			RootDeviceName:      aws.String(rootDeviceName),
 			VirtualizationType:  aws.String(string(config.AMIVirtType)),
 			BlockDeviceMappings: newMappings,

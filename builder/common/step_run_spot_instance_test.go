@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -35,7 +36,7 @@ func tStateSpot() multistep.StateBag {
 
 func getBasicStep() *StepRunSpotInstance {
 	stepRunSpotInstance := StepRunSpotInstance{
-		PollingConfig:            new(AWSPollingConfig),
+		PollingConfig:            new(AWSPollingConfig).Prepare(),
 		AssociatePublicIpAddress: confighelper.TriUnset,
 		LaunchMappings:           BlockDevices{},
 		BlockDurationMinutes:     0,
@@ -145,6 +146,9 @@ func TestCreateTemplateData_NoEphemeral(t *testing.T) {
 }
 
 type runSpotEC2ConnMock struct {
+	//clients.Ec2Client
+	clients.Ec2Client
+
 	CreateLaunchTemplateParams []*ec2.CreateLaunchTemplateInput
 	CreateLaunchTemplateFn     func(context.Context, *ec2.CreateLaunchTemplateInput, ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error)
 
@@ -212,6 +216,9 @@ func defaultEc2Mock(instanceId, spotRequestId, volumeId, launchTemplateId *strin
 				},
 			},
 		},
+		State: &ec2types.InstanceState{
+			Name: ec2types.InstanceStateNameRunning,
+		},
 	}
 	return &runSpotEC2ConnMock{
 		CreateLaunchTemplateFn: func(ctx context.Context, in *ec2.CreateLaunchTemplateInput, opts ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateOutput, error) {
@@ -274,7 +281,7 @@ func TestRun(t *testing.T) {
 		"volume-tag": "volume-tag-value",
 	}
 
-	ctx := context.TODO()
+	ctx := t.Context()
 	action := stepRunSpotInstance.Run(ctx, state)
 
 	if err := state.Get("error"); err != nil {
@@ -329,8 +336,8 @@ func TestRun(t *testing.T) {
 		t.Fatalf("expected fleet-tag: fleet-tag-value")
 	}
 
-	if len(ec2Mock.DescribeInstancesParams) != 1 {
-		t.Fatalf("describeInstancesParams should be invoked once, but invoked %v", len(ec2Mock.DescribeInstancesParams))
+	if len(ec2Mock.DescribeInstancesParams) != 2 {
+		t.Fatalf("describeInstancesParams should be invoked twice, but invoked %v", len(ec2Mock.DescribeInstancesParams))
 	}
 	if ec2Mock.DescribeInstancesParams[0].InstanceIds[0] != *instanceId {
 		t.Fatalf("instanceId should match from createFleet response")
@@ -372,7 +379,7 @@ func TestRun_NoSpotTags(t *testing.T) {
 		"volume-tag": "volume-tag-value",
 	}
 
-	ctx := context.TODO()
+	ctx := t.Context()
 	action := stepRunSpotInstance.Run(ctx, state)
 
 	if err := state.Get("error"); err != nil {
