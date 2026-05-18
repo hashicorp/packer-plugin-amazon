@@ -133,7 +133,7 @@ necessary for this build to succeed and can be found further down the page.
 
 - `root_device_name` (string) - The root device name. For example, xvda.
 
-- `root_volume_size` (int64) - The size of the root volume in GB for the chroot environment and the
+- `root_volume_size` (int32) - The size of the root volume in GB for the chroot environment and the
   resulting AMI. Default size is the snapshot size of the source_ami
   unless from_scratch is true, in which case this field must be defined.
 
@@ -259,7 +259,7 @@ builders.
   [template engine](/packer/docs/templates/legacy_json_templates/engine), see [Build template
   data](#build-template-data) for more information.
 
-- `ami_virtualization_type` (string) - The type of virtualization for the AMI
+- `ami_virtualization_type` (ec2types.VirtualizationType) - The type of virtualization for the AMI
   you are building. This option is required to register HVM images. Can be
   paravirtual (default) or hvm.
 
@@ -394,7 +394,7 @@ builders.
   
   [Time-based copies]: https://docs.aws.amazon.com/ebs/latest/userguide/time-based-copies.html
 
-- `imds_support` (string) - Enforce version of the Instance Metadata Service on the built AMI.
+- `imds_support` (ec2types.ImdsSupportValues) - Enforce version of the Instance Metadata Service on the built AMI.
   Valid options are unset (legacy) and `v2.0`. See the documentation on
   [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
   for more information. Defaults to legacy.
@@ -501,7 +501,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   false will result in an unencrypted device, and true will result in an
   encrypted one.
 
-- `iops` (\*int64) - The number of I/O operations per second (IOPS) that the volume supports.
+- `iops` (\*int32) - The number of I/O operations per second (IOPS) that the volume supports.
   See the documentation on
   [IOPs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information
@@ -511,7 +511,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `snapshot_id` (string) - The ID of the snapshot.
 
-- `throughput` (\*int64) - The throughput for gp3 volumes, only valid for gp3 types
+- `throughput` (\*int32) - The throughput for gp3 volumes, only valid for gp3 types
   See the documentation on
   [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information
@@ -529,7 +529,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   for Provisioned IOPS (SSD) volumes, st1 for Throughput Optimized HDD,
   sc1 for Cold HDD, and standard for Magnetic volumes.
 
-- `volume_size` (int64) - The size of the volume, in GiB. Required if not specifying a
+- `volume_size` (int32) - The size of the volume, in GiB. Required if not specifying a
   snapshot_id.
 
 - `kms_key_id` (string) - ID, alias or ARN of the KMS key to use for boot volume encryption.
@@ -770,6 +770,11 @@ JSON example:
   This value can also be set via the AWS_POLL_DELAY_SECONDS.
   If both option and environment variable are set, the delay_seconds will be considered over the AWS_POLL_DELAY_SECONDS.
   If none is set, defaults to AWS waiter default which is 15 seconds.
+
+- `max_timeout` (int) - Specifies the maximum timeout in seconds for the waiter.
+  This value can also be set via the AWS_MAX_TIMEOUT.
+  If both option and environment variable are set, the max_timeout will be considered over the AWS_MAX_TIMEOUT.
+  If none is set, defaults to AWS waiter default which is 600 seconds (10 minutes).
 
 <!-- End of code generated from the comments of the AWSPollingConfig struct in builder/common/state.go; -->
 
