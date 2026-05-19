@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.7
+	github.com/hashicorp/packer-plugin-sdk v0.6.8
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.11.1
@@ -36,7 +36,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.11.0 // indirect
 	cloud.google.com/go/monitoring v1.29.0 // indirect
-	cloud.google.com/go/storage v1.62.1 // indirect
+	cloud.google.com/go/storage v1.62.2 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.32.0 // indirect
@@ -102,7 +102,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.7
 	github.com/aws/aws-sdk-go-v2/config v1.32.17
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.301.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.303.0
 	github.com/aws/smithy-go v1.25.1
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -165,11 +165,11 @@ require (
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/api v0.278.0 // indirect
-	google.golang.org/genproto v0.0.0-20260504160031-60b97b32f348 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260504160031-60b97b32f348 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260504160031-60b97b32f348 // indirect
-	google.golang.org/grpc v1.81.0 // indirect
+	google.golang.org/api v0.279.0 // indirect
+	google.golang.org/genproto v0.0.0-20260519071638-aa98bba5eb94 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260519071638-aa98bba5eb94 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260519071638-aa98bba5eb94 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
