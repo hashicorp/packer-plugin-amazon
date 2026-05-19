@@ -83,8 +83,8 @@ type AWSPollingConfig struct {
 	// If none is set, defaults to AWS waiter default which is 15 seconds.
 	DelaySeconds int `mapstructure:"delay_seconds" required:"false"`
 	// Specifies the maximum timeout in seconds for the waiter.
-	// This value can also be set via the AWS_MAX_TIMEOUT.
-	// If both option and environment variable are set, the max_timeout will be considered over the AWS_MAX_TIMEOUT.
+	// This value can also be set via the AWS_TIMEOUT_SECONDS.
+	// If both option and environment variable are set, the max_timeout will be considered over the AWS_TIMEOUT_SECONDS.
 	// If none is set, defaults to AWS waiter default which is 600 seconds (10 minutes).
 	MaxTimeout int `mapstructure:"max_timeout" required:"false"`
 }

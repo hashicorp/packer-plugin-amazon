@@ -431,6 +431,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
+	state.Put("ctx", ctx)
 	state.Put("config", &b.config)
 	state.Put("access_config", &b.config.AccessConfig)
 	state.Put("ami_config", &b.config.AMIConfig)

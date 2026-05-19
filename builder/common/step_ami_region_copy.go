@@ -192,7 +192,7 @@ func GetEc2Client(ctx context.Context, config *AccessConfig, target string) (cli
 	return client, nil
 }
 
-func (s *StepAMIRegionCopy) copyImageV2(ctx context.Context, regionconn clients.Ec2Client, name, imageId, target, source,
+func (s *StepAMIRegionCopy) copyImage(ctx context.Context, regionconn clients.Ec2Client, name, imageId, target, source,
 	keyId string,
 	encrypt *bool, amiSnapshotCopyDurationMinutes int64) (string, error) {
 	var amiImageId string
@@ -241,7 +241,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 		return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
 	}
 
-	amiImageId, err = s.copyImageV2(ctx, regionconn, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyDurationMinutes)
+	amiImageId, err = s.copyImage(ctx, regionconn, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyDurationMinutes)
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
 	}
