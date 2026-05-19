@@ -31,7 +31,7 @@ type StepSwapVolumes struct {
 func (s *StepSwapVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(ec2types.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 
 	// Describe the instance
 	input := &ec2.DescribeInstancesInput{
@@ -145,7 +145,7 @@ func (s *StepSwapVolumes) Cleanup(state multistep.StateBag) {
 	ctx := context.TODO()
 	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
-	instance := state.Get("instance").(ec2types.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui.Say("Cleaning up any detached volumes with delete_on_termination set to true...")
 	// Describe the instance
 	input := &ec2.DescribeInstancesInput{

@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
@@ -74,8 +73,8 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 	}
 
 	if !s.IsRestricted {
-		region := state.Get("region").(*string)
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, aws.ToString(region), state)
+		region := state.Get("region").(string)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging key pair: %s", err)
 			state.Put("error", err)

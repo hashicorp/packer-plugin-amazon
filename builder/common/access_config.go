@@ -254,7 +254,8 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws.Config, error) {
 		}
 	}
 
-	return &awsConfig, nil
+	c.awsConfig = &awsConfig
+	return c.awsConfig, nil
 }
 
 func (c *AccessConfig) SessionRegion() string {

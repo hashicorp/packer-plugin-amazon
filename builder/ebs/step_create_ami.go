@@ -37,7 +37,7 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 	config := state.Get("config").(*Config)
 	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
-	instance := state.Get("instance").(ec2types.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	if s.AMISkipCreateImage {

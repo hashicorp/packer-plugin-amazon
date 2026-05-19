@@ -48,7 +48,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 		// does not exist.
 
 		// Work around this by retrying a few times, up to about 5 minutes.
-		err := retry.Config{Tries: 6, ShouldRetry: func(error) bool {
+		err := retry.Config{Tries: 6, ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
 				return true
 			}
@@ -81,7 +81,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 	w := ec2.NewInstanceStoppedWaiter(ec2conn)
 	err = w.Wait(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{aws.ToString(instance.InstanceId)},
-	}, time.Duration(s.PollingConfig.MaxTimeout))
+	}, time.Duration(s.PollingConfig.MaxTimeout)*time.Second)
 	if err != nil {
 		err := fmt.Errorf("Error waiting for instance to stop: %s", err)
 		state.Put("error", err)
