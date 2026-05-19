@@ -10,7 +10,7 @@ name: "Go Validate"
 on:
   push:
     branches:
-      - 'main'
+      - "main"
   pull_request:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
       go-version: ${{ steps.get-go-version.outputs.go-version }}
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      - name: 'Determine Go version'
+      - name: "Determine Go version"
         id: get-go-version
         run: |
           echo "Found Go $(cat .go-version)"
@@ -51,7 +51,8 @@ jobs:
           go-version: ${{ needs.get-go-version.outputs.go-version }}
       - uses: golangci/golangci-lint-action@82d40c283aeb1f2b6595839195e95c2d6a49081b # v5.0.0
         with:
-          version: v1.64.8
+          version: v2.12.2
+          install-mode: goinstall
           only-new-issues: true
   check-fmt:
     needs:

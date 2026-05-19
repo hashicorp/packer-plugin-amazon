@@ -4,8 +4,8 @@
 package common
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/packerbuilderdata"
 )
@@ -28,19 +28,19 @@ func extractBuildInfo(region string, state multistep.StateBag, generatedData *pa
 		}
 	}
 
-	sourceAMI := rawSourceAMI.(*ec2.Image)
+	sourceAMI := rawSourceAMI.(*ec2types.Image)
 	sourceAMITags := make(map[string]string, len(sourceAMI.Tags))
 	for _, tag := range sourceAMI.Tags {
-		sourceAMITags[aws.StringValue(tag.Key)] = aws.StringValue(tag.Value)
+		sourceAMITags[aws.ToString(tag.Key)] = aws.ToString(tag.Value)
 	}
 
 	buildInfoTemplate := &BuildInfoTemplate{
 		BuildRegion:           region,
-		SourceAMI:             aws.StringValue(sourceAMI.ImageId),
-		SourceAMICreationDate: aws.StringValue(sourceAMI.CreationDate),
-		SourceAMIName:         aws.StringValue(sourceAMI.Name),
-		SourceAMIOwner:        aws.StringValue(sourceAMI.OwnerId),
-		SourceAMIOwnerName:    aws.StringValue(sourceAMI.ImageOwnerAlias),
+		SourceAMI:             aws.ToString(sourceAMI.ImageId),
+		SourceAMICreationDate: aws.ToString(sourceAMI.CreationDate),
+		SourceAMIName:         aws.ToString(sourceAMI.Name),
+		SourceAMIOwner:        aws.ToString(sourceAMI.OwnerId),
+		SourceAMIOwnerName:    aws.ToString(sourceAMI.ImageOwnerAlias),
 		SourceAMITags:         sourceAMITags,
 	}
 

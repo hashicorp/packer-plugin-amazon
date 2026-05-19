@@ -35,9 +35,9 @@ type stepCreateAMI struct {
 
 func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
-	instance := state.Get("instance").(ec2types.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	if s.AMISkipCreateImage {
@@ -181,7 +181,7 @@ func (s *stepCreateAMI) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deregistering the AMI and deleting associated snapshots because " +

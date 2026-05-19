@@ -5,7 +5,9 @@
 
 package common
 
-import "github.com/hashicorp/packer-plugin-sdk/template/config"
+import (
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
+)
 
 // SnapshotConfig is for common configuration related to creating AMIs.
 type SnapshotConfig struct {

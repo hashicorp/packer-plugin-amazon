@@ -11,9 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -36,15 +37,15 @@ type StepSecurityGroup struct {
 }
 
 func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 	vpcId := state.Get("vpc_id").(string)
+	awscfg := state.Get("awsConfig").(*aws.Config)
 
 	if len(s.SecurityGroupIds) > 0 {
-		_, err := ec2conn.DescribeSecurityGroups(
-			&ec2.DescribeSecurityGroupsInput{
-				GroupIds: aws.StringSlice(s.SecurityGroupIds),
-			},
+		_, err := ec2conn.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+			GroupIds: s.SecurityGroupIds,
+		},
 		)
 		if err != nil {
 			err := fmt.Errorf("Couldn't find specified security group: %s", err)
@@ -74,7 +75,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 		log.Printf("Using SecurityGroup Filters %v", params)
 
-		sgResp, err := ec2conn.DescribeSecurityGroups(params)
+		sgResp, err := ec2conn.DescribeSecurityGroups(ctx, params)
 		if err != nil {
 			err := fmt.Errorf("Couldn't find security groups for filter: %s", err)
 			log.Printf("[DEBUG] %s", err.Error())
@@ -102,7 +103,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	}
 
 	if !s.IsRestricted {
-		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, *ec2conn.Config.Region, state)
+		ec2Tags, err := TagMap(s.Tags).EC2Tags(s.Ctx, awscfg.Region, state)
 		if err != nil {
 			err := fmt.Errorf("Error tagging security group: %s", err)
 			state.Put("error", err)
@@ -110,12 +111,12 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 			return multistep.ActionHalt
 		}
 
-		group.TagSpecifications = ec2Tags.TagSpecifications(ec2.ResourceTypeSecurityGroup)
+		group.TagSpecifications = ec2Tags.TagSpecifications(ec2types.ResourceTypeSecurityGroup)
 	}
 
 	group.VpcId = &vpcId
 
-	groupResp, err := ec2conn.CreateSecurityGroup(group)
+	groupResp, err := ec2conn.CreateSecurityGroup(ctx, group)
 	if err != nil {
 		ui.Error(err.Error())
 		state.Put("error", err)
@@ -127,11 +128,8 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	// Wait for the security group become available for authorizing
 	log.Printf("[DEBUG] Waiting for temporary security group: %s", s.createdGroupId)
-	err = waitUntilSecurityGroupExists(ec2conn,
-		&ec2.DescribeSecurityGroupsInput{
-			GroupIds: []*string{aws.String(s.createdGroupId)},
-		},
-	)
+	w := ec2.NewSecurityGroupExistsWaiter(ec2conn)
+	err = w.Wait(ctx, &ec2.DescribeSecurityGroupsInput{GroupIds: []string{s.createdGroupId}}, 200*time.Second)
 	if err != nil {
 		err := fmt.Errorf("Timed out waiting for security group %s: %s", s.createdGroupId, err)
 		log.Printf("[DEBUG] %s", err.Error())
@@ -178,8 +176,8 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 
 	// map the list of temporary security group CIDRs bundled with config to
 	// types expected by EC2.
-	groupIpRanges := []*ec2.IpRange{}
-	groupIpv6Ranges := []*ec2.Ipv6Range{}
+	groupIpRanges := []ec2types.IpRange{}
+	groupIpv6Ranges := []ec2types.Ipv6Range{}
 	for _, cidr := range temporarySGSourceCidrs {
 		_, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
@@ -189,12 +187,12 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		}
 		if ipNet.IP.To4() != nil {
 			// IPv4 CIDR
-			groupIpRanges = append(groupIpRanges, &ec2.IpRange{
+			groupIpRanges = append(groupIpRanges, ec2types.IpRange{
 				CidrIp: aws.String(cidr),
 			})
 		} else {
 			// IPv6 CIDR
-			groupIpv6Ranges = append(groupIpv6Ranges, &ec2.Ipv6Range{
+			groupIpv6Ranges = append(groupIpv6Ranges, ec2types.Ipv6Range{
 				CidrIpv6: aws.String(cidr),
 			})
 		}
@@ -212,10 +210,10 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 	// Authorize access for the provided port within the security group
 	groupRules := &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId: groupResp.GroupId,
-		IpPermissions: []*ec2.IpPermission{
+		IpPermissions: []ec2types.IpPermission{
 			{
-				FromPort:   aws.Int64(int64(port)),
-				ToPort:     aws.Int64(int64(port)),
+				FromPort:   aws.Int32(int32(port)),
+				ToPort:     aws.Int32(int32(port)),
 				Ipv6Ranges: groupIpv6Ranges,
 				IpRanges:   groupIpRanges,
 				IpProtocol: aws.String("tcp"),
@@ -227,7 +225,7 @@ func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) m
 		"Authorizing access to port %d from %v in the temporary security groups...",
 		port, temporarySGSourceCidrs),
 	)
-	_, err = ec2conn.AuthorizeSecurityGroupIngress(groupRules)
+	_, err = ec2conn.AuthorizeSecurityGroupIngress(ctx, groupRules)
 	if err != nil {
 		err := fmt.Errorf("Error authorizing temporary security group: %s", err)
 		state.Put("error", err)
@@ -243,14 +241,15 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	ctx := state.Get("ctx").(context.Context)
 
 	ui.Say("Deleting temporary security group...")
 
 	var err error
 	for i := 0; i < 5; i++ {
-		_, err = ec2conn.DeleteSecurityGroup(&ec2.DeleteSecurityGroupInput{GroupId: &s.createdGroupId})
+		_, err = ec2conn.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: &s.createdGroupId})
 		if err == nil {
 			break
 		}
@@ -264,46 +263,4 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 			"Error cleaning up security group. Please delete the group manually:"+
 				" err: %s; security group ID: %s", err, s.createdGroupId))
 	}
-}
-
-func waitUntilSecurityGroupExists(c *ec2.EC2, input *ec2.DescribeSecurityGroupsInput) error {
-	ctx := aws.BackgroundContext()
-	w := request.Waiter{
-		Name:        "DescribeSecurityGroups",
-		MaxAttempts: 40,
-		Delay:       request.ConstantWaiterDelay(5 * time.Second),
-		Acceptors: []request.WaiterAcceptor{
-			{
-				State:    request.SuccessWaiterState,
-				Matcher:  request.PathWaiterMatch,
-				Argument: "length(SecurityGroups[]) > `0`",
-				Expected: true,
-			},
-			{
-				State:    request.RetryWaiterState,
-				Matcher:  request.ErrorWaiterMatch,
-				Argument: "",
-				Expected: "InvalidGroup.NotFound",
-			},
-			{
-				State:    request.RetryWaiterState,
-				Matcher:  request.ErrorWaiterMatch,
-				Argument: "",
-				Expected: "InvalidSecurityGroupID.NotFound",
-			},
-		},
-		Logger: c.Config.Logger,
-		NewRequest: func(opts []request.Option) (*request.Request, error) {
-			var inCpy *ec2.DescribeSecurityGroupsInput
-			if input != nil {
-				tmp := *input
-				inCpy = &tmp
-			}
-			req, _ := c.DescribeSecurityGroupsRequest(inCpy)
-			req.SetContext(ctx)
-			req.ApplyOptions(opts...)
-			return req, nil
-		},
-	}
-	return w.WaitWithContext(ctx)
 }

@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -22,8 +25,8 @@ type StepStopEBSBackedInstance struct {
 }
 
 func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	instance := state.Get("instance").(*ec2.Instance)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Skip when it is a spot instance
@@ -45,7 +48,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 		// does not exist.
 
 		// Work around this by retrying a few times, up to about 5 minutes.
-		err := retry.Config{Tries: 6, ShouldRetry: func(error) bool {
+		err := retry.Config{Tries: 6, ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
 				return true
 			}
@@ -53,10 +56,10 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 		},
 			RetryDelay: (&retry.Backoff{InitialBackoff: 10 * time.Second, MaxBackoff: 60 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-			ui.Message("Stopping instance")
+			ui.Say("Stopping instance")
 
-			_, err = ec2conn.StopInstances(&ec2.StopInstancesInput{
-				InstanceIds: []*string{instance.InstanceId},
+			_, err = ec2conn.StopInstances(ctx, &ec2.StopInstancesInput{
+				InstanceIds: []string{aws.ToString(instance.InstanceId)},
 			})
 
 			return err
@@ -75,12 +78,10 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 
 	// Wait for the instance to actually stop
 	ui.Say("Waiting for the instance to stop...")
-	err = ec2conn.WaitUntilInstanceStoppedWithContext(ctx,
-		&ec2.DescribeInstancesInput{
-			InstanceIds: []*string{instance.InstanceId},
-		},
-		s.PollingConfig.getWaiterOptions()...)
-
+	w := ec2.NewInstanceStoppedWaiter(ec2conn)
+	err = w.Wait(ctx, &ec2.DescribeInstancesInput{
+		InstanceIds: []string{aws.ToString(instance.InstanceId)},
+	}, time.Duration(s.PollingConfig.MaxTimeout)*time.Second)
 	if err != nil {
 		err := fmt.Errorf("Error waiting for instance to stop: %s", err)
 		state.Put("error", err)

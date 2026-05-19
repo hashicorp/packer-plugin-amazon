@@ -3,14 +3,18 @@
 
 package common
 
-import "fmt"
+import (
+	"fmt"
+
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+)
 
 // IsValidBootMode checks that the bootmode is a value supported by AWS
 func IsValidBootMode(bootmode string) error {
-	validModes := []string{"legacy-bios", "uefi", "uefi-preferred"}
+	validModes := []ec2types.BootModeValues{ec2types.BootModeValuesLegacyBios, ec2types.BootModeValuesUefi, ec2types.BootModeValuesUefiPreferred}
 
 	for _, mode := range validModes {
-		if bootmode == mode {
+		if bootmode == string(mode) {
 			return nil
 		}
 	}

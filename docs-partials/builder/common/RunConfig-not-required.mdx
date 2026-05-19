@@ -22,7 +22,7 @@
 - `availability_zone` (string) - Destination availability zone to launch
   instance in. Leave this empty to allow Amazon to auto-assign.
 
-- `block_duration_minutes` (int64) - Requires spot_price to be set. The
+- `block_duration_minutes` (int32) - Requires spot_price to be set. The
   required duration for the Spot Instances (also known as Spot blocks). This
   value must be a multiple of 60 (60, 120, 180, 240, 300, or 360). You can't
   specify an Availability Zone group or a launch group if you specify a
@@ -30,7 +30,7 @@
   from July 1, 2021. [See Amazon's
   documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
 
-- `capacity_reservation_preference` (string) - Set the preference for using a capacity reservation if one exists.
+- `capacity_reservation_preference` (ec2types.CapacityReservationPreference) - Set the preference for using a capacity reservation if one exists.
   Either will be `open` or `none`. Defaults to `none`
 
 - `capacity_reservation_id` (string) - Provide the specific EC2 Capacity Reservation ID that will be used
@@ -277,7 +277,7 @@
     criteria provided in `source_ami_filter`; this pins the AMI returned by the
     filter, but will cause Packer to fail if the `source_ami` does not exist.
 
-- `spot_allocation_strategy` (string) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
+- `spot_allocation_strategy` (ec2types.SpotAllocationStrategy) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
   The strategy that determines how to allocate the target Spot Instance capacity
   across the Spot Instance pools specified by the EC2 Fleet launch configuration.
   If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
@@ -434,7 +434,7 @@
   
   Refer to the [Placement docs](#placement-configuration) for more information on the supported attributes for placement configuration.
 
-- `tenancy` (string) - Deprecated: Use Placement Tenancy instead.
+- `tenancy` (ec2types.Tenancy) - Deprecated: Use Placement Tenancy instead.
 
 - `temporary_security_group_source_cidrs` ([]string) - A list of IPv4/IPv6 CIDR blocks to be authorized access to the instance, when
   packer is creating a temporary security group.

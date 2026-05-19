@@ -10,9 +10,10 @@ import (
 	"math/rand"
 	"sort"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -38,10 +39,10 @@ type StepNetworkInfo struct {
 	// RequestedMachineType is the machine type of the instance we want to create.
 	// This is used for selecting a subnet/AZ which supports the type of instance
 	// selected, and not just the most available / random one.
-	RequestedMachineType string
+	RequestedMachineType ec2types.InstanceType
 }
 
-type subnetsSort []*ec2.Subnet
+type subnetsSort []ec2types.Subnet
 
 func (a subnetsSort) Len() int      { return len(a) }
 func (a subnetsSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -50,14 +51,14 @@ func (a subnetsSort) Less(i, j int) bool {
 }
 
 // Returns the most recent AMI out of a slice of images.
-func mostFreeSubnet(subnets []*ec2.Subnet) *ec2.Subnet {
+func mostFreeSubnet(subnets []ec2types.Subnet) ec2types.Subnet {
 	sortedSubnets := subnets
 	sort.Sort(subnetsSort(sortedSubnets))
 	return sortedSubnets[len(sortedSubnets)-1]
 }
 
 func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Set VpcID if none was specified but filters are defined in the template.
@@ -75,7 +76,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 
 		log.Printf("Using VPC Filters %v", params)
 
-		vpcResp, err := ec2conn.DescribeVpcs(params)
+		vpcResp, err := ec2conn.DescribeVpcs(ctx, params)
 		if err != nil {
 			err := fmt.Errorf("Error querying VPCs: %s", err)
 			state.Put("error", err)
@@ -115,7 +116,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 		params.Filters = subnetFilters
 		log.Printf("Using Subnet Filters %v", params)
 
-		subnetsResp, err := ec2conn.DescribeSubnets(params)
+		subnetsResp, err := ec2conn.DescribeSubnets(ctx, params)
 		if err != nil {
 			err := fmt.Errorf("Error querying Subnets: %s", err)
 			state.Put("error", err)
@@ -137,7 +138,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 			return multistep.ActionHalt
 		}
 
-		var subnet *ec2.Subnet
+		var subnet ec2types.Subnet
 		switch {
 		case s.SubnetFilter.MostFree:
 			subnet = mostFreeSubnet(subnetsResp.Subnets)
@@ -153,7 +154,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	// Set VPC/Subnet if we explicitely enable or disable public IP assignment to the instance
 	// and we did not set or get a subnet ID before
 	if s.AssociatePublicIpAddress != config.TriUnset && s.SubnetId == "" {
-		err := s.GetDefaultVPCAndSubnet(ui, ec2conn, state)
+		err := s.GetDefaultVPCAndSubnet(ctx, ui, ec2conn, state)
 		if err != nil {
 			ui.Say("associate_public_ip_address is set without a subnet_id.")
 			ui.Say(fmt.Sprintf("Packer attempted to infer a subnet from default VPC (if unspecified), but failed due to: %s", err))
@@ -164,7 +165,7 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	// Try to find AZ and VPC Id from Subnet if they are not yet found/given
 	if s.SubnetId != "" && (s.AvailabilityZone == "" || s.VpcId == "") {
 		log.Printf("[INFO] Finding AZ and VpcId for the given subnet '%s'", s.SubnetId)
-		resp, err := ec2conn.DescribeSubnets(&ec2.DescribeSubnetsInput{SubnetIds: []*string{&s.SubnetId}})
+		resp, err := ec2conn.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{SubnetIds: []string{s.SubnetId}})
 		if err != nil {
 			err := fmt.Errorf("Describing the subnet: %s returned error: %s.", s.SubnetId, err)
 			state.Put("error", err)
@@ -187,18 +188,18 @@ func (s *StepNetworkInfo) Run(ctx context.Context, state multistep.StateBag) mul
 	return multistep.ActionContinue
 }
 
-func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ui packersdk.Ui, ec2conn ec2iface.EC2API, state multistep.StateBag) error {
+func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ctx context.Context, ui packersdk.Ui, ec2conn clients.Ec2Client, state multistep.StateBag) error {
 	ui.Say(fmt.Sprintf("Setting public IP address to %t on instance without a subnet ID",
 		*s.AssociatePublicIpAddress.ToBoolPointer()))
 
 	var vpc = s.VpcId
 	if vpc == "" {
 		ui.Say("No VPC ID provided, Packer will use the default VPC")
-		vpcs, err := ec2conn.DescribeVpcs(&ec2.DescribeVpcsInput{
-			Filters: []*ec2.Filter{
+		vpcs, err := ec2conn.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
+			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("is-default"),
-					Values: []*string{aws.String("true")},
+					Values: []string{"true"},
 				},
 			},
 		})
@@ -224,7 +225,7 @@ func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ui packersdk.Ui, ec2conn ec2ifa
 	if err != nil {
 		return fmt.Errorf("Failed to prepare subnet filters: %s", err)
 	}
-	subnetOut, err := ec2conn.DescribeSubnets(params)
+	subnetOut, err := ec2conn.DescribeSubnets(ctx, params)
 	if err != nil {
 		return fmt.Errorf("Failed to describe subnets: %s", err)
 	}
@@ -233,7 +234,7 @@ func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ui packersdk.Ui, ec2conn ec2ifa
 
 	// Filter by AZ with support for machine type
 	azs := getAZFromSubnets(subnets)
-	azs, err = filterAZByMachineType(azs, s.RequestedMachineType, ec2conn)
+	azs, err = filterAZByMachineType(ctx, azs, s.RequestedMachineType, ec2conn)
 	if err == nil {
 		subnets = filterSubnetsByAZ(subnets, azs)
 		if subnets == nil {
@@ -258,7 +259,7 @@ func (s *StepNetworkInfo) GetDefaultVPCAndSubnet(ui packersdk.Ui, ec2conn ec2ifa
 	return nil
 }
 
-func getAZFromSubnets(subnets []*ec2.Subnet) []string {
+func getAZFromSubnets(subnets []ec2types.Subnet) []string {
 	azs := map[string]struct{}{}
 	for _, sub := range subnets {
 		azs[*sub.AvailabilityZone] = struct{}{}
@@ -272,20 +273,20 @@ func getAZFromSubnets(subnets []*ec2.Subnet) []string {
 	return retAZ
 }
 
-func filterAZByMachineType(azs []string, machineType string, ec2conn ec2iface.EC2API) ([]string, error) {
+func filterAZByMachineType(ctx context.Context, azs []string, machineType ec2types.InstanceType, ec2conn clients.Ec2Client) ([]string, error) {
 	var retAZ []string
 
 	for _, az := range azs {
-		resp, err := ec2conn.DescribeInstanceTypeOfferings(&ec2.DescribeInstanceTypeOfferingsInput{
-			LocationType: aws.String("availability-zone"),
-			Filters: []*ec2.Filter{
+		resp, err := ec2conn.DescribeInstanceTypeOfferings(ctx, &ec2.DescribeInstanceTypeOfferingsInput{
+			LocationType: ec2types.LocationTypeAvailabilityZone,
+			Filters: []ec2types.Filter{
 				{
 					Name:   aws.String("location"),
-					Values: []*string{&az},
+					Values: []string{az},
 				},
 				{
 					Name:   aws.String("instance-type"),
-					Values: []*string{&machineType},
+					Values: []string{string(machineType)},
 				},
 			},
 		})
@@ -295,7 +296,7 @@ func filterAZByMachineType(azs []string, machineType string, ec2conn ec2iface.EC
 		}
 
 		for _, off := range resp.InstanceTypeOfferings {
-			if *off.InstanceType == machineType {
+			if off.InstanceType == machineType {
 				retAZ = append(retAZ, az)
 				break
 			}
@@ -309,8 +310,8 @@ func filterAZByMachineType(azs []string, machineType string, ec2conn ec2iface.EC
 	return retAZ, nil
 }
 
-func filterSubnetsByAZ(subnets []*ec2.Subnet, azs []string) []*ec2.Subnet {
-	var retSubs []*ec2.Subnet
+func filterSubnetsByAZ(subnets []ec2types.Subnet, azs []string) []ec2types.Subnet {
+	var retSubs []ec2types.Subnet
 
 outLoop:
 	for _, sub := range subnets {

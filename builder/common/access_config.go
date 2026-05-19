@@ -8,27 +8,17 @@ package common
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go/aws"
-	awsCredentials "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	awsbase "github.com/hashicorp/aws-sdk-go-base"
-	awsbase_v2 "github.com/hashicorp/aws-sdk-go-base/v2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	awsbase "github.com/hashicorp/aws-sdk-go-base/v2"
 	basediag "github.com/hashicorp/aws-sdk-go-base/v2/diag"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/packer-plugin-amazon/builder/common/awserrors"
-	pluginversion "github.com/hashicorp/packer-plugin-amazon/version"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 	vaultapi "github.com/hashicorp/vault/api"
 )
@@ -163,8 +153,7 @@ type AccessConfig struct {
 	// access key and secret key. If you're not sure what this is, then you
 	// probably don't need it. This will also be read from the AWS_SESSION_TOKEN
 	// environmental variable.
-	Token   string `mapstructure:"token" required:"false"`
-	session *session.Session
+	Token string `mapstructure:"token" required:"false"`
 	// Get credentials from HashiCorp Vault's aws secrets engine. You must
 	// already have created a role to use. For more information about
 	// generating credentials via the Vault engine, see the [Vault
@@ -213,21 +202,21 @@ type AccessConfig struct {
 	VaultAWSEngine VaultAWSEngineOptions `mapstructure:"vault_aws_engine" required:"false"`
 	// [Polling configuration](#polling-configuration) for the AWS waiter. Configures the waiter that checks
 	// resource state.
-	PollingConfig *AWSPollingConfig `mapstructure:"aws_polling" required:"false"`
-
-	getEC2Connection func() ec2iface.EC2API
+	PollingConfig    *AWSPollingConfig `mapstructure:"aws_polling" required:"false"`
+	awsConfig        *aws.Config
+	getEC2Connection func() clients.Ec2Client
 
 	// packerConfig is set by Prepare() containing information about Packer,
 	// including the CorePackerVersionString
 	packerConfig *common.PackerConfig
 }
 
-func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*awsv2.Config, error) {
+func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*aws.Config, error) {
 
 	// Reload values into the config used by the Packer-Terraform shared SDK
-	assumeRoles := []awsbase_v2.AssumeRole{}
+	var assumeRoles []awsbase.AssumeRole
 	if c.AssumeRole.AssumeRoleARN != "" {
-		awsbaseAssumeRole := awsbase_v2.AssumeRole{
+		awsbaseAssumeRole := awsbase.AssumeRole{
 			RoleARN:           c.AssumeRole.AssumeRoleARN,
 			Duration:          time.Duration(c.AssumeRole.AssumeRoleDurationSeconds) * time.Second,
 			ExternalID:        c.AssumeRole.AssumeRoleExternalID,
@@ -240,7 +229,7 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*awsv2.Config, error) 
 		assumeRoles = append(assumeRoles, awsbaseAssumeRole)
 	}
 
-	awsbaseConfig := awsbase_v2.Config{
+	awsbaseConfig := awsbase.Config{
 		AccessKey:           c.AccessKey,
 		AssumeRole:          assumeRoles,
 		Insecure:            c.InsecureSkipTLSVerify,
@@ -252,7 +241,7 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*awsv2.Config, error) 
 		Token:               c.Token,
 	}
 
-	_, awsConfig, awsDiags := awsbase_v2.GetAwsConfig(ctx, &awsbaseConfig)
+	_, awsConfig, awsDiags := awsbase.GetAwsConfig(ctx, &awsbaseConfig)
 
 	for _, d := range awsDiags {
 		switch d.Severity() {
@@ -265,113 +254,15 @@ func (c *AccessConfig) GetAWSConfig(ctx context.Context) (*awsv2.Config, error) 
 		}
 	}
 
-	return &awsConfig, nil
-}
-
-// Config returns a valid aws.Config object for access to AWS services, or
-// an error if the authentication and region couldn't be resolved
-func (c *AccessConfig) Session() (*session.Session, error) {
-	if c.session != nil {
-		return c.session, nil
-	}
-
-	// Create new AWS config
-	config := aws.NewConfig().WithCredentialsChainVerboseErrors(true)
-	if c.MaxRetries > 0 {
-		config = config.WithMaxRetries(c.MaxRetries)
-	}
-
-	// Set AWS config defaults.
-	if c.RawRegion != "" {
-		config = config.WithRegion(c.RawRegion)
-	}
-
-	if c.CustomEndpointEc2 != "" {
-		config = config.WithEndpoint(c.CustomEndpointEc2)
-	}
-
-	config = config.WithHTTPClient(cleanhttp.DefaultClient())
-	transport := config.HTTPClient.Transport.(*http.Transport)
-	if c.InsecureSkipTLSVerify {
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
-	transport.Proxy = http.ProxyFromEnvironment
-
-	// Figure out which possible credential providers are valid; test that we
-	// can get credentials via the selected providers, and set the providers in
-	// the config.
-	creds, err := c.GetCredentials(config)
-	if err != nil {
-		return nil, err
-	}
-	config.WithCredentials(creds)
-
-	// Create session options based on our AWS config
-	opts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config:            *config,
-	}
-
-	if c.ProfileName != "" {
-		opts.Profile = c.ProfileName
-	}
-
-	if c.MFACode != "" {
-		opts.AssumeRoleTokenProvider = func() (string, error) {
-			return c.MFACode, nil
-		}
-	}
-
-	sess, err := session.NewSessionWithOptions(opts)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Found region %s", *sess.Config.Region)
-	c.session = sess
-
-	cp, err := c.session.Config.Credentials.Get()
-
-	if awserrors.Matches(err, "NoCredentialProviders", "") {
-		return nil, c.NewNoValidCredentialSourcesError(err)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("Error loading credentials for AWS Provider: %s", err)
-	}
-
-	log.Printf("[INFO] AWS Auth provider used: %q", cp.ProviderName)
-
-	if c.DecodeAuthZMessages {
-		DecodeAuthZMessages(c.session)
-	}
-
-	// Append additional User-Agent products to the AWS SDK Go client.
-	userAgentProducts := []*awsbase.UserAgentProduct{
-		{Name: "APN", Version: "1.0"},
-		{Name: "HashiCorp", Version: "1.0"},
-		{Name: "packer-plugin-amazon", Version: pluginversion.Version, Extra: []string{"+https://www.packer.io/docs/builders/amazon"}},
-	}
-
-	if c.packerConfig != nil {
-		// In acceptance tests, this is nil when authenticating for cleaning up created resources.
-		userAgentProducts = append(userAgentProducts, &awsbase.UserAgentProduct{Name: "Packer", Version: c.packerConfig.PackerCoreVersion, Extra: []string{"+https://www.packer.io"}})
-	}
-
-	for i := len(userAgentProducts) - 1; i >= 0; i-- {
-		product := userAgentProducts[i]
-		c.session.Handlers.Build.PushFront(request.MakeAddToUserAgentHandler(product.Name, product.Version, product.Extra...))
-	}
-
-	return c.session, nil
+	c.awsConfig = &awsConfig
+	return c.awsConfig, nil
 }
 
 func (c *AccessConfig) SessionRegion() string {
-	if c.session == nil {
-		panic("access config session should be set.")
+	if c.awsConfig == nil {
+		panic("access config should be set.")
 	}
-	return aws.StringValue(c.session.Config.Region)
+	return c.awsConfig.Region
 }
 
 func (c *AccessConfig) IsGovCloud() bool {
@@ -380,46 +271,6 @@ func (c *AccessConfig) IsGovCloud() bool {
 
 func (c *AccessConfig) IsChinaCloud() bool {
 	return strings.HasPrefix(c.SessionRegion(), "cn-")
-}
-
-// GetCredentials gets credentials from the environment, shared credentials,
-// the session (which may include a credential process), or ECS/EC2 metadata
-// endpoints. GetCredentials also validates the credentials and the ability to
-// assume a role or will return an error if unsuccessful.
-func (c *AccessConfig) GetCredentials(config *aws.Config) (*awsCredentials.Credentials, error) {
-	packerDebug := false
-	if c.packerConfig != nil && c.packerConfig.PackerDebug {
-		packerDebug = true
-	}
-	// Reload values into the config used by the Packer-Terraform shared SDK
-	awsbaseConfig := &awsbase.Config{
-		AccessKey:                   c.AccessKey,
-		AssumeRoleARN:               c.AssumeRole.AssumeRoleARN,
-		AssumeRoleDurationSeconds:   c.AssumeRole.AssumeRoleDurationSeconds,
-		AssumeRoleExternalID:        c.AssumeRole.AssumeRoleExternalID,
-		AssumeRolePolicy:            c.AssumeRole.AssumeRolePolicy,
-		AssumeRolePolicyARNs:        c.AssumeRole.AssumeRolePolicyARNs,
-		AssumeRoleSessionName:       c.AssumeRole.AssumeRoleSessionName,
-		AssumeRoleTags:              c.AssumeRole.AssumeRoleTags,
-		AssumeRoleTransitiveTagKeys: c.AssumeRole.AssumeRoleTransitiveTagKeys,
-		CredsFilename:               c.CredsFilename,
-		DebugLogging:                packerDebug,
-		// TODO: implement for Packer
-		// IamEndpoint:                 c.Endpoints["iam"],
-		Insecure:             c.InsecureSkipTLSVerify,
-		MaxRetries:           c.MaxRetries,
-		Profile:              c.ProfileName,
-		Region:               c.RawRegion,
-		SecretKey:            c.SecretKey,
-		SkipCredsValidation:  c.SkipCredsValidation,
-		SkipMetadataApiCheck: c.SkipMetadataApiCheck,
-		// TODO: implement for Packer
-		// SkipRequestingAccountId:     c.SkipRequestingAccountId,
-		// StsEndpoint:                 c.Endpoints["sts"],
-		Token: c.Token,
-	}
-
-	return awsbase.GetCredentials(awsbaseConfig)
 }
 
 func (c *AccessConfig) getCredsFromVault(cli *vaultapi.Client) (*vaultapi.Secret, error) {
@@ -505,6 +356,7 @@ func (c *AccessConfig) Prepare(packerConfig *common.PackerConfig) []error {
 		c.PollingConfig = new(AWSPollingConfig)
 	}
 	c.PollingConfig.LogEnvOverrideWarnings()
+	c.PollingConfig.Prepare()
 
 	// Default MaxRetries to 10, to make throttling issues less likely. The
 	// Aws sdk defaults this to 3, which regularly gets tripped by users.
@@ -529,16 +381,20 @@ func (c *AccessConfig) NewNoValidCredentialSourcesError(err error) error {
 		"Error: %w", err)
 }
 
-func (c *AccessConfig) NewEC2Connection() (ec2iface.EC2API, error) {
+func (c *AccessConfig) NewEC2Connection(ctx context.Context) (clients.Ec2Client, error) {
 	if c.getEC2Connection != nil {
 		return c.getEC2Connection(), nil
 	}
-	sess, err := c.Session()
+	awscfg, err := c.GetAWSConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ec2conn := ec2.New(sess)
-
+	ec2conn := ec2.NewFromConfig(awscfg.Copy(), func(o *ec2.Options) {
+		o.Region = c.SessionRegion()
+		if c.CustomEndpointEc2 != "" {
+			o.BaseEndpoint = aws.String(c.CustomEndpointEc2)
+		}
+	})
 	return ec2conn, nil
 }

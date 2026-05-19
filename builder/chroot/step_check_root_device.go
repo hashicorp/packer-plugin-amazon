@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -16,13 +16,13 @@ import (
 type StepCheckRootDevice struct{}
 
 func (s *StepCheckRootDevice) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	image := state.Get("source_image").(*ec2.Image)
+	image := state.Get("source_image").(*ec2types.Image)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Checking the root device on source AMI...")
 
 	// It must be EBS-backed otherwise the build won't work
-	if *image.RootDeviceType != "ebs" {
+	if image.RootDeviceType != ec2types.DeviceTypeEbs {
 		err := fmt.Errorf("The root device of the source AMI must be EBS-backed.")
 		state.Put("error", err)
 		ui.Error(err.Error())

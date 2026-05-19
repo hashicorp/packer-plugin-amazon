@@ -41,7 +41,7 @@ func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host stri
 		const tries = 2
 		// <= with current structure to check result of describing `tries` times
 		for j := 0; j <= tries; j++ {
-			i := state.Get("instance").(ec2types.Instance)
+			i := state.Get("instance").(*ec2types.Instance)
 			if sshInterface != "" {
 				switch sshInterface {
 				case "public_ip":
@@ -94,7 +94,7 @@ func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host stri
 				return "", fmt.Errorf("instance not found: %s", *i.InstanceId)
 			}
 
-			state.Put("instance", r.Reservations[0].Instances[0])
+			state.Put("instance", &r.Reservations[0].Instances[0])
 			time.Sleep(sshHostSleepDuration)
 		}
 

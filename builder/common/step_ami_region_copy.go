@@ -8,12 +8,9 @@ import (
 	"fmt"
 	"sync"
 
-	aws_v2 "github.com/aws/aws-sdk-go-v2/aws"
-	ec2_v2 "github.com/aws/aws-sdk-go-v2/service/ec2"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -29,7 +26,7 @@ type StepAMIRegionCopy struct {
 	OriginalRegion    string
 
 	toDelete                       string
-	getRegionConn                  func(*AccessConfig, string) (ec2iface.EC2API, error)
+	getRegionConn                  func(context.Context, *AccessConfig, string) (clients.Ec2Client, error)
 	AMISkipCreateImage             bool
 	AMISkipBuildRegion             bool
 	AMISnapshotCopyDurationMinutes int64
@@ -122,7 +119,7 @@ func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) m
 	wg.Add(len(s.Regions))
 	for _, region := range s.Regions {
 		var regKeyID string
-		ui.Message(fmt.Sprintf("Copying to: %s", region))
+		ui.Sayf("Copying to: %s", region)
 
 		if s.EncryptBootVolume.True() {
 			// Encrypt is true, explicitly
@@ -148,7 +145,7 @@ func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) m
 	}
 
 	// TODO(mitchellh): Wait but also allow for cancels to go through...
-	ui.Message("Waiting for all copies to complete...")
+	ui.Say("Waiting for all copies to complete...")
 	wg.Wait()
 
 	// If there were errors, show them
@@ -163,8 +160,9 @@ func (s *StepAMIRegionCopy) Run(ctx context.Context, state multistep.StateBag) m
 }
 
 func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
+	ctx := state.Get("ctx").(context.Context)
 
 	if len(s.toDelete) == 0 {
 		return
@@ -173,7 +171,7 @@ func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
 	// Delete the unencrypted amis and snapshots
 	ui.Say("Deregistering the AMI and deleting unencrypted temporary " +
 		"AMIs and snapshots")
-	err := DestroyAMIs([]*string{&s.toDelete}, ec2conn)
+	err := DestroyAMIs(ctx, []string{s.toDelete}, ec2conn)
 	if err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
@@ -181,68 +179,36 @@ func (s *StepAMIRegionCopy) Cleanup(state multistep.StateBag) {
 	}
 }
 
-func GetEc2Client(ctx context.Context, config *AccessConfig, target string) (*ec2_v2.Client, error) {
+func GetEc2Client(ctx context.Context, config *AccessConfig, target string) (clients.Ec2Client, error) {
 	// Connect to the region where the AMI will be copied to
 	cfg, err := config.GetAWSConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting region connection for copy: %s", err)
 	}
 	//override region to the target region
-	cfg.Region = target
-	client := ec2_v2.NewFromConfig(*cfg)
+	client := ec2.NewFromConfig(cfg.Copy(), func(o *ec2.Options) {
+		o.Region = target
+	})
 	return client, nil
 }
 
-func GetRegionConn(config *AccessConfig, target string) (ec2iface.EC2API, error) {
-	// Connect to the region where the AMI will be copied to
-	session, err := config.Session()
-	if err != nil {
-		return nil, fmt.Errorf("Error getting region connection for copy: %s", err)
-	}
-
-	regionconn := ec2.New(session.Copy(&aws.Config{
-		Region: aws.String(target),
-	}))
-
-	return regionconn, nil
-}
-
-func (s *StepAMIRegionCopy) copyImageV1(regionconn ec2iface.EC2API, name, imageId, target, source, keyId string,
-	encrypt *bool) (string, error) {
-
+func (s *StepAMIRegionCopy) copyImage(ctx context.Context, regionconn clients.Ec2Client, name, imageId, target, source,
+	keyId string,
+	encrypt *bool, amiSnapshotCopyDurationMinutes int64) (string, error) {
 	var amiImageId string
-	t := true
-	resp, err := regionconn.CopyImage(&ec2.CopyImageInput{
+	req := &ec2.CopyImageInput{
 		SourceRegion:  &source,
 		SourceImageId: &imageId,
 		Name:          &name,
 		Encrypted:     encrypt,
 		KmsKeyId:      aws.String(keyId),
-		CopyImageTags: &t,
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
-			imageId, target, err)
+		CopyImageTags: aws.Bool(true),
 	}
-	amiImageId = *resp.ImageId
-	return amiImageId, nil
-}
+	if amiSnapshotCopyDurationMinutes > 0 {
+		req.SnapshotCopyCompletionDurationMinutes = aws.Int64(amiSnapshotCopyDurationMinutes)
+	}
 
-func (s *StepAMIRegionCopy) copyImageV2(ctx context.Context, regionconn *ec2_v2.Client, name, imageId, target, source,
-	keyId string,
-	encrypt *bool, amiSnapshotCopyDurationMinutes int64) (string, error) {
-	var amiImageId string
-	t := true
-	resp, err := regionconn.CopyImage(ctx, &ec2_v2.CopyImageInput{
-		SourceRegion:                          &source,
-		SourceImageId:                         &imageId,
-		Name:                                  &name,
-		Encrypted:                             encrypt,
-		KmsKeyId:                              aws_v2.String(keyId),
-		CopyImageTags:                         &t,
-		SnapshotCopyCompletionDurationMinutes: &amiSnapshotCopyDurationMinutes,
-	})
+	resp, err := regionconn.CopyImage(ctx, req)
 
 	if err != nil {
 		return "", fmt.Errorf("Error Copying AMI (%s) to region (%s): %s",
@@ -259,31 +225,25 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	target, source, keyId string, encrypt *bool) (string, []string, error) {
 	snapshotIds := []string{}
 
-	if s.getRegionConn == nil {
-		s.getRegionConn = GetRegionConn
+	var (
+		amiImageId string
+		regionconn clients.Ec2Client
+		err        error
+	)
+
+	if s.getRegionConn != nil {
+		regionconn, err = s.getRegionConn(ctx, config, target)
+	} else {
+		// Get the EC2 connection for the target region
+		regionconn, err = GetEc2Client(ctx, config, target)
 	}
-	regionconn, err := s.getRegionConn(config, target)
 	if err != nil {
-		return "", snapshotIds, err
+		return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
 	}
 
-	var amiImageId string
-	switch {
-	case s.AMISnapshotCopyDurationMinutes == 0:
-		amiImageId, err = s.copyImageV1(regionconn, name, imageId, target, source, keyId, encrypt)
-		if err != nil {
-			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
-		}
-	default:
-		regionconnV2, err := GetEc2Client(ctx, config, target)
-		if err != nil {
-			return "", snapshotIds, fmt.Errorf("error getting EC2 client for region (%s): %w", target, err)
-		}
-
-		amiImageId, err = s.copyImageV2(ctx, regionconnV2, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyDurationMinutes)
-		if err != nil {
-			return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
-		}
+	amiImageId, err = s.copyImage(ctx, regionconn, name, imageId, target, source, keyId, encrypt, s.AMISnapshotCopyDurationMinutes)
+	if err != nil {
+		return "", snapshotIds, fmt.Errorf("error copying AMI (%s) to region (%s): %w", imageId, target, err)
 	}
 
 	// Wait for the image to become ready
@@ -293,7 +253,7 @@ func (s *StepAMIRegionCopy) amiRegionCopy(ctx context.Context, state multistep.S
 	}
 
 	// Getting snapshot IDs out of the copied AMI
-	describeImageResp, err := regionconn.DescribeImages(&ec2.DescribeImagesInput{ImageIds: []*string{&amiImageId}})
+	describeImageResp, err := regionconn.DescribeImages(ctx, &ec2.DescribeImagesInput{ImageIds: []string{amiImageId}})
 	if err != nil {
 		return "", snapshotIds, fmt.Errorf("Error describing copied AMI (%s) in region (%s): %s",
 			imageId, target, err)

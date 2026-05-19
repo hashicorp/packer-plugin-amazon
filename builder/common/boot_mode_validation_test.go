@@ -3,7 +3,9 @@
 
 package common
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsValidBuildMode(t *testing.T) {
 	tests := []struct {

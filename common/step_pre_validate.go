@@ -97,7 +97,7 @@ func (s *StepPreValidate) Run(ctx context.Context, state multistep.StateBag) mul
 		return multistep.ActionContinue
 	}
 
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 
 	// Validate VPC settings for non-default VPCs
 	ui.Say("Prevalidating any provided VPC information")

@@ -35,12 +35,17 @@ func (s *StepUploadBundle) Run(ctx context.Context, state multistep.StateBag) mu
 
 	accessKey := config.AccessKey
 	secretKey := config.SecretKey
-	session, err := config.AccessConfig.Session()
-	region := *session.Config.Region
-	accessConfig := session.Config
+	awscfg, err := config.AccessConfig.GetAWSConfig(ctx)
+	if err != nil {
+		err = fmt.Errorf("Error creating AWS config: %w", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	region := awscfg.Region
 	var token string
 	if err == nil && accessKey == "" && secretKey == "" {
-		credentials, err := accessConfig.Credentials.Get()
+		credentials, err := awscfg.Credentials.Retrieve(ctx)
 		if err == nil {
 			accessKey = credentials.AccessKeyID
 			secretKey = credentials.SecretAccessKey

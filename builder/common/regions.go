@@ -4,14 +4,15 @@
 package common
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
-func listEC2Regions(ec2conn ec2iface.EC2API) ([]string, error) {
+func listEC2Regions(ctx context.Context, ec2conn clients.Ec2Client) ([]string, error) {
 	var regions []string
-	resultRegions, err := ec2conn.DescribeRegions(nil)
+	resultRegions, err := ec2conn.DescribeRegions(ctx, nil)
 	if err != nil {
 		return []string{}, err
 	}
@@ -26,13 +27,13 @@ func listEC2Regions(ec2conn ec2iface.EC2API) ([]string, error) {
 // and exists; otherwise an error.
 // ValidateRegion calls ec2conn.DescribeRegions to get the list of
 // regions available to this account.
-func (c *AccessConfig) ValidateRegion(regions ...string) error {
-	ec2conn, err := c.NewEC2Connection()
+func (c *AccessConfig) ValidateRegion(ctx context.Context, regions ...string) error {
+	ec2conn, err := c.NewEC2Connection(ctx)
 	if err != nil {
 		return err
 	}
 
-	validRegions, err := listEC2Regions(ec2conn)
+	validRegions, err := listEC2Regions(ctx, ec2conn)
 	if err != nil {
 		return err
 	}

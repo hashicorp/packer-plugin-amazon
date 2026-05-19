@@ -4,11 +4,13 @@
 package common
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
@@ -37,9 +39,9 @@ func TestAMIConfigPrepare_name(t *testing.T) {
 	}
 }
 
-func (m *mockEC2Client) DescribeRegions(*ec2.DescribeRegionsInput) (*ec2.DescribeRegionsOutput, error) {
+func (m *mockEC2Client) DescribeRegions(ctx context.Context, params *ec2.DescribeRegionsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeRegionsOutput, error) {
 	return &ec2.DescribeRegionsOutput{
-		Regions: []*ec2.Region{
+		Regions: []ec2types.Region{
 			{RegionName: aws.String("us-east-1")},
 			{RegionName: aws.String("us-east-2")},
 			{RegionName: aws.String("us-west-1")},
@@ -59,7 +61,7 @@ func TestAMIConfigPrepare_regions(t *testing.T) {
 		t.Fatalf("shouldn't have err: %#v", errs)
 	}
 
-	c.AMIRegions, err = listEC2Regions(mockConn)
+	c.AMIRegions, err = listEC2Regions(t.Context(), mockConn)
 	if err != nil {
 		t.Fatalf("shouldn't have err: %s", err.Error())
 	}

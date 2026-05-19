@@ -89,7 +89,7 @@ func testSSHHost(t *testing.T, allowTries int, vpcId string, sshInterface string
 
 	f := SSHHost(context.Background(), e, sshInterface, sshHostOverride)
 	st := &multistep.BasicStateBag{}
-	st.Put("instance", ec2types.Instance{
+	st.Put("instance", &ec2types.Instance{
 		InstanceId: aws.String("instance-id"),
 	})
 

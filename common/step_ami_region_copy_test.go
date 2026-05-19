@@ -97,7 +97,7 @@ func tState() multistep.StateBag {
 	state.Put("amis", map[string]string{"us-east-1": "ami-12345"})
 	state.Put("snapshots", map[string][]string{"us-east-1": {"snap-0012345"}})
 	conn, _ := getMockConn(context.TODO(), &AccessConfig{}, "us-east-2")
-	state.Put("ec2v2", conn)
+	state.Put("ec2", conn)
 	return state
 }
 

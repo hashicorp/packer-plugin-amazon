@@ -63,7 +63,7 @@ func (s *StepKeyPair) Run(ctx context.Context, state multistep.StateBag) multist
 		return multistep.ActionContinue
 	}
 
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	var keyResp *ec2.CreateKeyPairOutput
 
 	ui.Say(fmt.Sprintf("Creating temporary keypair: %s", s.Comm.SSHTemporaryKeyPairName))
@@ -138,7 +138,7 @@ func (s *StepKeyPair) Cleanup(state multistep.StateBag) {
 		return
 	}
 	ctx := context.TODO()
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Remove the keypair

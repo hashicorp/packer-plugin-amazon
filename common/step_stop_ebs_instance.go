@@ -25,8 +25,8 @@ type StepStopEBSBackedInstance struct {
 }
 
 func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
-	instance := state.Get("instance").(ec2types.Instance)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Skip when it is a spot instance

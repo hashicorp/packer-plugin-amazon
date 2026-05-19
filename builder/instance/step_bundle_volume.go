@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
@@ -30,7 +30,7 @@ type StepBundleVolume struct {
 func (s *StepBundleVolume) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	comm := state.Get("communicator").(packersdk.Communicator)
 	config := state.Get("config").(*Config)
-	instance := state.Get("instance").(*ec2.Instance)
+	instance := state.Get("instance").(*ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 	x509RemoteCertPath := state.Get("x509RemoteCertPath").(string)
 	x509RemoteKeyPath := state.Get("x509RemoteKeyPath").(string)
@@ -39,7 +39,7 @@ func (s *StepBundleVolume) Run(ctx context.Context, state multistep.StateBag) mu
 	var err error
 	config.ctx.Data = bundleCmdData{
 		AccountId:    config.AccountId,
-		Architecture: *instance.Architecture,
+		Architecture: string(instance.Architecture),
 		CertPath:     x509RemoteCertPath,
 		Destination:  config.BundleDestination,
 		KeyPath:      x509RemoteKeyPath,

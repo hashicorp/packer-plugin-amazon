@@ -14,7 +14,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -89,8 +91,7 @@ WaitLoop:
 
 	// In debug-mode, we output the password
 	if s.Debug {
-		ui.Message(fmt.Sprintf(
-			"Password (since debug is enabled): %s", s.Comm.WinRMPassword))
+		ui.Sayf("Password (since debug is enabled): %s", s.Comm.WinRMPassword)
 	}
 	// store so that we can access this later during provisioning
 	state.Put("winrm_password", s.Comm.WinRMPassword)
@@ -102,8 +103,8 @@ WaitLoop:
 func (s *StepGetPassword) Cleanup(multistep.StateBag) {}
 
 func (s *StepGetPassword) waitForPassword(ctx context.Context, state multistep.StateBag) (string, error) {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	instance := state.Get("instance").(*ec2.Instance)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
+	instance := state.Get("instance").(*ec2types.Instance)
 	privateKey := s.Comm.SSHPrivateKey
 
 	for {
@@ -122,7 +123,7 @@ func (s *StepGetPassword) waitForPassword(ctx context.Context, state multistep.S
 			RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
 			var err error
-			resp, err = ec2conn.GetPasswordData(&ec2.GetPasswordDataInput{
+			resp, err = ec2conn.GetPasswordData(ctx, &ec2.GetPasswordDataInput{
 				InstanceId: instance.InstanceId,
 			})
 			if err != nil {

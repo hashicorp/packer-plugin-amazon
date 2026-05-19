@@ -16,7 +16,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/chroot"
@@ -112,7 +113,7 @@ type Config struct {
 	// The size of the root volume in GB for the chroot environment and the
 	// resulting AMI. Default size is the snapshot size of the source_ami
 	// unless from_scratch is true, in which case this field must be defined.
-	RootVolumeSize int64 `mapstructure:"root_volume_size" required:"false"`
+	RootVolumeSize int32 `mapstructure:"root_volume_size" required:"false"`
 	// The type of EBS volume for the chroot environment and resulting AMI. The
 	// default value is the type of the source_ami, unless from_scratch is
 	// true, in which case the default value is gp2. You can only specify io1
@@ -380,8 +381,8 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 		errs = packersdk.MultiErrorAppend(errs, errors.New(`The only valid ami_architecture values are "arm64", "arm64_mac", "i386", "x86_64", or "x86_64_mac"`))
 	}
 
-	if b.config.TpmSupport != "" && b.config.TpmSupport != ec2.TpmSupportValuesV20 {
-		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2.TpmSupportValuesV20))
+	if b.config.TpmSupport != "" && b.config.TpmSupport != string(ec2types.TpmSupportValuesV20) {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`The only valid tpm_support value is %q`, ec2types.TpmSupportValuesV20))
 	}
 
 	if b.config.BootMode != "" {
@@ -394,7 +395,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	if b.config.UefiData != "" {
 		if b.config.BootMode == "legacy-bios" {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You can't use uefi_data with boot_mode set to "legacy-bios".`))
-		} else if b.config.BootMode == "" && b.config.Architecture != "arm64" {
+		} else if b.config.BootMode == "" && b.config.Architecture != string(ec2types.ArchitectureValuesArm64) {
 			errs = packersdk.MultiErrorAppend(errs, fmt.Errorf(`You need boot_mode set to "uefi" to use uefi_data, `+
 				`"%s" architecture defaults to "legacy-bios".`, b.config.Architecture))
 		}
@@ -416,11 +417,11 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		return nil, errors.New("The amazon-chroot builder only works on Linux environments.")
 	}
 
-	session, err := b.config.Session()
+	awscfg, err := b.config.GetAWSConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ec2conn := ec2.New(session)
+	ec2conn := ec2.NewFromConfig(*awscfg)
 
 	wrappedCommand := func(command string) (string, error) {
 		ictx := b.config.ctx
@@ -430,11 +431,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
+	state.Put("ctx", ctx)
 	state.Put("config", &b.config)
 	state.Put("access_config", &b.config.AccessConfig)
 	state.Put("ami_config", &b.config.AMIConfig)
 	state.Put("ec2", ec2conn)
-	state.Put("awsSession", session)
+	state.Put("awsConfig", awscfg)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
 	state.Put("wrappedCommand", common.CommandWrapper(wrappedCommand))
@@ -469,7 +471,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 		},
 		&StepCreateVolume{
 			PollingConfig:         b.config.PollingConfig,
-			RootVolumeType:        b.config.RootVolumeType,
+			RootVolumeType:        ec2types.VolumeType(b.config.RootVolumeType),
 			RootVolumeSize:        b.config.RootVolumeSize,
 			RootVolumeTags:        b.config.RootVolumeTags,
 			RootVolumeEncryptBoot: b.config.RootVolumeEncryptBoot,
@@ -518,9 +520,9 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			EnableAMIENASupport:      b.config.AMIENASupport,
 			AMISkipBuildRegion:       b.config.AMISkipBuildRegion,
 			PollingConfig:            b.config.PollingConfig,
-			BootMode:                 b.config.BootMode,
+			BootMode:                 ec2types.BootModeValues(b.config.BootMode),
 			UefiData:                 b.config.UefiData,
-			TpmSupport:               b.config.TpmSupport,
+			TpmSupport:               ec2types.TpmSupportValues(b.config.TpmSupport),
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig:                   &b.config.AccessConfig,
@@ -529,7 +531,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			RegionKeyIds:                   b.config.AMIRegionKMSKeyIDs,
 			EncryptBootVolume:              b.config.AMIEncryptBootVolume,
 			Name:                           b.config.AMIName,
-			OriginalRegion:                 *ec2conn.Config.Region,
+			OriginalRegion:                 awscfg.Region,
 			AMISnapshotCopyDurationMinutes: b.config.AMISnapshotCopyDurationMinutes,
 		},
 		&awscommon.StepEnableDeprecation{
@@ -578,7 +580,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 	artifact := &awscommon.Artifact{
 		Amis:           state.Get("amis").(map[string]string),
 		BuilderIdValue: BuilderId,
-		Session:        session,
+		Config:         awscfg,
 		StateData:      map[string]interface{}{"generated_data": state.Get("generated_data")},
 	}
 

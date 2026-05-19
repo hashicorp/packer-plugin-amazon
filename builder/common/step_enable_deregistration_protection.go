@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
@@ -42,7 +42,7 @@ func (s *StepEnableDeregistrationProtection) Run(ctx context.Context, state mult
 	for region, ami := range amis {
 		log.Printf("Enabling deregistration protection on AMI (%s) in region %q ...", ami, region)
 
-		conn, err := GetRegionConn(s.AccessConfig, region)
+		conn, err := GetEc2Client(ctx, s.AccessConfig, region)
 		if err != nil {
 			err := fmt.Errorf("failed to connect to region %s: %s", region, err)
 			state.Put("error", err.Error())
@@ -50,7 +50,7 @@ func (s *StepEnableDeregistrationProtection) Run(ctx context.Context, state mult
 			return multistep.ActionHalt
 		}
 
-		_, err = conn.EnableImageDeregistrationProtection(&ec2.EnableImageDeregistrationProtectionInput{
+		_, err = conn.EnableImageDeregistrationProtection(ctx, &ec2.EnableImageDeregistrationProtectionInput{
 			ImageId:      &ami,
 			WithCooldown: &s.DeregistrationProtection.WithCooldown,
 		})

@@ -10,4 +10,9 @@
   If both option and environment variable are set, the delay_seconds will be considered over the AWS_POLL_DELAY_SECONDS.
   If none is set, defaults to AWS waiter default which is 15 seconds.
 
+- `max_timeout` (int) - Specifies the maximum timeout in seconds for the waiter.
+  This value can also be set via the AWS_MAX_TIMEOUT.
+  If both option and environment variable are set, the max_timeout will be considered over the AWS_MAX_TIMEOUT.
+  If none is set, defaults to AWS waiter default which is 600 seconds (10 minutes).
+
 <!-- End of code generated from the comments of the AWSPollingConfig struct in builder/common/state.go; -->

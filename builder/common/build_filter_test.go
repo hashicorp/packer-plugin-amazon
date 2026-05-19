@@ -37,7 +37,7 @@ func TestStepSourceAmiInfo_BuildFilter_SingleValue(t *testing.T) {
 	foundMap := map[string]bool{filter_key: false, filter_key2: false}
 	for _, filter := range outputFilter {
 		for key, value := range testFilter {
-			if *filter.Name == key && *filter.Values[0] == value {
+			if *filter.Name == key && filter.Values[0] == value {
 				foundMap[key] = true
 			}
 		}
@@ -81,7 +81,7 @@ func TestStepSourceAmiInfo_BuildFilter_ListValue(t *testing.T) {
 		for key, value := range testFilter {
 			if *filter.Name == key {
 				for idx, filter_value := range value {
-					if *filter.Values[idx] == filter_value {
+					if filter.Values[idx] == filter_value {
 						foundMap[key] = true
 					} else {
 						foundMap[key] = false
@@ -123,7 +123,7 @@ func TestStepSourceAmiInfo_BuildFilter_ValueWithQuote(t *testing.T) {
 	foundMap := map[string]bool{filter_key: false, filter_key2: false}
 	for _, filter := range outputFilter {
 		for key, value := range testFilter {
-			if *filter.Name == key && *filter.Values[0] == value {
+			if *filter.Name == key && filter.Values[0] == value {
 				foundMap[key] = true
 			}
 		}

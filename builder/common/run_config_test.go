@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"testing"
 
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 )
 
@@ -151,7 +152,7 @@ func TestRunConfigPrepare_EnableUnlimitedCredits(t *testing.T) {
 
 	tc := []struct {
 		name          string
-		instanceType  string
+		instanceType  ec2types.InstanceType
 		enableCredits bool
 		errorCount    int
 	}{
@@ -349,7 +350,7 @@ func TestRunConfigPrepare_TenancyBad(t *testing.T) {
 }
 
 func TestRunConfigPrepare_TenancyGood(t *testing.T) {
-	validTenancy := []string{"", "default", "dedicated", "host"}
+	validTenancy := []ec2types.Tenancy{"", "default", "dedicated", "host"}
 	for _, vt := range validTenancy {
 		c := testConfig()
 		c.Tenancy = vt
@@ -453,7 +454,7 @@ func TestRunConfigPrepare_InvalidTenantForHost(t *testing.T) {
 			c := testConfig()
 			c.Placement.HostId = tt.setHost
 			c.Placement.HostResourceGroupArn = tt.setGroup
-			c.Placement.Tenancy = tt.setTenant
+			c.Placement.Tenancy = ec2types.Tenancy(tt.setTenant)
 			errs := c.Prepare(nil)
 			if len(errs) != tt.expectErrors {
 				t.Errorf("expected %d errors, got %d", tt.expectErrors, len(errs))
@@ -466,10 +467,10 @@ func TestRunConfigPrepare_WithCapacityReservations(t *testing.T) {
 	tests := []struct {
 		name                          string
 		reservationID                 string
-		reservationPreference         string
+		reservationPreference         ec2types.CapacityReservationPreference
 		reservationARN                string
 		expectedReservationID         string
-		expectedReservationPreference string
+		expectedReservationPreference ec2types.CapacityReservationPreference
 		expectedReservationARN        string
 		expectError                   bool
 	}{

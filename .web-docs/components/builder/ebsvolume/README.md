@@ -308,6 +308,11 @@ JSON example:
   If both option and environment variable are set, the delay_seconds will be considered over the AWS_POLL_DELAY_SECONDS.
   If none is set, defaults to AWS waiter default which is 15 seconds.
 
+- `max_timeout` (int) - Specifies the maximum timeout in seconds for the waiter.
+  This value can also be set via the AWS_MAX_TIMEOUT.
+  If both option and environment variable are set, the max_timeout will be considered over the AWS_MAX_TIMEOUT.
+  If none is set, defaults to AWS waiter default which is 600 seconds (10 minutes).
+
 <!-- End of code generated from the comments of the AWSPollingConfig struct in builder/common/state.go; -->
 
 
@@ -377,7 +382,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   false will result in an unencrypted device, and true will result in an
   encrypted one.
 
-- `iops` (\*int64) - The number of I/O operations per second (IOPS) that the volume supports.
+- `iops` (\*int32) - The number of I/O operations per second (IOPS) that the volume supports.
   See the documentation on
   [IOPs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information
@@ -387,7 +392,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `snapshot_id` (string) - The ID of the snapshot.
 
-- `throughput` (\*int64) - The throughput for gp3 volumes, only valid for gp3 types
+- `throughput` (\*int32) - The throughput for gp3 volumes, only valid for gp3 types
   See the documentation on
   [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information
@@ -405,7 +410,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   for Provisioned IOPS (SSD) volumes, st1 for Throughput Optimized HDD,
   sc1 for Cold HDD, and standard for Magnetic volumes.
 
-- `volume_size` (int64) - The size of the volume, in GiB. Required if not specifying a
+- `volume_size` (int32) - The size of the volume, in GiB. Required if not specifying a
   snapshot_id.
 
 - `kms_key_id` (string) - ID, alias or ARN of the KMS key to use for boot volume encryption.
@@ -470,7 +475,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 <!-- Code generated from the comments of the RunConfig struct in builder/common/run_config.go; DO NOT EDIT MANUALLY -->
 
-- `instance_type` (string) - The EC2 instance type to use while building the
+- `instance_type` (ec2types.InstanceType) - The EC2 instance type to use while building the
   AMI, such as t2.small.
 
 - `source_ami` (string) - The source AMI whose root volume will be copied and
@@ -506,7 +511,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 - `availability_zone` (string) - Destination availability zone to launch
   instance in. Leave this empty to allow Amazon to auto-assign.
 
-- `block_duration_minutes` (int64) - Requires spot_price to be set. The
+- `block_duration_minutes` (int32) - Requires spot_price to be set. The
   required duration for the Spot Instances (also known as Spot blocks). This
   value must be a multiple of 60 (60, 120, 180, 240, 300, or 360). You can't
   specify an Availability Zone group or a launch group if you specify a
@@ -514,7 +519,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   from July 1, 2021. [See Amazon's
   documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-requests.html#fixed-duration-spot-instances).
 
-- `capacity_reservation_preference` (string) - Set the preference for using a capacity reservation if one exists.
+- `capacity_reservation_preference` (ec2types.CapacityReservationPreference) - Set the preference for using a capacity reservation if one exists.
   Either will be `open` or `none`. Defaults to `none`
 
 - `capacity_reservation_id` (string) - Provide the specific EC2 Capacity Reservation ID that will be used
@@ -761,7 +766,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
     criteria provided in `source_ami_filter`; this pins the AMI returned by the
     filter, but will cause Packer to fail if the `source_ami` does not exist.
 
-- `spot_allocation_strategy` (string) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
+- `spot_allocation_strategy` (ec2types.SpotAllocationStrategy) - One of  `price-capacity-optimized`, `capacity-optimized`, `diversified` or `lowest-price`.
   The strategy that determines how to allocate the target Spot Instance capacity
   across the Spot Instance pools specified by the EC2 Fleet launch configuration.
   If this option is not set, Packer will use default option provided by the SDK (currently `lowest-price`).
@@ -918,7 +923,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   
   Refer to the [Placement docs](#placement-configuration) for more information on the supported attributes for placement configuration.
 
-- `tenancy` (string) - Deprecated: Use Placement Tenancy instead.
+- `tenancy` (ec2types.Tenancy) - Deprecated: Use Placement Tenancy instead.
 
 - `temporary_security_group_source_cidrs` ([]string) - A list of IPv4/IPv6 CIDR blocks to be authorized access to the instance, when
   packer is creating a temporary security group.
@@ -1045,7 +1050,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `host_id` (string) - The ID of the host used when Packer launches an EC2 instance.
 
-- `tenancy` (string) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
+- `tenancy` (ec2types.Tenancy) - [Tenancy](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html) used
   when Packer launches the EC2 instance, allowing it to be launched on dedicated hardware.
   
   The default is "default", meaning shared tenancy. Allowed values are "default",

@@ -9,16 +9,16 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 )
 
 type mockEC2KeyPairConn struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 
 	CreateKeyPairCount int
 	CreateKeyPairArgs  []ec2.CreateKeyPairInput
@@ -26,7 +26,7 @@ type mockEC2KeyPairConn struct {
 	lock sync.Mutex
 }
 
-func (m *mockEC2KeyPairConn) CreateKeyPair(keyPairInput *ec2.CreateKeyPairInput) (*ec2.CreateKeyPairOutput, error) {
+func (m *mockEC2KeyPairConn) CreateKeyPair(ctx context.Context, keyPairInput *ec2.CreateKeyPairInput, optFns ...func(*ec2.Options)) (*ec2.CreateKeyPairOutput, error) {
 	m.lock.Lock()
 	m.CreateKeyPairCount++
 	m.CreateKeyPairArgs = append(m.CreateKeyPairArgs, *keyPairInput)
@@ -38,7 +38,7 @@ func (m *mockEC2KeyPairConn) CreateKeyPair(keyPairInput *ec2.CreateKeyPairInput)
 	return output, nil
 }
 
-func getKeyPairMockConn() ec2iface.EC2API {
+func getKeyPairMockConn() clients.Ec2Client {
 	return &mockEC2KeyPairConn{}
 }
 
@@ -50,7 +50,7 @@ func keyPairState() multistep.StateBag {
 	})
 	conn := getKeyPairMockConn()
 	state.Put("ec2", conn)
-	state.Put("region", aws.String("us-east-1"))
+	state.Put("region", "us-east-1")
 	return state
 }
 
@@ -79,7 +79,7 @@ func TestStepKeyPair_withDefault(t *testing.T) {
 		t.Fatalf("Unexpected Key Type expected %s, got %s", "temp-key-name", *createKeyPairArgs[0].KeyName)
 	}
 
-	if *createKeyPairArgs[0].KeyType != "rsa" {
-		t.Fatalf("Expeccted KeyType %s got %s", "rsa", *createKeyPairArgs[0].KeyType)
+	if createKeyPairArgs[0].KeyType != ec2types.KeyTypeRsa {
+		t.Fatalf("Expeccted KeyType %s got %s", "rsa", createKeyPairArgs[0].KeyType)
 	}
 }

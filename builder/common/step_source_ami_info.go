@@ -9,7 +9,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -20,17 +23,17 @@ import (
 //
 // Produces:
 //
-//	source_image *ec2.Image - the source AMI info
+//	source_image *ec2types.Image - the source AMI info
 type StepSourceAMIInfo struct {
 	SourceAmi                string
 	EnableAMISriovNetSupport bool
 	EnableAMIENASupport      config.Trilean
-	AMIVirtType              string
+	AMIVirtType              ec2types.VirtualizationType
 	AmiFilters               AmiFilterOptions
 	IncludeDeprecated        bool
 }
 
-type imageSort []*ec2.Image
+type imageSort []ec2types.Image
 
 func (a imageSort) Len() int      { return len(a) }
 func (a imageSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -41,14 +44,14 @@ func (a imageSort) Less(i, j int) bool {
 }
 
 // Returns the most recent AMI out of a slice of images.
-func mostRecentAmi(images []*ec2.Image) *ec2.Image {
+func mostRecentAmi(images []ec2types.Image) ec2types.Image {
 	sortedImages := images
 	sort.Sort(imageSort(sortedImages))
 	return sortedImages[len(sortedImages)-1]
 }
 
 func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	params := &ec2.DescribeImagesInput{
@@ -56,17 +59,17 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 	}
 
 	if s.SourceAmi != "" {
-		params.ImageIds = []*string{&s.SourceAmi}
+		params.ImageIds = []string{s.SourceAmi}
 	}
 
-	image, err := s.AmiFilters.GetFilteredImage(params, ec2conn)
+	image, err := s.AmiFilters.GetFilteredImage(ctx, params, ec2conn)
 	if err != nil {
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
 
-	ui.Message(fmt.Sprintf("Found Image ID: %s", *image.ImageId))
+	ui.Say(fmt.Sprintf("Found Image ID: %s", aws.ToString(image.ImageId)))
 
 	// Enhanced Networking can only be enabled on HVM AMIs.
 	// See http://goo.gl/icuXh5
@@ -85,14 +88,14 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 
 func (s *StepSourceAMIInfo) Cleanup(multistep.StateBag) {}
 
-func (s *StepSourceAMIInfo) canEnableEnhancedNetworking(image *ec2.Image) error {
-	if s.AMIVirtType == "hvm" {
+func (s *StepSourceAMIInfo) canEnableEnhancedNetworking(image *ec2types.Image) error {
+	if s.AMIVirtType == ec2types.VirtualizationTypeHvm {
 		return nil
 	}
 	if s.AMIVirtType != "" {
 		return fmt.Errorf("Cannot enable enhanced networking, AMIVirtType '%s' is not HVM", s.AMIVirtType)
 	}
-	if *image.VirtualizationType != "hvm" {
+	if image.VirtualizationType != ec2types.VirtualizationTypeHvm {
 		return fmt.Errorf("Cannot enable enhanced networking, source AMI '%s' is not HVM", s.SourceAmi)
 	}
 	return nil

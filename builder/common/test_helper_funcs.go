@@ -4,25 +4,27 @@
 package common
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 )
 
 type mockEC2Client struct {
-	ec2iface.EC2API
+	clients.Ec2Client
 }
 
 func FakeAccessConfig() *AccessConfig {
 	accessConfig := AccessConfig{
-		getEC2Connection: func() ec2iface.EC2API {
+		getEC2Connection: func() clients.Ec2Client {
 			return &mockEC2Client{}
 		},
-		PollingConfig: new(AWSPollingConfig),
+		AccessKey:           "AKIA12SOME345EXAMPLE",
+		SecretKey:           "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+		Token:               "accesstoken",
+		SkipCredsValidation: true,
+		PollingConfig:       new(AWSPollingConfig).Prepare(),
 	}
-	accessConfig.session = session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	}))
-
+	accessConfig.awsConfig = &aws.Config{
+		Region: "us-east-1",
+	}
 	return &accessConfig
 }

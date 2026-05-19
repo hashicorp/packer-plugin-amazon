@@ -3,6 +3,7 @@
 package common
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/zclconf/go-cty/cty"
@@ -115,9 +116,9 @@ func (*FlatMetadataOptions) HCL2Spec() map[string]hcldec.Spec {
 // FlatPlacement is an auto-generated flat version of Placement.
 // Where the contents of a field with a `mapstructure:,squash` tag are bubbled up.
 type FlatPlacement struct {
-	HostResourceGroupArn *string `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
-	HostId               *string `mapstructure:"host_id" required:"false" cty:"host_id" hcl:"host_id"`
-	Tenancy              *string `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
+	HostResourceGroupArn *string        `mapstructure:"host_resource_group_arn" required:"false" cty:"host_resource_group_arn" hcl:"host_resource_group_arn"`
+	HostId               *string        `mapstructure:"host_id" required:"false" cty:"host_id" hcl:"host_id"`
+	Tenancy              *types.Tenancy `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 }
 
 // FlatMapstructure returns a new FlatPlacement.

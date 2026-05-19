@@ -84,7 +84,7 @@ func (s *stepEnableFastLaunch) Run(ctx context.Context, state multistep.StateBag
 			}
 
 			// Casting is somewhat unsafe, but since the retryer below only
-			// accepts this type, and not ec2iface.EC2API, we can safely
+			// accepts this type, and not clients.Ec2Client, we can safely
 			// do this here, unless the `GetRegionConn` function evolves
 			// later, in which case this will fail.
 			// todo check this

@@ -4,14 +4,14 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
@@ -28,8 +28,8 @@ type Artifact struct {
 	// to be shared with post-processors
 	StateData map[string]interface{}
 
-	// EC2 connection for performing API stuff.
-	Session *session.Session
+	// AWS SDK v2 configuration
+	Config *aws.Config
 }
 
 func (a *Artifact) BuilderId() string {
@@ -82,16 +82,17 @@ func (a *Artifact) State(name string) interface{} {
 func (a *Artifact) Destroy() error {
 	errors := make([]error, 0)
 
+	ctx := context.TODO()
 	for region, imageId := range a.Amis {
 		log.Printf("Deregistering image ID (%s) from region (%s)", imageId, region)
 
-		regionConn := ec2.New(a.Session, &aws.Config{
-			Region: aws.String(region),
+		regionConn := ec2.NewFromConfig(*a.Config, func(o *ec2.Options) {
+			o.Region = region
 		})
 
 		// Get image metadata
-		imageResp, err := regionConn.DescribeImages(&ec2.DescribeImagesInput{
-			ImageIds: []*string{&imageId},
+		imageResp, err := regionConn.DescribeImages(ctx, &ec2.DescribeImagesInput{
+			ImageIds: []string{imageId},
 		})
 		if err != nil {
 			errors = append(errors, err)
@@ -101,7 +102,7 @@ func (a *Artifact) Destroy() error {
 			errors = append(errors, err)
 		}
 
-		err = DestroyAMIs([]*string{&imageId}, regionConn)
+		err = DestroyAMIs(ctx, []string{imageId}, regionConn)
 		if err != nil {
 			errors = append(errors, err)
 		}

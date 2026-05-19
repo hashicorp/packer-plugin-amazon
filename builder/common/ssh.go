@@ -4,18 +4,24 @@
 package common
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
 type ec2Describer interface {
-	DescribeInstances(*ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+	DescribeInstances(ctx context.Context, input *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 }
+
+var _ ec2Describer = (clients.Ec2Client)(nil)
 
 var (
 	// modified in tests
@@ -24,7 +30,7 @@ var (
 
 // SSHHost returns a function that can be given to the SSH communicator
 // for determining the SSH address based on the instance DNS name.
-func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.StateBag) (string, error) {
+func SSHHost(ctx context.Context, e ec2Describer, sshInterface string, host string) func(multistep.StateBag) (string, error) {
 	return func(state multistep.StateBag) (string, error) {
 		if host != "" {
 			log.Printf("Using host value: %s", host)
@@ -38,7 +44,7 @@ func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.St
 		const tries = 2
 		// <= with current structure to check result of describing `tries` times
 		for j := 0; j <= tries; j++ {
-			i := state.Get("instance").(*ec2.Instance)
+			i := state.Get("instance").(*ec2types.Instance)
 			if sshInterface != "" {
 				switch sshInterface {
 				case "public_ip":
@@ -80,8 +86,8 @@ func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.St
 				return host, nil
 			}
 
-			r, err := e.DescribeInstances(&ec2.DescribeInstancesInput{
-				InstanceIds: []*string{i.InstanceId},
+			r, err := e.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+				InstanceIds: []string{aws.ToString(i.InstanceId)},
 			})
 			if err != nil {
 				return "", err
@@ -91,7 +97,7 @@ func SSHHost(e ec2Describer, sshInterface string, host string) func(multistep.St
 				return "", fmt.Errorf("instance not found: %s", *i.InstanceId)
 			}
 
-			state.Put("instance", r.Reservations[0].Instances[0])
+			state.Put("instance", &r.Reservations[0].Instances[0])
 			time.Sleep(sshHostSleepDuration)
 		}
 

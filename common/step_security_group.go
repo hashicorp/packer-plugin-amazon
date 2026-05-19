@@ -38,7 +38,7 @@ type StepSecurityGroup struct {
 }
 
 func (s *StepSecurityGroup) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	vpcId := state.Get("vpc_id").(string)
@@ -241,7 +241,7 @@ func (s *StepSecurityGroup) Cleanup(state multistep.StateBag) {
 		return
 	}
 	ctx := context.TODO()
-	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
+	ec2conn := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deleting temporary security group...")

@@ -12,6 +12,7 @@ import (
 type FlatAWSPollingConfig struct {
 	MaxAttempts  *int `mapstructure:"max_attempts" required:"false" cty:"max_attempts" hcl:"max_attempts"`
 	DelaySeconds *int `mapstructure:"delay_seconds" required:"false" cty:"delay_seconds" hcl:"delay_seconds"`
+	MaxTimeout   *int `mapstructure:"max_timeout" required:"false" cty:"max_timeout" hcl:"max_timeout"`
 }
 
 // FlatMapstructure returns a new FlatAWSPollingConfig.
@@ -28,6 +29,7 @@ func (*FlatAWSPollingConfig) HCL2Spec() map[string]hcldec.Spec {
 	s := map[string]hcldec.Spec{
 		"max_attempts":  &hcldec.AttrSpec{Name: "max_attempts", Type: cty.Number, Required: false},
 		"delay_seconds": &hcldec.AttrSpec{Name: "delay_seconds", Type: cty.Number, Required: false},
+		"max_timeout":   &hcldec.AttrSpec{Name: "max_timeout", Type: cty.Number, Required: false},
 	}
 	return s
 }

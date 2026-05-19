@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
@@ -22,7 +22,7 @@ import (
 //
 // Produces:
 //
-//	source_image *ec2.Image - the source AMI info
+//	source_image *ec2types.Image - the source AMI info
 type StepSourceAMIInfo struct {
 	SourceAmi                string
 	EnableAMISriovNetSupport bool
@@ -32,7 +32,7 @@ type StepSourceAMIInfo struct {
 	IncludeDeprecated        bool
 }
 
-type imageSort []types.Image
+type imageSort []ec2types.Image
 
 func (a imageSort) Len() int      { return len(a) }
 func (a imageSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -43,14 +43,14 @@ func (a imageSort) Less(i, j int) bool {
 }
 
 // Returns the most recent AMI out of a slice of images.
-func mostRecentAmi(images []types.Image) types.Image {
+func mostRecentAmi(images []ec2types.Image) ec2types.Image {
 	sortedImages := images
 	sort.Sort(imageSort(sortedImages))
 	return sortedImages[len(sortedImages)-1]
 }
 
 func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	client := state.Get("ec2v2").(clients.Ec2Client)
+	client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	params := &ec2.DescribeImagesInput{
@@ -87,14 +87,14 @@ func (s *StepSourceAMIInfo) Run(ctx context.Context, state multistep.StateBag) m
 
 func (s *StepSourceAMIInfo) Cleanup(multistep.StateBag) {}
 
-func (s *StepSourceAMIInfo) canEnableEnhancedNetworking(image *types.Image) error {
+func (s *StepSourceAMIInfo) canEnableEnhancedNetworking(image *ec2types.Image) error {
 	if s.AMIVirtType == "hvm" {
 		return nil
 	}
 	if s.AMIVirtType != "" {
 		return fmt.Errorf("Cannot enable enhanced networking, AMIVirtType '%s' is not HVM", s.AMIVirtType)
 	}
-	if image.VirtualizationType != types.VirtualizationTypeHvm {
+	if image.VirtualizationType != ec2types.VirtualizationTypeHvm {
 		return fmt.Errorf("Cannot enable enhanced networking, source AMI '%s' is not HVM", s.SourceAmi)
 	}
 	return nil

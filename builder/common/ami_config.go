@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 	"github.com/hashicorp/packer-plugin-sdk/template/interpolate"
 )
@@ -77,7 +77,7 @@ type AMIConfig struct {
 	// The type of virtualization for the AMI
 	// you are building. This option is required to register HVM images. Can be
 	// paravirtual (default) or hvm.
-	AMIVirtType string `mapstructure:"ami_virtualization_type" required:"false"`
+	AMIVirtType ec2types.VirtualizationType `mapstructure:"ami_virtualization_type" required:"false"`
 	// A list of account IDs that have access to
 	// launch the resulting AMI(s). By default no additional users other than the
 	// user creating the AMI has permissions to launch it.
@@ -213,7 +213,7 @@ type AMIConfig struct {
 	// Valid options are unset (legacy) and `v2.0`. See the documentation on
 	// [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 	// for more information. Defaults to legacy.
-	AMIIMDSSupport string `mapstructure:"imds_support" required:"false"`
+	AMIIMDSSupport ec2types.ImdsSupportValues `mapstructure:"imds_support" required:"false"`
 	// The date and time to deprecate the AMI, in UTC, in the following format: YYYY-MM-DDTHH:MM:SSZ.
 	// If you specify a value for seconds, Amazon EC2 rounds the seconds to the nearest minute.
 	// You can’t specify a date in the past. The upper limit for DeprecateAt is 10 years from now.
@@ -321,10 +321,10 @@ func (c *AMIConfig) Prepare(accessConfig *AccessConfig, ctx *interpolate.Context
 			"filter to automatically clean your ami name."))
 	}
 
-	if c.AMIIMDSSupport != "" && c.AMIIMDSSupport != ec2.ImdsSupportValuesV20 {
+	if c.AMIIMDSSupport != "" && c.AMIIMDSSupport != ec2types.ImdsSupportValuesV20 {
 		errs = append(errs,
 			fmt.Errorf(`The only valid imds_support values are %q or the empty string`,
-				ec2.ImdsSupportValuesV20),
+				ec2types.ImdsSupportValuesV20),
 		)
 	}
 

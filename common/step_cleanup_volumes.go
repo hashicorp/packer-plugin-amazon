@@ -29,7 +29,7 @@ func (s *StepCleanupVolumes) Run(ctx context.Context, state multistep.StateBag) 
 
 func (s *StepCleanupVolumes) Cleanup(state multistep.StateBag) {
 	ctx := context.TODO()
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	instanceRaw := state.Get("instance")
 	var instance ec2types.Instance
 	if instanceRaw != nil {

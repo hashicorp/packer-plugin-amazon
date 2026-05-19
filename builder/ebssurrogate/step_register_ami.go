@@ -37,7 +37,7 @@ type StepRegisterAMI struct {
 
 func (s *StepRegisterAMI) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	awsConfig := state.Get("aws_config").(*aws.Config)
 	snapshotIds := state.Get("snapshot_ids").(map[string]string)
 	ui := state.Get("ui").(packersdk.Ui)
@@ -145,7 +145,7 @@ func (s *StepRegisterAMI) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	ec2Client := state.Get("ec2v2").(clients.Ec2Client)
+	ec2Client := state.Get("ec2").(clients.Ec2Client)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	ui.Say("Deregistering the AMI because cancellation or error...")

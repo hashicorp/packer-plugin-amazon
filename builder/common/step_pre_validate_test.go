@@ -4,23 +4,25 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 // DescribeVpcs mocks an ec2.DescribeVpcsOutput for a given input
-func (m *mockEC2Conn) DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+func (m *mockEC2Conn) DescribeVpcs(ctx context.Context, input *ec2.DescribeVpcsInput, opts ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error) {
 
-	if input == nil || aws.StringValue(input.VpcIds[0]) == "" {
+	if input == nil || input.VpcIds[0] == "" {
 		return nil, fmt.Errorf("oops looks like we need more input")
 	}
 
 	var isDefault bool
-	vpcID := aws.StringValue(input.VpcIds[0])
+	vpcID := input.VpcIds[0]
 
 	//only one default VPC per region
 	if strings.Contains("vpc-default-id", vpcID) {
@@ -28,7 +30,7 @@ func (m *mockEC2Conn) DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeV
 	}
 
 	output := &ec2.DescribeVpcsOutput{
-		Vpcs: []*ec2.Vpc{
+		Vpcs: []ec2types.Vpc{
 			{IsDefault: aws.Bool(isDefault),
 				VpcId: aws.String(vpcID),
 			},
@@ -51,14 +53,14 @@ func TestStepPreValidate_checkVpc(t *testing.T) {
 		{"NonDefaultVpcWithSubnetFilter", StepPreValidate{VpcId: "vpc-1234567890", HasSubnetFilter: true}, false},
 	}
 
-	mockConn, err := getMockConn(nil, "")
+	mockConn, err := getMockConn(t.Context(), FakeAccessConfig(), "")
 	if err != nil {
 		t.Fatal("unable to get a mock connection")
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.step.checkVpc(mockConn)
+			err := tc.step.checkVpc(t.Context(), mockConn)
 
 			if tc.errorExpected && err == nil {
 				t.Errorf("expected a validation error for %q but got %q", tc.name, err)

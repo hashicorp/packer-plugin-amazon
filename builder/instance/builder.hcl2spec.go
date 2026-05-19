@@ -3,6 +3,7 @@
 package instance
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-amazon/builder/common"
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
@@ -38,7 +39,7 @@ type FlatConfig struct {
 	PollingConfig                             *common.FlatAWSPollingConfig                `mapstructure:"aws_polling" required:"false" cty:"aws_polling" hcl:"aws_polling"`
 	AMIName                                   *string                                     `mapstructure:"ami_name" required:"true" cty:"ami_name" hcl:"ami_name"`
 	AMIDescription                            *string                                     `mapstructure:"ami_description" required:"false" cty:"ami_description" hcl:"ami_description"`
-	AMIVirtType                               *string                                     `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
+	AMIVirtType                               *types.VirtualizationType                   `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
 	AMIUsers                                  []string                                    `mapstructure:"ami_users" required:"false" cty:"ami_users" hcl:"ami_users"`
 	AMIGroups                                 []string                                    `mapstructure:"ami_groups" required:"false" cty:"ami_groups" hcl:"ami_groups"`
 	AMIOrgArns                                []string                                    `mapstructure:"ami_org_arns" required:"false" cty:"ami_org_arns" hcl:"ami_org_arns"`
@@ -57,7 +58,7 @@ type FlatConfig struct {
 	AMIRegionKMSKeyIDs                        map[string]string                           `mapstructure:"region_kms_key_ids" required:"false" cty:"region_kms_key_ids" hcl:"region_kms_key_ids"`
 	AMISkipBuildRegion                        *bool                                       `mapstructure:"skip_save_build_region" cty:"skip_save_build_region" hcl:"skip_save_build_region"`
 	AMISnapshotCopyDurationMinutes            *int64                                      `mapstructure:"snapshot_copy_duration_minutes" required:"false" cty:"snapshot_copy_duration_minutes" hcl:"snapshot_copy_duration_minutes"`
-	AMIIMDSSupport                            *string                                     `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
+	AMIIMDSSupport                            *types.ImdsSupportValues                    `mapstructure:"imds_support" required:"false" cty:"imds_support" hcl:"imds_support"`
 	DeprecationTime                           *string                                     `mapstructure:"deprecate_at" cty:"deprecate_at" hcl:"deprecate_at"`
 	SnapshotTags                              map[string]string                           `mapstructure:"snapshot_tags" required:"false" cty:"snapshot_tags" hcl:"snapshot_tags"`
 	SnapshotTag                               []config.FlatKeyValue                       `mapstructure:"snapshot_tag" required:"false" cty:"snapshot_tag" hcl:"snapshot_tag"`
@@ -66,8 +67,8 @@ type FlatConfig struct {
 	DeregistrationProtection                  *common.FlatDeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false" cty:"deregistration_protection" hcl:"deregistration_protection"`
 	AssociatePublicIpAddress                  *bool                                       `mapstructure:"associate_public_ip_address" required:"false" cty:"associate_public_ip_address" hcl:"associate_public_ip_address"`
 	AvailabilityZone                          *string                                     `mapstructure:"availability_zone" required:"false" cty:"availability_zone" hcl:"availability_zone"`
-	BlockDurationMinutes                      *int64                                      `mapstructure:"block_duration_minutes" required:"false" cty:"block_duration_minutes" hcl:"block_duration_minutes"`
-	CapacityReservationPreference             *string                                     `mapstructure:"capacity_reservation_preference" required:"false" cty:"capacity_reservation_preference" hcl:"capacity_reservation_preference"`
+	BlockDurationMinutes                      *int32                                      `mapstructure:"block_duration_minutes" required:"false" cty:"block_duration_minutes" hcl:"block_duration_minutes"`
+	CapacityReservationPreference             *types.CapacityReservationPreference        `mapstructure:"capacity_reservation_preference" required:"false" cty:"capacity_reservation_preference" hcl:"capacity_reservation_preference"`
 	CapacityReservationId                     *string                                     `mapstructure:"capacity_reservation_id" required:"false" cty:"capacity_reservation_id" hcl:"capacity_reservation_id"`
 	CapacityReservationGroupArn               *string                                     `mapstructure:"capacity_reservation_group_arn" required:"false" cty:"capacity_reservation_group_arn" hcl:"capacity_reservation_group_arn"`
 	DisableStopInstance                       *bool                                       `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
@@ -81,7 +82,7 @@ type FlatConfig struct {
 	SkipProfileValidation                     *bool                                       `mapstructure:"skip_profile_validation" required:"false" cty:"skip_profile_validation" hcl:"skip_profile_validation"`
 	TemporaryIamInstanceProfilePolicyDocument *common.FlatPolicyDocument                  `mapstructure:"temporary_iam_instance_profile_policy_document" required:"false" cty:"temporary_iam_instance_profile_policy_document" hcl:"temporary_iam_instance_profile_policy_document"`
 	InstanceInitiatedShutdownBehavior         *string                                     `mapstructure:"shutdown_behavior" required:"false" cty:"shutdown_behavior" hcl:"shutdown_behavior"`
-	InstanceType                              *string                                     `mapstructure:"instance_type" required:"true" cty:"instance_type" hcl:"instance_type"`
+	InstanceType                              *types.InstanceType                         `mapstructure:"instance_type" required:"true" cty:"instance_type" hcl:"instance_type"`
 	SecurityGroupFilter                       *common.FlatSecurityGroupFilterOptions      `mapstructure:"security_group_filter" required:"false" cty:"security_group_filter" hcl:"security_group_filter"`
 	RunTags                                   map[string]string                           `mapstructure:"run_tags" required:"false" cty:"run_tags" hcl:"run_tags"`
 	RunTag                                    []config.FlatKeyValue                       `mapstructure:"run_tag" required:"false" cty:"run_tag" hcl:"run_tag"`
@@ -89,7 +90,7 @@ type FlatConfig struct {
 	SecurityGroupIds                          []string                                    `mapstructure:"security_group_ids" required:"false" cty:"security_group_ids" hcl:"security_group_ids"`
 	SourceAmi                                 *string                                     `mapstructure:"source_ami" required:"true" cty:"source_ami" hcl:"source_ami"`
 	SourceAmiFilter                           *common.FlatAmiFilterOptions                `mapstructure:"source_ami_filter" required:"false" cty:"source_ami_filter" hcl:"source_ami_filter"`
-	SpotAllocationStrategy                    *string                                     `mapstructure:"spot_allocation_strategy" required:"false" cty:"spot_allocation_strategy" hcl:"spot_allocation_strategy"`
+	SpotAllocationStrategy                    *types.SpotAllocationStrategy               `mapstructure:"spot_allocation_strategy" required:"false" cty:"spot_allocation_strategy" hcl:"spot_allocation_strategy"`
 	SpotInstanceTypes                         []string                                    `mapstructure:"spot_instance_types" required:"false" cty:"spot_instance_types" hcl:"spot_instance_types"`
 	SpotPrice                                 *string                                     `mapstructure:"spot_price" required:"false" cty:"spot_price" hcl:"spot_price"`
 	SpotPriceAutoProduct                      *string                                     `mapstructure:"spot_price_auto_product" required:"false" undocumented:"true" cty:"spot_price_auto_product" hcl:"spot_price_auto_product"`
@@ -99,7 +100,7 @@ type FlatConfig struct {
 	SubnetId                                  *string                                     `mapstructure:"subnet_id" required:"false" cty:"subnet_id" hcl:"subnet_id"`
 	LicenseSpecifications                     []common.FlatLicenseSpecification           `mapstructure:"license_specifications" required:"false" cty:"license_specifications" hcl:"license_specifications"`
 	Placement                                 *common.FlatPlacement                       `mapstructure:"placement" required:"false" cty:"placement" hcl:"placement"`
-	Tenancy                                   *string                                     `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
+	Tenancy                                   *types.Tenancy                              `mapstructure:"tenancy" required:"false" cty:"tenancy" hcl:"tenancy"`
 	TemporarySGSourceCidrs                    []string                                    `mapstructure:"temporary_security_group_source_cidrs" required:"false" cty:"temporary_security_group_source_cidrs" hcl:"temporary_security_group_source_cidrs"`
 	TemporarySGSourcePublicIp                 *bool                                       `mapstructure:"temporary_security_group_source_public_ip" required:"false" cty:"temporary_security_group_source_public_ip" hcl:"temporary_security_group_source_public_ip"`
 	UserData                                  *string                                     `mapstructure:"user_data" required:"false" cty:"user_data" hcl:"user_data"`
@@ -171,7 +172,7 @@ type FlatConfig struct {
 	X509CertPath                              *string                                     `mapstructure:"x509_cert_path" required:"true" cty:"x509_cert_path" hcl:"x509_cert_path"`
 	X509KeyPath                               *string                                     `mapstructure:"x509_key_path" required:"true" cty:"x509_key_path" hcl:"x509_key_path"`
 	X509UploadPath                            *string                                     `mapstructure:"x509_upload_path" required:"false" cty:"x509_upload_path" hcl:"x509_upload_path"`
-	TpmSupport                                *string                                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
+	TpmSupport                                *types.TpmSupportValues                     `mapstructure:"tpm_support" required:"false" cty:"tpm_support" hcl:"tpm_support"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
