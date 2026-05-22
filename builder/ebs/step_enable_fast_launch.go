@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/packer-plugin-amazon/common"
-	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
@@ -23,7 +22,7 @@ import (
 
 type stepEnableFastLaunch struct {
 	AccessConfig       *common.AccessConfig
-	PollingConfig      *awscommon.AWSPollingConfig
+	PollingConfig      *common.AWSPollingConfig
 	AMISkipCreateImage bool
 	EnableFastLaunch   bool
 	MaxInstances       int
