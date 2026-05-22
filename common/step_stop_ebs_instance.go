@@ -48,7 +48,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 		// does not exist.
 
 		// Work around this by retrying a few times, up to about 5 minutes.
-		err := retry.Config{Tries: 6, ShouldRetry: func(error) bool {
+		err := retry.Config{Tries: 6, ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
 				return true
 			}

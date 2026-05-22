@@ -2,6 +2,16 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 ---
+## x.x.x (Unreleased)
+
+## 🐛 Bug Fixes
+- **Fix ShouldRetry callbacks not receiving error from retry framework** – by @tjouni
+  Several `ShouldRetry` callbacks had unnamed function parameters, causing them to
+  reference the outer scope's error variable instead of the error passed by the retry
+  framework. This prevented retries from working for transient AWS API errors such as
+  `InvalidAMIID.NotFound`, `InvalidSnapshot.NotFound`, and `InvalidInstanceID.NotFound`.
+
+---
 ## 1.8.0 (November 19, 2025)
 
 ## ✨ Features

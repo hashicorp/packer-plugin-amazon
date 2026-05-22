@@ -1,8 +1,6 @@
 module github.com/hashicorp/packer-plugin-amazon
 
-go 1.24.0
-
-toolchain go1.24.10
+go 1.25.10
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
@@ -20,12 +18,12 @@ require (
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.65
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/hcl/v2 v2.19.1
-	github.com/hashicorp/packer-plugin-sdk v0.6.5
+	github.com/hashicorp/hcl/v2 v2.24.0
+	github.com/hashicorp/packer-plugin-sdk v0.6.8
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.11.1
-	github.com/zclconf/go-cty v1.13.3
+	github.com/zclconf/go-cty v1.16.3
 	golang.org/x/sys v0.39.0
 )
 
@@ -36,7 +34,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/storage v1.39.1 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
+	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/ChrisTrenkamp/goxpath v0.0.0-20210404020558-97928f7e12b6 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
@@ -78,9 +76,11 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel v1.41.0 // indirect
-	go.opentelemetry.io/otel/metric v1.41.0 // indirect
-	go.opentelemetry.io/otel/trace v1.41.0 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 )
 
 require (
