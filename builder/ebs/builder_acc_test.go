@@ -24,7 +24,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/packer-plugin-amazon/common"
 	awscommon "github.com/hashicorp/packer-plugin-amazon/common"
 	amazon_acc "github.com/hashicorp/packer-plugin-amazon/common/acceptance"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
@@ -1096,7 +1095,7 @@ func TestAccBuilder_EnableUnlimitedCredits_withSpotInstances(t *testing.T) {
 
 func testEC2Conn(region string) (clients.Ec2Client, error) {
 	ctx := context.TODO()
-	access := &common.AccessConfig{RawRegion: region}
+	access := &awscommon.AccessConfig{RawRegion: region}
 	awsConfig, err := access.Config(ctx)
 	if err != nil {
 		return nil, err
