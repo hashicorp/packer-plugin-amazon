@@ -2,14 +2,17 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 ---
-## x.x.x (Unreleased)
+## 1.8.2 
 
 ## 🐛 Bug Fixes
-- **Fix ShouldRetry callbacks not receiving error from retry framework** – by @tjouni
-  Several `ShouldRetry` callbacks had unnamed function parameters, causing them to
-  reference the outer scope's error variable instead of the error passed by the retry
-  framework. This prevented retries from working for transient AWS API errors such as
-  `InvalidAMIID.NotFound`, `InvalidSnapshot.NotFound`, and `InvalidInstanceID.NotFound`.
+- **Fix ShouldRetry callbacks not receiving error from retry framework** – Several `ShouldRetry` callbacks had unnamed parameters, causing retries to fail for transient AWS API errors such as `InvalidAMIID.NotFound` and `InvalidSnapshot.NotFound`.
+- **Fix instance profile propagation handling** – Improved IAM instance profile propagation to avoid race conditions during instance launch. ([#639](https://github.com/hashicorp/packer-plugin-amazon/pull/639))
+- **Fix IPv6 support** – Corrected IPv6 handling in `run_config`, SSH config, and security group steps to properly support IPv6-only configurations.
+
+## 📦 Dependencies
+- Bump `github.com/hashicorp/packer-plugin-sdk` from **0.6.5 → 0.6.8**
+- Bump `github.com/go-jose/go-jose/v4` to **v4.1.4**
+- Bump `golang.org/x/crypto` to **v0.43.0** ([#634](https://github.com/hashicorp/packer-plugin-amazon/pull/634))
 
 ---
 ## 1.8.0 (November 19, 2025)
