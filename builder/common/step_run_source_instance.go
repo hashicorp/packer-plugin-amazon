@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
@@ -364,7 +364,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	if s.IsRestricted {
 		ec2Tags.Report(ui)
 		// Retry creating tags for about 2.5 minutes
-		err = retry.Config{Tries: 11, ShouldRetry: func(error) bool {
+		err = retry.Config{Tries: 11, ShouldRetry: func(err error) bool {
 			if awserrors.Matches(err, "InvalidInstanceID.NotFound", "") {
 				return true
 			}

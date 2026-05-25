@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
@@ -420,12 +420,6 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 	err = retry.Config{
 		Tries: 11,
 		ShouldRetry: func(err error) bool {
-			if strings.Contains(err.Error(), "Invalid IAM Instance Profile name") {
-				// eventual consistency of the profile. PutRolePolicy &
-				// AddRoleToInstanceProfile are eventually consistent and once
-				// we can wait on those operations, this can be removed.
-				return true
-			}
 			if err.Error() == "InsufficientInstanceCapacity" {
 				return true
 			}
@@ -521,7 +515,7 @@ func (s *StepRunSpotInstance) Run(ctx context.Context, state multistep.StateBag)
 		// Apply tags to the spot request.
 		err = retry.Config{
 			Tries:       11,
-			ShouldRetry: func(error) bool { return false },
+			ShouldRetry: func(err error) bool { return false },
 			RetryDelay:  (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
 			_, err := ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{

@@ -1,10 +1,9 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
 
 import (
-	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
@@ -216,7 +215,7 @@ func TestRunConfigPrepare_SSHPort(t *testing.T) {
 
 func TestRunConfigPrepare_UserData(t *testing.T) {
 	c := testConfig()
-	tf, err := ioutil.TempFile("", "packer")
+	tf, err := os.CreateTemp("", "packer")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -241,7 +240,7 @@ func TestRunConfigPrepare_UserDataFile(t *testing.T) {
 		t.Fatalf("Should error if the file specified by user_data_file does not exist")
 	}
 
-	tf, err := ioutil.TempFile("", "packer")
+	tf, err := os.CreateTemp("", "packer")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
