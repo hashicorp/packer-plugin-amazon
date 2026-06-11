@@ -182,6 +182,10 @@ type RunConfig struct {
 	// Optimized](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html).
 	// Default `false`.
 	EbsOptimized bool `mapstructure:"ebs_optimized" required:"false"`
+	// Enable nested virtualization for the launched instance.
+	// Supported only on 8th generation Intel-based instance types (c8i, m8i, r8i, and their flex variants).
+	// See [Nested Virtualization](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/amazon-ec2-nested-virtualization.html) for details.
+	EnableNestedVirtualization bool `mapstructure:"enable_nested_virtualization" required:"false"`
 	// Enable support for Nitro Enclaves on the instance.  Note that the instance type must
 	// be able to [support Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/faqs/).
 	// This option is not supported for spot instances.

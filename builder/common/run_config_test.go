@@ -393,6 +393,15 @@ func TestRunConfigPrepare_EnableNitroEnclaveGood(t *testing.T) {
 	}
 }
 
+func TestRunConfigPrepare_EnableNestedVirtualization(t *testing.T) {
+	c := testConfig()
+	c.EnableNestedVirtualization = true
+	err := c.Prepare(nil)
+	if len(err) != 0 {
+		t.Fatalf("Should not error when enable_nested_virtualization is set: %v", err)
+	}
+}
+
 func TestRunConfigPrepare_FailIfBothHostIDAndGroupSpecified(t *testing.T) {
 	c := testConfig()
 	c.Placement.HostId = "host"

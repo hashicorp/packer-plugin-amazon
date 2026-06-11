@@ -68,8 +68,15 @@ func getBasicStep() *StepRunSpotInstance {
 func TestCreateTemplateData(t *testing.T) {
 	state := tStateSpot()
 	stepRunSpotInstance := getBasicStep()
+	stepRunSpotInstance.EnableNestedVirtualization = true
 	template := stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
 		&ec2.LaunchTemplateInstanceMarketOptionsRequest{})
+
+	// EnableNestedVirtualization is not supported with the legacy AWS SDK v1,
+	// so CpuOptions should not be set in this code path.
+	if template.CpuOptions != nil {
+		t.Fatalf("Template should not set CpuOptions with the legacy AWS SDK v1, received %#v", template.CpuOptions)
+	}
 
 	// expected := []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 	// 	&ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{

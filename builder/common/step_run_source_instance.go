@@ -55,6 +55,7 @@ type StepRunSourceInstance struct {
 	VolumeTags                        map[string]string
 	NoEphemeral                       bool
 	EnableNitroEnclave                bool
+	EnableNestedVirtualization        bool
 	IsBurstableInstanceType           bool
 
 	instanceId string
@@ -121,6 +122,11 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	enclaveOptions := ec2.EnclaveOptionsRequest{
 		Enabled: &s.EnableNitroEnclave,
+	}
+
+	if s.EnableNestedVirtualization {
+		log.Println("Warning: EnableNestedVirtualization is not supported with the legacy AWS SDK v1. " +
+			"Use the ebs, ebssurrogate, or ebs-volume builders which use the AWS SDK v2.")
 	}
 
 	az := state.Get("availability_zone").(string)
