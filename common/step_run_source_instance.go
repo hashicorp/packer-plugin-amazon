@@ -260,6 +260,14 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	if s.CapacityReservationId != "" || s.CapacityReservationGroupArn != "" {
+		// capacity_reservation_id / capacity_reservation_group_arn are mutually
+		// exclusive with capacity_reservation_preference (see RunConfig.Prepare),
+		// so when a target is set the preference block above did not allocate the
+		// specification. Allocate it here before setting the target, otherwise we
+		// dereference a nil pointer. See hashicorp/packer-plugin-amazon#684.
+		if runOpts.CapacityReservationSpecification == nil {
+			runOpts.CapacityReservationSpecification = &ec2types.CapacityReservationSpecification{}
+		}
 		runOpts.CapacityReservationSpecification.CapacityReservationTarget = &ec2types.CapacityReservationTarget{}
 
 		if s.CapacityReservationId != "" {
