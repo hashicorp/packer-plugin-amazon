@@ -1,6 +1,6 @@
 module github.com/hashicorp/packer-plugin-amazon
 
-go 1.25.10
+go 1.25.11
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
@@ -19,12 +19,12 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/packer-plugin-sdk v0.6.9
+	github.com/hashicorp/packer-plugin-sdk v0.6.10
 	github.com/hashicorp/vault/api v1.16.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.11.1
 	github.com/zclconf/go-cty v1.16.3
-	golang.org/x/sys v0.45.0
+	golang.org/x/sys v0.47.0
 )
 
 require (
@@ -79,8 +79,8 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/tools v0.47.0 // indirect
 )
 
 require (
@@ -142,13 +142,13 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
-	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/api v0.230.0 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
