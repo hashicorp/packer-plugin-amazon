@@ -188,9 +188,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 		sourceImage := sourceImageRaw.(*ec2types.Image)
 		instanceType := map[ec2types.ArchitectureValues]ec2types.InstanceType{
-			ec2types.ArchitectureValuesArm64:    ec2types.InstanceTypeT4gNano,
-			ec2types.ArchitectureValuesX8664Mac: ec2types.InstanceTypeMac1Metal,
-			ec2types.ArchitectureValuesArm64Mac: ec2types.InstanceTypeMac2Metal,
+			ec2types.ArchitectureValuesArm64: ec2types.InstanceTypeT4gNano,
 		}[sourceImage.Architecture]
 		if instanceType == "" {
 			instanceType = ec2types.InstanceTypeT3Nano
