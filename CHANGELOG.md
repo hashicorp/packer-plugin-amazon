@@ -2,6 +2,16 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 ---
+## 1.8.2 (July 14, 2026)
+
+## 📦 Dependencies
+- Bump `github.com/hashicorp/packer-plugin-sdk` from **0.6.9 → 0.6.10** – by @dependabot ([#689](https://github.com/hashicorp/packer-plugin-amazon/pull/689))
+- Bump `golang.org/x/crypto` to **v0.54.0** – security and performance improvements ([#692](https://github.com/hashicorp/packer-plugin-amazon/pull/692))
+
+## 🧹 Maintenance
+- **Add/Update Copyright Headers** – by @hashicorp-copywrite ([#677](https://github.com/hashicorp/packer-plugin-amazon/pull/677))
+
+---
 ## 1.8.1 (May 25, 2026)
 
 ## 🐛 Bug Fixes
