@@ -187,6 +187,12 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionHalt
 		}
 		sourceImage := sourceImageRaw.(*ec2types.Image)
+		instanceType := map[ec2types.ArchitectureValues]ec2types.InstanceType{
+			ec2types.ArchitectureValuesArm64: ec2types.InstanceTypeT4gNano,
+		}[sourceImage.Architecture]
+		if instanceType == "" {
+			instanceType = ec2types.InstanceTypeT3Nano
+		}
 
 		err = retry.Config{
 			Tries: 11,
@@ -205,7 +211,7 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 				ImageId:      sourceImage.ImageId,
 				MinCount:     aws.Int32(1),
 				MaxCount:     aws.Int32(1),
-				InstanceType: ec2types.InstanceTypeT3Nano,
+				InstanceType: instanceType,
 				DryRun:       aws.Bool(true),
 				IamInstanceProfile: &ec2types.IamInstanceProfileSpecification{
 					Name: aws.String(s.createdInstanceProfileName),
