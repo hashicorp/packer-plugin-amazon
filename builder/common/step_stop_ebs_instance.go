@@ -28,6 +28,7 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 
 	// Skip when it is a spot instance
 	if s.Skip {
+		ui.Say("Skipping instance stop, since this is a spot instance.")
 		return multistep.ActionContinue
 	}
 
