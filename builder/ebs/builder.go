@@ -400,10 +400,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			PollingConfig:       b.config.PollingConfig,
 			Skip:                b.config.IsSpotInstance(),
 			DisableStopInstance: b.config.DisableStopInstance,
+			AMISkipCreateImage:  b.config.AMISkipCreateImage,
 		},
 		&awscommon.StepModifyEBSBackedInstance{
 			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
 			EnableAMIENASupport:      b.config.AMIENASupport,
+			AMISkipCreateImage:       b.config.AMISkipCreateImage,
 		},
 		&awscommon.StepDeregisterAMI{
 			AccessConfig:        &b.config.AccessConfig,
