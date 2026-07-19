@@ -74,6 +74,7 @@ type FlatConfig struct {
 	MountOptions                   []string                                    `mapstructure:"mount_options" required:"false" cty:"mount_options" hcl:"mount_options"`
 	MountPartition                 *string                                     `mapstructure:"mount_partition" required:"false" cty:"mount_partition" hcl:"mount_partition"`
 	MountPath                      *string                                     `mapstructure:"mount_path" required:"false" cty:"mount_path" hcl:"mount_path"`
+	ManualMountCommand             *string                                     `mapstructure:"manual_mount_command" required:"false" cty:"manual_mount_command" hcl:"manual_mount_command"`
 	PostMountCommands              []string                                    `mapstructure:"post_mount_commands" required:"false" cty:"post_mount_commands" hcl:"post_mount_commands"`
 	PreMountCommands               []string                                    `mapstructure:"pre_mount_commands" required:"false" cty:"pre_mount_commands" hcl:"pre_mount_commands"`
 	RootDeviceName                 *string                                     `mapstructure:"root_device_name" required:"false" cty:"root_device_name" hcl:"root_device_name"`
@@ -165,6 +166,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"mount_options":                  &hcldec.AttrSpec{Name: "mount_options", Type: cty.List(cty.String), Required: false},
 		"mount_partition":                &hcldec.AttrSpec{Name: "mount_partition", Type: cty.String, Required: false},
 		"mount_path":                     &hcldec.AttrSpec{Name: "mount_path", Type: cty.String, Required: false},
+		"manual_mount_command":           &hcldec.AttrSpec{Name: "manual_mount_command", Type: cty.String, Required: false},
 		"post_mount_commands":            &hcldec.AttrSpec{Name: "post_mount_commands", Type: cty.List(cty.String), Required: false},
 		"pre_mount_commands":             &hcldec.AttrSpec{Name: "pre_mount_commands", Type: cty.List(cty.String), Required: false},
 		"root_device_name":               &hcldec.AttrSpec{Name: "root_device_name", Type: cty.String, Required: false},
