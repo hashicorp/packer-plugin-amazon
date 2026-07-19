@@ -40,6 +40,11 @@ type Config struct {
 	// during a build test stage. Default `false`.
 	AMISkipCreateImage bool `mapstructure:"skip_create_ami" required:"false"`
 
+	// If true, Packer will return after EC2 accepts source instance
+	// termination instead of waiting for the source instance to reach the
+	// terminated state. Default `false`.
+	SkipSourceInstanceTerminationWait bool `mapstructure:"skip_source_instance_termination_wait" required:"false"`
+
 	// If true will not propagate the run tags set on Packer created instance to the AMI created.
 	AMISkipRunTags bool `mapstructure:"skip_ami_run_tags" required:"false"`
 
@@ -296,6 +301,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			UserDataFile:                      b.config.UserDataFile,
 			VolumeTags:                        b.config.VolumeRunTags,
 			NoEphemeral:                       b.config.NoEphemeral,
+			SkipSourceInstanceTerminationWait: b.config.SkipSourceInstanceTerminationWait,
 		}
 	}
 
