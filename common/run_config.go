@@ -132,6 +132,12 @@ type RunConfig struct {
 	// Otherwise, Packer will pick the most available subnet in the VPC selected,
 	// which may not be able to host the instance type you provided.
 	AssociatePublicIpAddress config.Trilean `mapstructure:"associate_public_ip_address" required:"false"`
+	// The allocation ID of a pre-existing Elastic IP to associate with the build
+	// instance after launch, e.g. "eipalloc-0123456789abcdef0". Packer will
+	// disassociate (but NOT release) the EIP when the build completes.
+	// Requires ec2:AssociateAddress and ec2:DisassociateAddress IAM permissions.
+	// Cannot be used with associate_public_ip_address.
+	ElasticIpAllocationId string `mapstructure:"elastic_ip_allocation_id" required:"false"`
 	// Destination availability zone to launch
 	// instance in. Leave this empty to allow Amazon to auto-assign.
 	AvailabilityZone string `mapstructure:"availability_zone" required:"false"`
@@ -950,6 +956,19 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		// check if we have an instance in the t-line (burstable instances)
 		if strings.HasPrefix(c.InstanceType, "t") {
 			errs = append(errs, fmt.Errorf("Error: Nitro Enclaves cannot be used in conjunction with burstable instance types: %s", c.InstanceType))
+		}
+	}
+
+	if c.ElasticIpAllocationId != "" {
+		reEipAllocId := regexp.MustCompile(`^eipalloc-[0-9a-f]+$`)
+		if !reEipAllocId.MatchString(c.ElasticIpAllocationId) {
+			errs = append(errs, fmt.Errorf(
+				"elastic_ip_allocation_id must be a valid EIP allocation ID (e.g. eipalloc-0123456789abcdef0), got: %q",
+				c.ElasticIpAllocationId))
+		}
+		if c.AssociatePublicIpAddress != config.TriUnset {
+			errs = append(errs, fmt.Errorf(
+				"associate_public_ip_address must not be set when elastic_ip_allocation_id is specified"))
 		}
 	}
 

@@ -65,6 +65,7 @@ type FlatConfig struct {
 	SnapshotGroups                            []string                                    `mapstructure:"snapshot_groups" required:"false" cty:"snapshot_groups" hcl:"snapshot_groups"`
 	DeregistrationProtection                  *common.FlatDeregistrationProtectionOptions `mapstructure:"deregistration_protection" required:"false" cty:"deregistration_protection" hcl:"deregistration_protection"`
 	AssociatePublicIpAddress                  *bool                                       `mapstructure:"associate_public_ip_address" required:"false" cty:"associate_public_ip_address" hcl:"associate_public_ip_address"`
+	ElasticIpAllocationId                     *string                                     `mapstructure:"elastic_ip_allocation_id" required:"false" cty:"elastic_ip_allocation_id" hcl:"elastic_ip_allocation_id"`
 	AvailabilityZone                          *string                                     `mapstructure:"availability_zone" required:"false" cty:"availability_zone" hcl:"availability_zone"`
 	BlockDurationMinutes                      *int64                                      `mapstructure:"block_duration_minutes" required:"false" cty:"block_duration_minutes" hcl:"block_duration_minutes"`
 	CapacityReservationPreference             *string                                     `mapstructure:"capacity_reservation_preference" required:"false" cty:"capacity_reservation_preference" hcl:"capacity_reservation_preference"`
@@ -235,6 +236,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"snapshot_groups":                 &hcldec.AttrSpec{Name: "snapshot_groups", Type: cty.List(cty.String), Required: false},
 		"deregistration_protection":       &hcldec.BlockSpec{TypeName: "deregistration_protection", Nested: hcldec.ObjectSpec((*common.FlatDeregistrationProtectionOptions)(nil).HCL2Spec())},
 		"associate_public_ip_address":     &hcldec.AttrSpec{Name: "associate_public_ip_address", Type: cty.Bool, Required: false},
+		"elastic_ip_allocation_id":        &hcldec.AttrSpec{Name: "elastic_ip_allocation_id", Type: cty.String, Required: false},
 		"availability_zone":               &hcldec.AttrSpec{Name: "availability_zone", Type: cty.String, Required: false},
 		"block_duration_minutes":          &hcldec.AttrSpec{Name: "block_duration_minutes", Type: cty.Number, Required: false},
 		"capacity_reservation_preference": &hcldec.AttrSpec{Name: "capacity_reservation_preference", Type: cty.String, Required: false},

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 func init() {
@@ -609,5 +610,47 @@ func TestRunConfigPrepare_SSHInterfaceIPv6_DefaultCIDR(t *testing.T) {
 
 	if c.TemporarySGSourceCidrs[0] != "::/0" {
 		t.Errorf("expected default CIDR to be '::/0', got: %s", c.TemporarySGSourceCidrs[0])
+	}
+}
+
+func TestRunConfigPrepare_ElasticIpAllocationId_Valid(t *testing.T) {
+	c := testConfig()
+	c.ElasticIpAllocationId = "eipalloc-0123456789abcdef0"
+	errs := c.Prepare(nil)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestRunConfigPrepare_ElasticIpAllocationId_InvalidFormat(t *testing.T) {
+	cases := []string{
+		"eipalloc-UPPER",
+		"alloc-123",
+		"eipalloc-",
+	}
+	for _, id := range cases {
+		c := testConfig()
+		c.ElasticIpAllocationId = id
+		errs := c.Prepare(nil)
+		if len(errs) != 1 {
+			t.Errorf("expected 1 error for %q, got %d: %v", id, len(errs), errs)
+		}
+	}
+}
+
+func TestRunConfigPrepare_ElasticIpAllocationId_ConflictsWithAssociatePublicIp(t *testing.T) {
+	c := testConfig()
+	c.ElasticIpAllocationId = "eipalloc-0123456789abcdef0"
+	c.AssociatePublicIpAddress = config.TriTrue
+	errs := c.Prepare(nil)
+	found := false
+	for _, err := range errs {
+		if err.Error() == "associate_public_ip_address must not be set when elastic_ip_allocation_id is specified" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected conflict error, got: %v", errs)
 	}
 }

@@ -19,6 +19,12 @@
   Otherwise, Packer will pick the most available subnet in the VPC selected,
   which may not be able to host the instance type you provided.
 
+- `elastic_ip_allocation_id` (string) - The allocation ID of a pre-existing Elastic IP to associate with the build
+  instance after launch, e.g. "eipalloc-0123456789abcdef0". Packer will
+  disassociate (but NOT release) the EIP when the build completes.
+  Requires ec2:AssociateAddress and ec2:DisassociateAddress IAM permissions.
+  Cannot be used with associate_public_ip_address.
+
 - `availability_zone` (string) - Destination availability zone to launch
   instance in. Leave this empty to allow Amazon to auto-assign.
 
