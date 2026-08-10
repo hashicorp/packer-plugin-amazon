@@ -39,6 +39,11 @@
 - `capacity_reservation_group_arn` (string) - Provide the EC2 Capacity Reservation Group ARN that will be used by
   Packer.
 
+- `capacity_reservation_market_type` (string) - The market type to use when launching instances with capacity reservations.
+  Valid values are: `interruptible-capacity-reservation`, `capacity-block`, or empty string (for on-demand).
+  Only set this when using interruptible capacity reservations or capacity blocks.
+  Leave empty for standard on-demand capacity reservations. Defaults to empty string.
+
 - `disable_stop_instance` (bool) - Packer normally stops the build instance after all provisioners have
   run. For Windows instances, it is sometimes desirable to [run
   Sysprep](https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/Creating_EBSbacked_WinAMI.html)

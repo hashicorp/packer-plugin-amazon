@@ -31,6 +31,7 @@ type StepRunSourceInstance struct {
 	CapacityReservationPreference     string
 	CapacityReservationId             string
 	CapacityReservationGroupArn       string
+	CapacityReservationMarketType     string
 	Comm                              *communicator.Config
 	Ctx                               interpolate.Context
 	Debug                             bool
@@ -258,6 +259,9 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	if s.CapacityReservationId != "" || s.CapacityReservationGroupArn != "" {
+		if runOpts.CapacityReservationSpecification == nil {
+			runOpts.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{}
+		}
 		runOpts.CapacityReservationSpecification.CapacityReservationTarget = &ec2.CapacityReservationTarget{}
 
 		if s.CapacityReservationId != "" {
@@ -266,6 +270,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 		if s.CapacityReservationGroupArn != "" {
 			runOpts.CapacityReservationSpecification.CapacityReservationTarget.CapacityReservationResourceGroupArn = aws.String(s.CapacityReservationGroupArn)
+		}
+
+		// Set market type if specified for interruptible capacity reservations or capacity blocks
+		if s.CapacityReservationMarketType != "" {
+			runOpts.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
+				MarketType: aws.String(s.CapacityReservationMarketType),
+			}
 		}
 	}
 
