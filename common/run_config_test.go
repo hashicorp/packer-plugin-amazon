@@ -56,6 +56,27 @@ func TestRunConfigPrepare_InstanceType(t *testing.T) {
 	}
 }
 
+func TestRunConfig_EffectiveInstanceType(t *testing.T) {
+	tests := []struct {
+		name              string
+		instanceType      string
+		spotInstanceTypes []string
+		want              string
+	}{
+		{"instance_type set", "t3.small", nil, "t3.small"},
+		{"spot only falls back to first", "", []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
+		{"neither set", "", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &RunConfig{InstanceType: tt.instanceType, SpotInstanceTypes: tt.spotInstanceTypes}
+			if got := c.EffectiveInstanceType(); got != tt.want {
+				t.Errorf("EffectiveInstanceType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRunConfigPrepare_SourceAmi(t *testing.T) {
 	c := testConfig()
 	c.SourceAmi = ""
