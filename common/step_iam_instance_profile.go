@@ -190,8 +190,13 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 		sourceImage := sourceImageRaw.(*ec2types.Image)
 
-		subnetID := state.Get("subnet_id").(string)
-		runInput := s.iamValidationRunInput(sourceImage, subnetID)
+		subnetIDRaw, exists := state.GetOk("subnet_id")
+		if !exists {
+			err := fmt.Errorf("subnet_id not available in state for IAM validation")
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		runInput := s.iamValidationRunInput(sourceImage, subnetIDRaw.(string))
 
 		err = retry.Config{
 			Tries:       11,
