@@ -6,6 +6,7 @@ package common
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -74,6 +75,56 @@ func TestRunConfig_EffectiveInstanceType(t *testing.T) {
 				t.Errorf("EffectiveInstanceType() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	if err := c.Prepare(nil); len(err) != 0 {
+		t.Fatalf("instance_types alone should be valid, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesConflictsWithInstanceType(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "mac2.metal"
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_type and instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesConflictsWithSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal"}
+	c.SpotInstanceTypes = []string{"mac2.metal"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_types and spot_instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesRejectsEmptyEntry(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", ""}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "must not contain empty entries") {
+		t.Fatalf("empty instance_types entry should error, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesRejectsBurstable(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "t3.micro"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "burstable") {
+		t.Fatalf("burstable instance_types entry should error, got: %s", err)
 	}
 }
 

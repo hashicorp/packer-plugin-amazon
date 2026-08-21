@@ -328,6 +328,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			IsBurstableInstanceType:       b.config.RunConfig.IsBurstableInstanceType(),
 			EnableUnlimitedCredits:        b.config.EnableUnlimitedCredits,
 			InstanceType:                  b.config.InstanceType,
+			InstanceTypes:                 b.config.InstanceTypes,
 			IsRestricted:                  b.config.IsChinaCloud(),
 			SourceAMI:                     b.config.SourceAmi,
 			Tags:                          b.config.RunTags,

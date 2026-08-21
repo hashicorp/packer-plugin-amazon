@@ -43,6 +43,7 @@ type StepRunSourceInstance struct {
 	InstanceMetadataTags              string
 	InstanceInitiatedShutdownBehavior string
 	InstanceType                      string
+	InstanceTypes                     []string
 	IsRestricted                      bool
 	SourceAMI                         string
 	Tags                              map[string]string
@@ -287,17 +288,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		runOpts.Placement.Tenancy = aws.String(s.Tenancy)
 	}
 
-	var runResp *ec2.Reservation
-	err = retry.Config{
-		Tries: 11,
-		ShouldRetry: func(err error) bool {
-			return awserrors.Matches(err, "InvalidParameterValue", "iamInstanceProfile")
-		},
-		RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
-	}.Run(ctx, func(ctx context.Context) error {
-		runResp, err = ec2conn.RunInstances(runOpts)
-		return err
-	})
+	// Fall back to instance_type when instance_types is unset.
+	instanceTypes := s.InstanceTypes
+	if len(instanceTypes) == 0 {
+		instanceTypes = []string{s.InstanceType}
+	}
+
+	runResp, err := runInstanceWithFallback(ctx, ec2conn, runOpts, instanceTypes, ui)
 
 	if awserrors.Matches(err, "VPCIdNotSpecified", "No default VPC for this user") && subnetId == "" {
 		err := fmt.Errorf("Error launching source instance: a valid Subnet Id was not specified")
@@ -443,6 +440,57 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 	}
 
 	return multistep.ActionContinue
+}
+
+// runInstanceWithFallback launches an instance, trying each candidate type in
+// order. It returns on the first success. A capacity shortage on one type
+// (see awserrors.IsCapacityError) falls through to the next candidate; any
+// other error is returned immediately so genuine configuration, permission,
+// and quota failures are not masked. When every candidate is capacity-starved,
+// the last error is returned. All placement configuration on runOpts is
+// type-independent and reused across attempts; only InstanceType changes.
+func runInstanceWithFallback(
+	ctx context.Context,
+	ec2conn ec2iface.EC2API,
+	runOpts *ec2.RunInstancesInput,
+	instanceTypes []string,
+	ui packersdk.Ui,
+) (*ec2.Reservation, error) {
+	if len(instanceTypes) == 0 {
+		return nil, fmt.Errorf("runInstanceWithFallback: no instance types to try")
+	}
+	var lastErr error
+	for i, instanceType := range instanceTypes {
+		runOpts.InstanceType = aws.String(instanceType)
+		if len(instanceTypes) > 1 {
+			ui.Say(fmt.Sprintf("Attempting to launch source instance as type %q...", instanceType))
+		}
+
+		var runResp *ec2.Reservation
+		err := retry.Config{
+			Tries: 11,
+			ShouldRetry: func(err error) bool {
+				return awserrors.Matches(err, "InvalidParameterValue", "iamInstanceProfile")
+			},
+			RetryDelay: (&retry.Backoff{InitialBackoff: 200 * time.Millisecond, MaxBackoff: 30 * time.Second, Multiplier: 2}).Linear,
+		}.Run(ctx, func(ctx context.Context) error {
+			var runErr error
+			runResp, runErr = ec2conn.RunInstances(runOpts)
+			return runErr
+		})
+		if err == nil {
+			return runResp, nil
+		}
+
+		lastErr = err
+		if !awserrors.IsCapacityError(err) {
+			return nil, err
+		}
+		if i < len(instanceTypes)-1 {
+			ui.Say(fmt.Sprintf("Insufficient capacity for instance type %q (%s); trying next type...", instanceType, err))
+		}
+	}
+	return nil, lastErr
 }
 
 func waitForInstanceReadiness(

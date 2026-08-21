@@ -100,6 +100,7 @@ type FlatConfig struct {
 	TemporaryIamInstanceProfilePolicyDocument *common.FlatPolicyDocument                  `mapstructure:"temporary_iam_instance_profile_policy_document" required:"false" cty:"temporary_iam_instance_profile_policy_document" hcl:"temporary_iam_instance_profile_policy_document"`
 	InstanceInitiatedShutdownBehavior         *string                                     `mapstructure:"shutdown_behavior" required:"false" cty:"shutdown_behavior" hcl:"shutdown_behavior"`
 	InstanceType                              *string                                     `mapstructure:"instance_type" required:"true" cty:"instance_type" hcl:"instance_type"`
+	InstanceTypes                             []string                                    `mapstructure:"instance_types" required:"false" cty:"instance_types" hcl:"instance_types"`
 	SecurityGroupFilter                       *common.FlatSecurityGroupFilterOptions      `mapstructure:"security_group_filter" required:"false" cty:"security_group_filter" hcl:"security_group_filter"`
 	RunTags                                   map[string]string                           `mapstructure:"run_tags" required:"false" cty:"run_tags" hcl:"run_tags"`
 	RunTag                                    []config.FlatKeyValue                       `mapstructure:"run_tag" required:"false" cty:"run_tag" hcl:"run_tag"`
@@ -275,6 +276,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"temporary_iam_instance_profile_policy_document": &hcldec.BlockSpec{TypeName: "temporary_iam_instance_profile_policy_document", Nested: hcldec.ObjectSpec((*common.FlatPolicyDocument)(nil).HCL2Spec())},
 		"shutdown_behavior":                     &hcldec.AttrSpec{Name: "shutdown_behavior", Type: cty.String, Required: false},
 		"instance_type":                         &hcldec.AttrSpec{Name: "instance_type", Type: cty.String, Required: false},
+		"instance_types":                        &hcldec.AttrSpec{Name: "instance_types", Type: cty.List(cty.String), Required: false},
 		"security_group_filter":                 &hcldec.BlockSpec{TypeName: "security_group_filter", Nested: hcldec.ObjectSpec((*common.FlatSecurityGroupFilterOptions)(nil).HCL2Spec())},
 		"run_tags":                              &hcldec.AttrSpec{Name: "run_tags", Type: cty.Map(cty.String), Required: false},
 		"run_tag":                               &hcldec.BlockListSpec{TypeName: "run_tag", Nested: hcldec.ObjectSpec((*config.FlatKeyValue)(nil).HCL2Spec())},

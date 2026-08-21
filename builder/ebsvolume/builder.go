@@ -270,6 +270,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceMetadataTags:              b.config.Metadata.InstanceMetadataTags,
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
+			InstanceTypes:                     b.config.InstanceTypes,
 			IsRestricted:                      b.config.IsChinaCloud(),
 			SourceAMI:                         b.config.SourceAmi,
 			Tags:                              b.config.RunTags,
