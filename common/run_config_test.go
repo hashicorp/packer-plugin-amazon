@@ -52,8 +52,9 @@ func TestRunConfigPrepare(t *testing.T) {
 func TestRunConfigPrepare_InstanceType(t *testing.T) {
 	c := testConfig()
 	c.InstanceType = ""
-	if err := c.Prepare(nil); len(err) != 1 {
-		t.Fatalf("Should error if an instance_type is not specified")
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "must be specified") {
+		t.Fatalf("Should error if no launch type is specified, got: %s", err)
 	}
 }
 
@@ -105,6 +106,27 @@ func TestRunConfigPrepare_InstanceTypesConflictsWithSpotInstanceTypes(t *testing
 	err := c.Prepare(nil)
 	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
 		t.Fatalf("instance_types and spot_instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypeConflictsWithSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "m1.small"
+	c.SpotInstanceTypes = []string{"m1.small"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_type and spot_instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_AllThreeSelectorsConflict(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "m1.small"
+	c.InstanceTypes = []string{"mac2.metal"}
+	c.SpotInstanceTypes = []string{"m1.small"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("setting all three launch selectors must error, got: %s", err)
 	}
 }
 

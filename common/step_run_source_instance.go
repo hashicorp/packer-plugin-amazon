@@ -293,7 +293,6 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		runOpts.Placement.Tenancy = ec2types.Tenancy(s.Tenancy)
 	}
 
-	// Fall back to instance_type when instance_types is unset.
 	instanceTypes := s.InstanceTypes
 	if len(instanceTypes) == 0 {
 		instanceTypes = []string{s.InstanceType}
@@ -496,6 +495,13 @@ func runInstanceWithFallback(
 		if i < len(instanceTypes)-1 {
 			ui.Say(fmt.Sprintf("Insufficient capacity for instance type %q (%s); trying next type...", instanceType, err))
 		}
+	}
+	// Reaching here means every candidate returned a capacity error (any
+	// non-capacity error returns above). For a multi-type list, name the types
+	// tried so the failure record shows the fallback ran and was exhausted;
+	// the single-type path returns the raw error unchanged.
+	if len(instanceTypes) > 1 {
+		return nil, fmt.Errorf("all %d instance types %v were capacity-starved; last error: %w", len(instanceTypes), instanceTypes, lastErr)
 	}
 	return nil, lastErr
 }

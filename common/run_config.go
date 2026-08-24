@@ -27,7 +27,7 @@ const (
 )
 
 var reShutdownBehavior = regexp.MustCompile("^(stop|terminate)$")
-var burstableInstanceTypeRe = regexp.MustCompile(`^t(:?2|3a?|4g)\.`)
+var reBurstableInstanceType = regexp.MustCompile(`^t(?:2|3a?|4g)\.`)
 
 type Statement struct {
 	Effect   string   `mapstructure:"Effect" required:"false"`
@@ -289,22 +289,19 @@ type RunConfig struct {
 	InstanceType string `mapstructure:"instance_type" required:"true"`
 	// An ordered list of EC2 instance types to try when launching the source
 	// instance, used in place of `instance_type`. Packer launches the first
-	// type; if that type has no available capacity
-	// (`InsufficientInstanceCapacity`, `InsufficientHostCapacity`, or
-	// `InsufficientReservedInstanceCapacity`), it falls through to the next
-	// type in the list, and so on. The build succeeds on the first type that
-	// launches and fails with the last error if every type is capacity-starved.
-	// Any non-capacity error (configuration, permission, quota) fails the build
-	// immediately without trying further types. All other placement settings
-	// (tenancy, `placement.host_resource_group_arn`, subnet/AZ, license
-	// specifications, block device mappings) are type-independent and preserved
-	// across attempts. This is intended for capacity-constrained families such
-	// as EC2 Mac Dedicated Hosts and metal/GPU types where cross-compatible
-	// alternatives exist. Mutually exclusive with `instance_type` and
-	// `spot_instance_types`. Only the on-demand launch path honors this list;
-	// for Spot use `spot_instance_types`. Burstable (T-family) instance types
-	// are not supported here (their credit specification is derived from
-	// `instance_type`); use `instance_type` for those.
+	// type; if that type has no available capacity (any EC2 insufficient-capacity
+	// error), it falls through to the next type in the list, and so on. The build
+	// succeeds on the first type that launches and fails with the last error if
+	// every type is capacity-starved. Any non-capacity error (configuration,
+	// permission, quota) fails the build immediately without trying further
+	// types. All other launch configuration (placement, networking, licensing,
+	// block device mappings) is reused unchanged across attempts; only the
+	// instance type varies. This is useful for capacity-constrained families
+	// where cross-compatible alternatives exist. Mutually exclusive with
+	// `instance_type` and `spot_instance_types`. Only the on-demand launch path
+	// honors this list; for Spot use `spot_instance_types`. Burstable (T-family)
+	// instance types are not supported here (their credit specification is
+	// derived from `instance_type`); use `instance_type` for those.
 	InstanceTypes []string `mapstructure:"instance_types" required:"false"`
 	// Filters used to populate the `security_group_ids` field.
 	//
@@ -1042,7 +1039,7 @@ func (c *RunConfig) IsBurstableInstanceType() bool {
 }
 
 func isBurstableInstanceType(instanceType string) bool {
-	return burstableInstanceTypeRe.MatchString(instanceType)
+	return reBurstableInstanceType.MatchString(instanceType)
 }
 
 var supportedNestedVirtualizationInstanceFamilies = []string{

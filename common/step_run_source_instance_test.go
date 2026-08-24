@@ -114,6 +114,9 @@ func TestRunInstanceWithFallback_AllExhaustedReturnsLastError(t *testing.T) {
 	if !strings.Contains(err.Error(), "last type full") {
 		t.Fatalf("expected the last error to be returned, got: %s", err)
 	}
+	if !strings.Contains(err.Error(), "mac2.metal") {
+		t.Fatalf("expected the exhaustion error to name the types tried, got: %s", err)
+	}
 	if want := []string{"mac2.metal", "mac2-m2.metal"}; !reflect.DeepEqual(mock.attempted, want) {
 		t.Fatalf("expected all types attempted %v, got %v", want, mock.attempted)
 	}
@@ -168,5 +171,19 @@ func TestRunInstanceWithFallback_NonCapacityAbortsImmediately(t *testing.T) {
 	}
 	if want := []string{"mac2.metal"}; !reflect.DeepEqual(mock.attempted, want) {
 		t.Fatalf("expected abort after first type %v, got %v", want, mock.attempted)
+	}
+}
+
+func TestRunInstanceWithFallback_EmptyListErrors(t *testing.T) {
+	mock := &fallbackEC2Mock{responses: map[string]fallbackResp{}}
+
+	_, err := runInstanceWithFallback(context.Background(), mock,
+		&ec2.RunInstancesInput{}, nil, packersdk.TestUi(t))
+
+	if err == nil {
+		t.Fatal("expected an error when no instance types are provided")
+	}
+	if len(mock.attempted) != 0 {
+		t.Fatalf("expected no RunInstances calls, got %v", mock.attempted)
 	}
 }
