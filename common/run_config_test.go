@@ -152,6 +152,17 @@ func TestRunConfigPrepare_InstanceTypesRejectsBurstable(t *testing.T) {
 	}
 }
 
+func TestRunConfigPrepare_UnlimitedCreditsConflictsWithInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	c.EnableUnlimitedCredits = true
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "cannot be combined with instance_types") {
+		t.Fatalf("enable_unlimited_credits with instance_types should give a clear conflict error, got: %s", err)
+	}
+}
+
 func TestRunConfigPrepare_SourceAmi(t *testing.T) {
 	c := testConfig()
 	c.SourceAmi = ""

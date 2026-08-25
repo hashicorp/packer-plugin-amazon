@@ -289,7 +289,7 @@ type RunConfig struct {
 	InstanceInitiatedShutdownBehavior string `mapstructure:"shutdown_behavior" required:"false"`
 	// The EC2 instance type to use while building the
 	// AMI, such as t2.small.
-	InstanceType string `mapstructure:"instance_type" required:"true"`
+	InstanceType string `mapstructure:"instance_type" required:"false"`
 	// An ordered list of EC2 instance types to try when launching the source
 	// instance, used in place of `instance_type`. Packer launches the first
 	// type; if that type has no available capacity (any EC2 insufficient-capacity
@@ -938,7 +938,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	if c.EnableUnlimitedCredits {
 		if !c.IsBurstableInstanceType() {
-			errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
+			if len(c.InstanceTypes) > 0 {
+				errs = append(errs, fmt.Errorf("enable_unlimited_credits requires a burstable (T-family) instance_type; it cannot be combined with instance_types, which rejects burstable types"))
+			} else {
+				errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
+			}
 		}
 
 		if c.SpotPrice != "" && regexp.MustCompile(`^t2\.`).MatchString(c.InstanceType) {
@@ -1014,6 +1018,23 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 func (c *RunConfig) IsSpotInstance() bool {
 	return c.SpotPrice != "" && c.SpotPrice != "0"
+}
+
+// EffectiveInstanceType returns the instance type a launch will use. Prepare
+// enforces that exactly one of instance_type / instance_types /
+// spot_instance_types is set; when instance_type is empty this returns the
+// first candidate of whichever list is set (the type a launch tries first).
+func (c *RunConfig) EffectiveInstanceType() string {
+	if c.InstanceType != "" {
+		return c.InstanceType
+	}
+	if len(c.InstanceTypes) > 0 {
+		return c.InstanceTypes[0]
+	}
+	if len(c.SpotInstanceTypes) > 0 {
+		return c.SpotInstanceTypes[0]
+	}
+	return ""
 }
 
 func (c *RunConfig) SSMAgentEnabled() bool {

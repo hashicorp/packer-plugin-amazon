@@ -130,6 +130,40 @@ func TestRunConfigPrepare_InstanceTypesRejectsBurstable(t *testing.T) {
 	}
 }
 
+func TestRunConfigPrepare_UnlimitedCreditsConflictsWithInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	c.EnableUnlimitedCredits = true
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "cannot be combined with instance_types") {
+		t.Fatalf("enable_unlimited_credits with instance_types should give a clear conflict error, got: %s", err)
+	}
+}
+
+func TestRunConfig_EffectiveInstanceType(t *testing.T) {
+	tests := []struct {
+		name              string
+		instanceType      string
+		instanceTypes     []string
+		spotInstanceTypes []string
+		want              string
+	}{
+		{"instance_type set", "t3.small", nil, nil, "t3.small"},
+		{"instance_types falls back to first", "", []string{"mac2.metal", "mac2-m2.metal"}, nil, "mac2.metal"},
+		{"spot only falls back to first", "", nil, []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
+		{"none set", "", nil, nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &RunConfig{InstanceType: tt.instanceType, InstanceTypes: tt.instanceTypes, SpotInstanceTypes: tt.spotInstanceTypes}
+			if got := c.EffectiveInstanceType(); got != tt.want {
+				t.Errorf("EffectiveInstanceType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRunConfigPrepare_SourceAmi(t *testing.T) {
 	c := testConfig()
 	c.SourceAmi = ""
