@@ -393,6 +393,50 @@ func TestRunConfigPrepare_EnableNitroEnclaveGood(t *testing.T) {
 	}
 }
 
+func TestRunConfigPrepare_EnableNestedVirtualization(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "c8i.large"
+	c.EnableNestedVirtualization = true
+	err := c.Prepare(nil)
+	if len(err) != 0 {
+		t.Fatalf("Should not error when enable_nested_virtualization is set: %v", err)
+	}
+}
+
+func TestRunConfigSupportsNestedVirtualization(t *testing.T) {
+	tests := []struct {
+		instanceType string
+		supported    bool
+	}{
+		{"c7i.large", true},
+		{"c7i-flex.large", true},
+		{"c8id.large", true},
+		{"i7i.large", true},
+		{"m7i-flex.large", true},
+		{"m8id.large", true},
+		{"r7i.large", true},
+		{"r8i-flex.large", true},
+		{"r8id.large", true},
+		{"x8i.large", true},
+		{"c7id.large", false},
+		{"c7in.large", false},
+		{"m7id.large", false},
+		{"r7id.large", false},
+		{"m1.small", false},
+		{"c8i", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.instanceType, func(t *testing.T) {
+			c := testConfig()
+			c.InstanceType = tt.instanceType
+			if got := c.SupportsNestedVirtualization(); got != tt.supported {
+				t.Errorf("SupportsNestedVirtualization() = %t, want %t", got, tt.supported)
+			}
+		})
+	}
+}
+
 func TestRunConfigPrepare_FailIfBothHostIDAndGroupSpecified(t *testing.T) {
 	c := testConfig()
 	c.Placement.HostId = "host"
