@@ -26,6 +26,7 @@ import (
 type StepIamInstanceProfile struct {
 	PollingConfig                             *AWSPollingConfig
 	IamInstanceProfile                        string
+	InstanceType                              string
 	SkipProfileValidation                     bool
 	TemporaryIamInstanceProfilePolicyDocument *PolicyDocument
 	createdInstanceProfileName                string
@@ -174,8 +175,9 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 			return multistep.ActionHalt
 		}
 
-		// In aws sdk go v2, we noticed if there was no Wait, the spot fleet requests were failing even with retry.
-		// Running a dummy instance in DryRun mode to validate that the instance profile is visible to EC2
+		// Cleanup detaches the role only when this is set; set it before the
+		// propagation check below so a failure there still detaches the role.
+		s.roleIsAttached = true
 
 		ui.Say("Waiting for the change to propagate because of eventual consistency...")
 
@@ -188,56 +190,82 @@ func (s *StepIamInstanceProfile) Run(ctx context.Context, state multistep.StateB
 		}
 		sourceImage := sourceImageRaw.(*ec2types.Image)
 
+		subnetIDRaw, exists := state.GetOk("subnet_id")
+		if !exists {
+			err := fmt.Errorf("subnet_id not available in state for IAM validation")
+			state.Put("error", err)
+			return multistep.ActionHalt
+		}
+		runInput := s.iamValidationRunInput(sourceImage, subnetIDRaw.(string))
+
 		err = retry.Config{
-			Tries: 11,
-			ShouldRetry: func(err error) bool {
-				errStr := err.Error()
-				return strings.Contains(errStr, "Invalid IAM Instance Profile")
-			},
+			Tries:       11,
+			ShouldRetry: iamProfileNotYetVisible,
 			RetryDelay: (&retry.Backoff{
 				InitialBackoff: 500 * time.Millisecond,
 				MaxBackoff:     5 * time.Second,
 				Multiplier:     2,
 			}).Linear,
 		}.Run(ctx, func(ctx context.Context) error {
-
-			_, err := ec2Client.RunInstances(ctx, &ec2.RunInstancesInput{
-				ImageId:      sourceImage.ImageId,
-				MinCount:     aws.Int32(1),
-				MaxCount:     aws.Int32(1),
-				InstanceType: ec2types.InstanceTypeT3Nano,
-				DryRun:       aws.Bool(true),
-				IamInstanceProfile: &ec2types.IamInstanceProfileSpecification{
-					Name: aws.String(s.createdInstanceProfileName),
-				},
-			})
-
-			// For dry run, we expect a DryRunOperation error if the call would succeed
-			// Any other error indicates the instance profile isn't visible to EC2 yet
-			if err != nil {
-				errStr := err.Error()
-				if strings.Contains(errStr, "DryRunOperation") {
-					log.Printf("[DEBUG] EC2 can see IAM instance profile %s", s.createdInstanceProfileName)
-					return nil
-				}
-				log.Printf("[DEBUG] EC2 dry run failed: %s", errStr)
+			_, err := ec2Client.RunInstances(ctx, runInput)
+			if err == nil {
+				// DryRun must return an error; nil means it was not honored and a
+				// real instance may have launched.
+				return fmt.Errorf("dry-run RunInstances returned no error; DryRun may not have been honored")
+			}
+			if iamProfileNotYetVisible(err) {
 				return err
 			}
+			// Any other outcome — DryRunOperation, or a downstream error like an
+			// architecture or instance-type/AZ mismatch — means EC2 got past IAM
+			// validation, so the profile has propagated. The launch step reports the rest.
+			log.Printf("[DEBUG] EC2 accepted IAM instance profile %s", s.createdInstanceProfileName)
 			return nil
 		})
 
 		if err != nil {
-			err := fmt.Errorf("timed out waiting for IAM changes to propagate to EC2: %s", err)
+			if iamProfileNotYetVisible(err) {
+				err = fmt.Errorf("timed out waiting for IAM changes to propagate to EC2: %s", err)
+			} else {
+				err = fmt.Errorf("failed to validate temporary instance profile via dry-run RunInstances: %s", err)
+			}
 			log.Printf("[DEBUG] %s", err.Error())
 			state.Put("error", err)
 			return multistep.ActionHalt
 		}
 
-		s.roleIsAttached = true
 		state.Put("iamInstanceProfile", aws.ToString(profileResp.InstanceProfile.InstanceProfileName))
 	}
 
 	return multistep.ActionContinue
+}
+
+// iamProfileNotYetVisible reports whether err is EC2 rejecting the request
+// because the instance profile has not yet propagated — the condition the
+// propagation dry run waits on.
+func iamProfileNotYetVisible(err error) bool {
+	return strings.Contains(err.Error(), "Invalid IAM Instance Profile")
+}
+
+// iamValidationRunInput builds the DryRun RunInstances request used to check IAM
+// propagation. A valid instance type and the resolved subnet keep the request
+// well-formed so EC2 reaches the instance-profile check rather than rejecting it
+// earlier (an invalid type, or the default-VPC fallback in accounts without one).
+func (s *StepIamInstanceProfile) iamValidationRunInput(sourceImage *ec2types.Image, subnetID string) *ec2.RunInstancesInput {
+	input := &ec2.RunInstancesInput{
+		ImageId:      sourceImage.ImageId,
+		MinCount:     aws.Int32(1),
+		MaxCount:     aws.Int32(1),
+		InstanceType: ec2types.InstanceType(s.InstanceType),
+		DryRun:       aws.Bool(true),
+		IamInstanceProfile: &ec2types.IamInstanceProfileSpecification{
+			Name: aws.String(s.createdInstanceProfileName),
+		},
+	}
+	if subnetID != "" {
+		input.SubnetId = aws.String(subnetID)
+	}
+	return input
 }
 
 func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
