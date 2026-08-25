@@ -1015,11 +1015,15 @@ func (c *RunConfig) IsSpotInstance() bool {
 }
 
 // EffectiveInstanceType returns the instance type a launch will use. Prepare
-// enforces that exactly one of instance_type / spot_instance_types is set, so
-// this falls back to the first spot type when instance_type is empty.
+// enforces that exactly one of instance_type / instance_types /
+// spot_instance_types is set; when instance_type is empty this returns the
+// first candidate of whichever list is set (the type a launch tries first).
 func (c *RunConfig) EffectiveInstanceType() string {
 	if c.InstanceType != "" {
 		return c.InstanceType
+	}
+	if len(c.InstanceTypes) > 0 {
+		return c.InstanceTypes[0]
 	}
 	if len(c.SpotInstanceTypes) > 0 {
 		return c.SpotInstanceTypes[0]

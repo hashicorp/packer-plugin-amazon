@@ -62,16 +62,18 @@ func TestRunConfig_EffectiveInstanceType(t *testing.T) {
 	tests := []struct {
 		name              string
 		instanceType      string
+		instanceTypes     []string
 		spotInstanceTypes []string
 		want              string
 	}{
-		{"instance_type set", "t3.small", nil, "t3.small"},
-		{"spot only falls back to first", "", []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
-		{"neither set", "", nil, ""},
+		{"instance_type set", "t3.small", nil, nil, "t3.small"},
+		{"instance_types falls back to first", "", []string{"mac2.metal", "mac2-m2.metal"}, nil, "mac2.metal"},
+		{"spot only falls back to first", "", nil, []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
+		{"none set", "", nil, nil, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &RunConfig{InstanceType: tt.instanceType, SpotInstanceTypes: tt.spotInstanceTypes}
+			c := &RunConfig{InstanceType: tt.instanceType, InstanceTypes: tt.instanceTypes, SpotInstanceTypes: tt.spotInstanceTypes}
 			if got := c.EffectiveInstanceType(); got != tt.want {
 				t.Errorf("EffectiveInstanceType() = %q, want %q", got, tt.want)
 			}
