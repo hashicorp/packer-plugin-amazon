@@ -960,6 +960,19 @@ func (c *RunConfig) IsSpotInstance() bool {
 	return c.SpotPrice != "" && c.SpotPrice != "0"
 }
 
+// EffectiveInstanceType returns the instance type a launch will use. Prepare
+// enforces that exactly one of instance_type / spot_instance_types is set, so
+// this falls back to the first spot type when instance_type is empty.
+func (c *RunConfig) EffectiveInstanceType() string {
+	if c.InstanceType != "" {
+		return c.InstanceType
+	}
+	if len(c.SpotInstanceTypes) > 0 {
+		return c.SpotInstanceTypes[0]
+	}
+	return ""
+}
+
 func (c *RunConfig) SSMAgentEnabled() bool {
 	hasIamInstanceProfile := c.IamInstanceProfile != "" || c.TemporaryIamInstanceProfilePolicyDocument != nil
 	return c.SSHInterface == "session_manager" && hasIamInstanceProfile
