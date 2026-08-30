@@ -133,6 +133,30 @@ func TestBuilderPrepare_InvalidShutdownBehavior(t *testing.T) {
 	}
 }
 
+func TestBuilderPrepare_SkipSourceInstanceTerminationWait(t *testing.T) {
+	var b Builder
+	config := testConfig()
+	config["skip_source_instance_termination_wait"] = true
+
+	_, warnings, err := b.Prepare(config)
+	if len(warnings) > 0 {
+		t.Fatalf("bad: %#v", warnings)
+	}
+	if err != nil {
+		t.Fatalf("should not have error: %s", err)
+	}
+	if !b.config.SkipSourceInstanceTerminationWait {
+		t.Fatal("expected skip_source_instance_termination_wait to be enabled")
+	}
+}
+
+func TestFlatConfigHCL2Spec_SkipSourceInstanceTerminationWait(t *testing.T) {
+	spec := (*FlatConfig)(nil).HCL2Spec()
+	if _, ok := spec["skip_source_instance_termination_wait"]; !ok {
+		t.Fatal("expected HCL2 spec to contain skip_source_instance_termination_wait")
+	}
+}
+
 func TestBuilderPrepare_DeprecationTime(t *testing.T) {
 	var b Builder
 	config := testConfig()

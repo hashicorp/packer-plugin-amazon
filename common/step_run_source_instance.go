@@ -58,6 +58,7 @@ type StepRunSourceInstance struct {
 	EnableNitroEnclave                bool
 	EnableNestedVirtualization        bool
 	IsBurstableInstanceType           bool
+	SkipSourceInstanceTerminationWait bool
 
 	instanceId string
 }
@@ -499,6 +500,11 @@ func (s *StepRunSourceInstance) Cleanup(state multistep.StateBag) {
 		if _, err := ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{s.
 			instanceId}}); err != nil {
 			ui.Error(fmt.Sprintf("Error terminating instance, may still be around: %s", err))
+			return
+		}
+
+		if s.SkipSourceInstanceTerminationWait {
+			ui.Say("skip_source_instance_termination_wait was set; skipping final source instance termination wait")
 			return
 		}
 
