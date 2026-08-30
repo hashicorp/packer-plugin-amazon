@@ -122,6 +122,10 @@ necessary for this build to succeed and can be found further down the page.
   template where the .Device variable is replaced with the name of the
   device where the volume is attached.
 
+- `manual_mount_command` (string) - Manual Mount Command that is executed to manually mount the
+  root device, partition, and unmount. All other mount steps are skipped.
+  The device andmount path are provided by `{{.Device}}` and `{{.MountPath}}`.
+
 - `post_mount_commands` ([]string) - As pre_mount_commands, but the commands are executed after mounting the
   root device and before the extra mount and copy steps. The device and
   mount path are provided by `{{.Device}}` and `{{.MountPath}}`.
