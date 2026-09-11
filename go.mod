@@ -1,6 +1,6 @@
 module github.com/hashicorp/packer-plugin-amazon
 
-go 1.25.11
+go 1.26.8
 
 require (
 	github.com/aws/aws-sdk-go v1.55.8
@@ -161,3 +161,5 @@ require (
 )
 
 replace github.com/zclconf/go-cty => github.com/nywilken/go-cty v1.13.3 // added by packer-sdc fix as noted in github.com/hashicorp/packer-plugin-sdk/issues/187
+
+replace github.com/hashicorp/go-getter/v2 => github.com/hashicorp/go-getter/v2 v2.2.4-0.20260911052237-c2b656b78e5f
