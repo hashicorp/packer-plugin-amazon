@@ -162,6 +162,7 @@ type FlatConfig struct {
 	PauseBeforeSSM                            *string                                     `mapstructure:"pause_before_ssm" cty:"pause_before_ssm" hcl:"pause_before_ssm"`
 	SessionManagerPort                        *int                                        `mapstructure:"session_manager_port" cty:"session_manager_port" hcl:"session_manager_port"`
 	AMISkipCreateImage                        *bool                                       `mapstructure:"skip_create_ami" required:"false" cty:"skip_create_ami" hcl:"skip_create_ami"`
+	AMICreateDuringShutdown                   *bool                                       `mapstructure:"ami_create_during_shutdown" required:"false" cty:"ami_create_during_shutdown" hcl:"ami_create_during_shutdown"`
 	AMISkipRunTags                            *bool                                       `mapstructure:"skip_ami_run_tags" required:"false" cty:"skip_ami_run_tags" hcl:"skip_ami_run_tags"`
 	AMIMappings                               []common.FlatBlockDevice                    `mapstructure:"ami_block_device_mappings" required:"false" cty:"ami_block_device_mappings" hcl:"ami_block_device_mappings"`
 	LaunchMappings                            []common.FlatBlockDevice                    `mapstructure:"launch_block_device_mappings" required:"false" cty:"launch_block_device_mappings" hcl:"launch_block_device_mappings"`
@@ -333,6 +334,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"pause_before_ssm":             &hcldec.AttrSpec{Name: "pause_before_ssm", Type: cty.String, Required: false},
 		"session_manager_port":         &hcldec.AttrSpec{Name: "session_manager_port", Type: cty.Number, Required: false},
 		"skip_create_ami":              &hcldec.AttrSpec{Name: "skip_create_ami", Type: cty.Bool, Required: false},
+		"ami_create_during_shutdown":   &hcldec.AttrSpec{Name: "ami_create_during_shutdown", Type: cty.Bool, Required: false},
 		"skip_ami_run_tags":            &hcldec.AttrSpec{Name: "skip_ami_run_tags", Type: cty.Bool, Required: false},
 		"ami_block_device_mappings":    &hcldec.BlockListSpec{TypeName: "ami_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
 		"launch_block_device_mappings": &hcldec.BlockListSpec{TypeName: "launch_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},

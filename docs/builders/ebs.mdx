@@ -49,6 +49,45 @@ necessary for this build to succeed and can be found further down the page.
 
 @include 'builder/ebs/Config-not-required.mdx'
 
+### Overlapping AMI creation with instance shutdown
+
+With `ami_create_during_shutdown = true`, Packer can start the snapshot after
+Linux powers off, while EC2 is still cleaning up GPU or other instance resources.
+The default remains to wait for the EC2 `stopped` state.
+
+Packer writes a unique marker to `/dev/kmsg` before requesting shutdown. It then
+checks the latest EC2 console output for that marker followed by the kernel's
+`reboot: Power down` message. It does not treat a lost SSH connection, the EC2
+`stopping` state, or an earlier boot's power-off message as confirmation. After
+confirmation, Packer uses `CreateImage` with `NoReboot` enabled.
+
+This optimization requires a Linux guest with an SSH communicator, root or
+passwordless sudo access to `/dev/kmsg`, serial-console kernel output, and
+`ec2:GetConsoleOutput` permission for the Packer identity. It falls back to the
+normal stop wait when the probe cannot run, console access is unavailable, or no
+fresh power-off evidence arrives. The same polling timeout still applies.
+
+When `sriov_support` is enabled and EC2 omits the value from
+`DescribeInstances`, Packer also uses `ec2:DescribeInstanceAttribute` to verify it.
+If that query is unavailable, Packer waits for `stopped`.
+
+ENA and SR-IOV settings must already match the requested values on the instance
+for overlap to occur. If an attribute needs changing, Packer waits for `stopped`
+and applies it before creating the AMI, as usual. Spot builds,
+`disable_stop_instance`, `skip_create_ami`, and non-SSH communicators cannot be
+combined with this option.
+
+```hcl
+source "amazon-ebs" "example" {
+  # Other required settings omitted.
+  ami_create_during_shutdown = true
+}
+```
+
+Overlap can shorten the combined shutdown and snapshot wait. It does not reduce
+the amount of data the snapshot needs to store or guarantee a fixed time saving.
+See [AWS's GPU shutdown explanation](https://repost.aws/knowledge-center/ec2-gpu-metal-instance-stop-time).
+
 ### AMI Configuration
 
 **Required:**

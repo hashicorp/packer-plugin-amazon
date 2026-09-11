@@ -53,6 +53,10 @@ type Ec2Client interface {
 	EnableImageDeregistrationProtection(ctx context.Context, params *ec2.EnableImageDeregistrationProtectionInput, optFns ...func(*ec2.Options)) (*ec2.EnableImageDeregistrationProtectionOutput, error)
 	EnableFastLaunch(ctx context.Context, params *ec2.EnableFastLaunchInput, optFns ...func(*ec2.Options)) (*ec2.EnableFastLaunchOutput, error)
 
+	DescribeInstanceAttribute(ctx context.Context, params *ec2.DescribeInstanceAttributeInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceAttributeOutput, error)
+
+	GetConsoleOutput(ctx context.Context, params *ec2.GetConsoleOutputInput, optFns ...func(*ec2.Options)) (*ec2.GetConsoleOutputOutput, error)
+
 	GetPasswordData(ctx context.Context, params *ec2.GetPasswordDataInput, optFns ...func(*ec2.Options)) (*ec2.GetPasswordDataOutput, error)
 
 	ImportImage(ctx context.Context, params *ec2.ImportImageInput, optFns ...func(*ec2.Options)) (*ec2.ImportImageOutput, error)
