@@ -27,6 +27,7 @@ const (
 )
 
 var reShutdownBehavior = regexp.MustCompile("^(stop|terminate)$")
+var reBurstableInstanceType = regexp.MustCompile(`^t(?:2|3a?|4g)\.`)
 
 type Statement struct {
 	Effect   string   `mapstructure:"Effect" required:"false"`
@@ -285,7 +286,23 @@ type RunConfig struct {
 	InstanceInitiatedShutdownBehavior string `mapstructure:"shutdown_behavior" required:"false"`
 	// The EC2 instance type to use while building the
 	// AMI, such as t2.small.
-	InstanceType string `mapstructure:"instance_type" required:"true"`
+	InstanceType string `mapstructure:"instance_type" required:"false"`
+	// An ordered list of EC2 instance types to try when launching the source
+	// instance, used in place of `instance_type`. Packer launches the first
+	// type; if that type has no available capacity (any EC2 insufficient-capacity
+	// error), it falls through to the next type in the list, and so on. The build
+	// succeeds on the first type that launches and fails with the last error if
+	// every type is capacity-starved. Any non-capacity error (configuration,
+	// permission, quota) fails the build immediately without trying further
+	// types. All other launch configuration (placement, networking, licensing,
+	// block device mappings) is reused unchanged across attempts; only the
+	// instance type varies. This is useful for capacity-constrained families
+	// where cross-compatible alternatives exist. Mutually exclusive with
+	// `instance_type` and `spot_instance_types`. Only the on-demand launch path
+	// honors this list; for Spot use `spot_instance_types`. Burstable (T-family)
+	// instance types are not supported here (their credit specification is
+	// derived from `instance_type`); use `instance_type` for those.
+	InstanceTypes []string `mapstructure:"instance_types" required:"false"`
 	// Filters used to populate the `security_group_ids` field.
 	//
 	// HCL2 Example:
@@ -820,14 +837,38 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, fmt.Errorf("For security reasons, your source AMI filter must declare an owner."))
 	}
 
-	if c.InstanceType == "" && len(c.SpotInstanceTypes) == 0 {
-		errs = append(errs, fmt.Errorf("either instance_type or "+
-			"spot_instance_types must be specified"))
+	// instance_type, instance_types, and spot_instance_types are three mutually
+	// exclusive ways to pick the launch type; exactly one must be specified.
+	typeSelectors := 0
+	if c.InstanceType != "" {
+		typeSelectors++
+	}
+	if len(c.InstanceTypes) > 0 {
+		typeSelectors++
+	}
+	if len(c.SpotInstanceTypes) > 0 {
+		typeSelectors++
+	}
+	switch {
+	case typeSelectors == 0:
+		errs = append(errs, fmt.Errorf("one of instance_type, instance_types, "+
+			"or spot_instance_types must be specified"))
+	case typeSelectors > 1:
+		errs = append(errs, fmt.Errorf("only one of instance_type, instance_types, "+
+			"or spot_instance_types may be specified"))
 	}
 
-	if c.InstanceType != "" && len(c.SpotInstanceTypes) > 0 {
-		errs = append(errs, fmt.Errorf("either instance_type or "+
-			"spot_instance_types must be specified, not both"))
+	// Burstable (T-family) types are rejected in instance_types: the credit
+	// specification is derived from instance_type, so a burstable entry here
+	// would launch with AWS's default (unlimited) credits instead of the
+	// standard credits the instance_type path applies.
+	for _, it := range c.InstanceTypes {
+		switch {
+		case it == "":
+			errs = append(errs, fmt.Errorf("instance_types must not contain empty entries"))
+		case isBurstableInstanceType(it):
+			errs = append(errs, fmt.Errorf("instance_types does not support burstable (T-family) instance types (%q); use instance_type for burstable types", it))
+		}
 	}
 
 	if c.FleetTags != nil {
@@ -895,7 +936,11 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 
 	if c.EnableUnlimitedCredits {
 		if !c.IsBurstableInstanceType() {
-			errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
+			if len(c.InstanceTypes) > 0 {
+				errs = append(errs, fmt.Errorf("enable_unlimited_credits requires a burstable (T-family) instance_type; it cannot be combined with instance_types, which rejects burstable types"))
+			} else {
+				errs = append(errs, fmt.Errorf("Error: Instance Type: %s is not within the supported types for Unlimited credits. Supported instance types are T2, T3, and T4g", c.InstanceType))
+			}
 		}
 
 		if c.SpotPrice != "" && regexp.MustCompile(`^t2\.`).MatchString(c.InstanceType) {
@@ -974,11 +1019,15 @@ func (c *RunConfig) IsSpotInstance() bool {
 }
 
 // EffectiveInstanceType returns the instance type a launch will use. Prepare
-// enforces that exactly one of instance_type / spot_instance_types is set, so
-// this falls back to the first spot type when instance_type is empty.
+// enforces that exactly one of instance_type / instance_types /
+// spot_instance_types is set; when instance_type is empty this returns the
+// first candidate of whichever list is set (the type a launch tries first).
 func (c *RunConfig) EffectiveInstanceType() string {
 	if c.InstanceType != "" {
 		return c.InstanceType
+	}
+	if len(c.InstanceTypes) > 0 {
+		return c.InstanceTypes[0]
 	}
 	if len(c.SpotInstanceTypes) > 0 {
 		return c.SpotInstanceTypes[0]
@@ -994,8 +1043,11 @@ func (c *RunConfig) SSMAgentEnabled() bool {
 // IsBurstableInstanceType checks if the InstanceType for the config is one
 // of the following types T2, T3a, T3, T4g
 func (c *RunConfig) IsBurstableInstanceType() bool {
-	r := `^t(:?2|3a?|4g)\.`
-	return regexp.MustCompile(r).MatchString(c.InstanceType)
+	return isBurstableInstanceType(c.InstanceType)
+}
+
+func isBurstableInstanceType(instanceType string) bool {
+	return reBurstableInstanceType.MatchString(instanceType)
 }
 
 var supportedNestedVirtualizationInstanceFamilies = []string{

@@ -270,6 +270,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			InstanceMetadataTags:              b.config.Metadata.InstanceMetadataTags,
 			InstanceInitiatedShutdownBehavior: b.config.InstanceInitiatedShutdownBehavior,
 			InstanceType:                      b.config.InstanceType,
+			InstanceTypes:                     b.config.InstanceTypes,
 			IsRestricted:                      b.config.IsChinaCloud(),
 			SourceAMI:                         b.config.SourceAmi,
 			Tags:                              b.config.RunTags,
@@ -299,7 +300,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			SubnetFilter:             b.config.SubnetFilter,
 			AvailabilityZone:         b.config.AvailabilityZone,
 			AssociatePublicIpAddress: b.config.AssociatePublicIpAddress,
-			RequestedMachineType:     b.config.InstanceType,
+			RequestedMachineType:     b.config.EffectiveInstanceType(),
 		},
 		&awscommon.StepKeyPair{
 			Debug:        b.config.PackerDebug,

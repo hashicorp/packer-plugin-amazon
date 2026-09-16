@@ -6,6 +6,7 @@ package common
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
@@ -51,8 +52,9 @@ func TestRunConfigPrepare(t *testing.T) {
 func TestRunConfigPrepare_InstanceType(t *testing.T) {
 	c := testConfig()
 	c.InstanceType = ""
-	if err := c.Prepare(nil); len(err) != 1 {
-		t.Fatalf("Should error if an instance_type is not specified")
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "must be specified") {
+		t.Fatalf("Should error if no launch type is specified, got: %s", err)
 	}
 }
 
@@ -60,20 +62,104 @@ func TestRunConfig_EffectiveInstanceType(t *testing.T) {
 	tests := []struct {
 		name              string
 		instanceType      string
+		instanceTypes     []string
 		spotInstanceTypes []string
 		want              string
 	}{
-		{"instance_type set", "t3.small", nil, "t3.small"},
-		{"spot only falls back to first", "", []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
-		{"neither set", "", nil, ""},
+		{"instance_type set", "t3.small", nil, nil, "t3.small"},
+		{"instance_types falls back to first", "", []string{"mac2.metal", "mac2-m2.metal"}, nil, "mac2.metal"},
+		{"spot only falls back to first", "", nil, []string{"c7g.large", "c7g.xlarge"}, "c7g.large"},
+		{"none set", "", nil, nil, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &RunConfig{InstanceType: tt.instanceType, SpotInstanceTypes: tt.spotInstanceTypes}
+			c := &RunConfig{InstanceType: tt.instanceType, InstanceTypes: tt.instanceTypes, SpotInstanceTypes: tt.spotInstanceTypes}
 			if got := c.EffectiveInstanceType(); got != tt.want {
 				t.Errorf("EffectiveInstanceType() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	if err := c.Prepare(nil); len(err) != 0 {
+		t.Fatalf("instance_types alone should be valid, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesConflictsWithInstanceType(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "mac2.metal"
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_type and instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesConflictsWithSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal"}
+	c.SpotInstanceTypes = []string{"mac2.metal"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_types and spot_instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypeConflictsWithSpotInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "m1.small"
+	c.SpotInstanceTypes = []string{"m1.small"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("instance_type and spot_instance_types must be mutually exclusive, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_AllThreeSelectorsConflict(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = "m1.small"
+	c.InstanceTypes = []string{"mac2.metal"}
+	c.SpotInstanceTypes = []string{"m1.small"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "only one of") {
+		t.Fatalf("setting all three launch selectors must error, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesRejectsEmptyEntry(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", ""}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "must not contain empty entries") {
+		t.Fatalf("empty instance_types entry should error, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_InstanceTypesRejectsBurstable(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "t3.micro"}
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "burstable") {
+		t.Fatalf("burstable instance_types entry should error, got: %s", err)
+	}
+}
+
+func TestRunConfigPrepare_UnlimitedCreditsConflictsWithInstanceTypes(t *testing.T) {
+	c := testConfig()
+	c.InstanceType = ""
+	c.InstanceTypes = []string{"mac2.metal", "mac2-m2.metal"}
+	c.EnableUnlimitedCredits = true
+	err := c.Prepare(nil)
+	if len(err) != 1 || !strings.Contains(err[0].Error(), "cannot be combined with instance_types") {
+		t.Fatalf("enable_unlimited_credits with instance_types should give a clear conflict error, got: %s", err)
 	}
 }
 

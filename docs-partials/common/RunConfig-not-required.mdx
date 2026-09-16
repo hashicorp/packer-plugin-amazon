@@ -168,6 +168,25 @@
   shutdown in case Packer exits ungracefully. Possible values are stop and
   terminate. Defaults to stop.
 
+- `instance_type` (string) - The EC2 instance type to use while building the
+  AMI, such as t2.small.
+
+- `instance_types` ([]string) - An ordered list of EC2 instance types to try when launching the source
+  instance, used in place of `instance_type`. Packer launches the first
+  type; if that type has no available capacity (any EC2 insufficient-capacity
+  error), it falls through to the next type in the list, and so on. The build
+  succeeds on the first type that launches and fails with the last error if
+  every type is capacity-starved. Any non-capacity error (configuration,
+  permission, quota) fails the build immediately without trying further
+  types. All other launch configuration (placement, networking, licensing,
+  block device mappings) is reused unchanged across attempts; only the
+  instance type varies. This is useful for capacity-constrained families
+  where cross-compatible alternatives exist. Mutually exclusive with
+  `instance_type` and `spot_instance_types`. Only the on-demand launch path
+  honors this list; for Spot use `spot_instance_types`. Burstable (T-family)
+  instance types are not supported here (their credit specification is
+  derived from `instance_type`); use `instance_type` for those.
+
 - `security_group_filter` (SecurityGroupFilterOptions) - Filters used to populate the `security_group_ids` field.
   
   HCL2 Example:
