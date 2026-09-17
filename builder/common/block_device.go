@@ -22,7 +22,7 @@ const (
 	minIopsGp3    = 3000
 	maxIopsGp3    = 16000
 	minThroughput = 125
-	maxThroughput = 1000
+	maxThroughput = 2000
 )
 
 // These will be attached when launching your instance. Your
