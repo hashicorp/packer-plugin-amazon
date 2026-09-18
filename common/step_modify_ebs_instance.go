@@ -27,6 +27,12 @@ func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.S
 	instance := state.Get("instance").(ec2types.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
+	if confirmed, _ := state.Get(GuestShutdownConfirmedKey).(bool); confirmed {
+		// The shutdown waiter verified that ENA/SR-IOV already match. The
+		// instance is still stopping, so do not issue stopped-only mutations.
+		return multistep.ActionContinue
+	}
+
 	// Skip when it is a spot instance
 	if s.Skip {
 		return multistep.ActionContinue

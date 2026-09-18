@@ -516,6 +516,10 @@ func (w *AWSPollingConfig) WaitUntilInstanceRunning(ctx context.Context, ec2Clie
 }
 
 func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2Client clients.Ec2Client, instanceId string) error {
+	return w.waitUntilInstanceTerminated(ctx, ec2Client, instanceId, false)
+}
+
+func (w *AWSPollingConfig) waitUntilInstanceTerminated(ctx context.Context, ec2Client clients.Ec2Client, instanceId string, allowStopping bool) error {
 	instanceInput := ec2.DescribeInstancesInput{
 		InstanceIds: []string{instanceId},
 	}
@@ -532,6 +536,22 @@ func (w *AWSPollingConfig) WaitUntilInstanceTerminated(ctx context.Context, ec2C
 		})
 	}
 
+	if allowStopping {
+		optFns = append(optFns, func(o *ec2.InstanceTerminatedWaiterOptions) {
+			original := o.Retryable
+			o.Retryable = func(ctx context.Context, input *ec2.DescribeInstancesInput, output *ec2.DescribeInstancesOutput, err error) (bool, error) {
+				// After early AMI creation, TerminateInstances may still return
+				// the previous stopping state while GPU cleanup completes.
+				if err == nil && output != nil && len(output.Reservations) == 1 && len(output.Reservations[0].Instances) == 1 {
+					instance := output.Reservations[0].Instances[0]
+					if instance.State != nil && instance.State.Name == ec2types.InstanceStateNameStopping {
+						return true, nil
+					}
+				}
+				return original(ctx, input, output, err)
+			}
+		})
+	}
 	err := ec2.NewInstanceTerminatedWaiter(ec2Client).Wait(ctx, &instanceInput, *pollingOptions.MaxWaitTime, optFns...)
 	return err
 }
