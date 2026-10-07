@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
@@ -70,8 +70,16 @@ func getBasicStep() *StepRunSpotInstance {
 func TestCreateTemplateData(t *testing.T) {
 	state := tStateSpot()
 	stepRunSpotInstance := getBasicStep()
+	stepRunSpotInstance.EnableNestedVirtualization = true
 	template := stepRunSpotInstance.CreateTemplateData(aws.String("userdata"), "az", state,
 		&ec2types.LaunchTemplateInstanceMarketOptionsRequest{})
+
+	if template.CpuOptions == nil {
+		t.Fatalf("Template should contain cpu options when enable_nested_virtualization is configured")
+	}
+	if template.CpuOptions.NestedVirtualization != ec2types.NestedVirtualizationSpecificationEnabled {
+		t.Fatalf("Template should have NestedVirtualization set to enabled, received %#v", template.CpuOptions)
+	}
 
 	// expected := []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 	// 	&ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{

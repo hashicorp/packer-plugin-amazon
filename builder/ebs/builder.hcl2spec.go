@@ -72,6 +72,7 @@ type FlatConfig struct {
 	CapacityReservationGroupArn               *string                                     `mapstructure:"capacity_reservation_group_arn" required:"false" cty:"capacity_reservation_group_arn" hcl:"capacity_reservation_group_arn"`
 	DisableStopInstance                       *bool                                       `mapstructure:"disable_stop_instance" required:"false" cty:"disable_stop_instance" hcl:"disable_stop_instance"`
 	EbsOptimized                              *bool                                       `mapstructure:"ebs_optimized" required:"false" cty:"ebs_optimized" hcl:"ebs_optimized"`
+	EnableNestedVirtualization                *bool                                       `mapstructure:"enable_nested_virtualization" required:"false" cty:"enable_nested_virtualization" hcl:"enable_nested_virtualization"`
 	EnableNitroEnclave                        *bool                                       `mapstructure:"enable_nitro_enclave" required:"false" cty:"enable_nitro_enclave" hcl:"enable_nitro_enclave"`
 	EnableT2Unlimited                         *bool                                       `mapstructure:"enable_t2_unlimited" required:"false" cty:"enable_t2_unlimited" hcl:"enable_t2_unlimited"`
 	EnableUnlimitedCredits                    *bool                                       `mapstructure:"enable_unlimited_credits" required:"false" cty:"enable_unlimited_credits" hcl:"enable_unlimited_credits"`
@@ -154,6 +155,8 @@ type FlatConfig struct {
 	WinRMNoProxy                              *bool                                       `mapstructure:"winrm_no_proxy" cty:"winrm_no_proxy" hcl:"winrm_no_proxy"`
 	WinRMPort                                 *int                                        `mapstructure:"winrm_port" cty:"winrm_port" hcl:"winrm_port"`
 	WinRMTimeout                              *string                                     `mapstructure:"winrm_timeout" cty:"winrm_timeout" hcl:"winrm_timeout"`
+	WinRMRetryInterval                        *string                                     `mapstructure:"winrm_retry_interval" cty:"winrm_retry_interval" hcl:"winrm_retry_interval"`
+	WinRMConnectTimeout                       *string                                     `mapstructure:"winrm_connect_timeout" cty:"winrm_connect_timeout" hcl:"winrm_connect_timeout"`
 	WinRMUseSSL                               *bool                                       `mapstructure:"winrm_use_ssl" cty:"winrm_use_ssl" hcl:"winrm_use_ssl"`
 	WinRMInsecure                             *bool                                       `mapstructure:"winrm_insecure" cty:"winrm_insecure" hcl:"winrm_insecure"`
 	WinRMUseNTLM                              *bool                                       `mapstructure:"winrm_use_ntlm" cty:"winrm_use_ntlm" hcl:"winrm_use_ntlm"`
@@ -242,6 +245,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"capacity_reservation_group_arn":  &hcldec.AttrSpec{Name: "capacity_reservation_group_arn", Type: cty.String, Required: false},
 		"disable_stop_instance":           &hcldec.AttrSpec{Name: "disable_stop_instance", Type: cty.Bool, Required: false},
 		"ebs_optimized":                   &hcldec.AttrSpec{Name: "ebs_optimized", Type: cty.Bool, Required: false},
+		"enable_nested_virtualization":    &hcldec.AttrSpec{Name: "enable_nested_virtualization", Type: cty.Bool, Required: false},
 		"enable_nitro_enclave":            &hcldec.AttrSpec{Name: "enable_nitro_enclave", Type: cty.Bool, Required: false},
 		"enable_t2_unlimited":             &hcldec.AttrSpec{Name: "enable_t2_unlimited", Type: cty.Bool, Required: false},
 		"enable_unlimited_credits":        &hcldec.AttrSpec{Name: "enable_unlimited_credits", Type: cty.Bool, Required: false},
@@ -324,6 +328,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"winrm_no_proxy":               &hcldec.AttrSpec{Name: "winrm_no_proxy", Type: cty.Bool, Required: false},
 		"winrm_port":                   &hcldec.AttrSpec{Name: "winrm_port", Type: cty.Number, Required: false},
 		"winrm_timeout":                &hcldec.AttrSpec{Name: "winrm_timeout", Type: cty.String, Required: false},
+		"winrm_retry_interval":         &hcldec.AttrSpec{Name: "winrm_retry_interval", Type: cty.String, Required: false},
+		"winrm_connect_timeout":        &hcldec.AttrSpec{Name: "winrm_connect_timeout", Type: cty.String, Required: false},
 		"winrm_use_ssl":                &hcldec.AttrSpec{Name: "winrm_use_ssl", Type: cty.Bool, Required: false},
 		"winrm_insecure":               &hcldec.AttrSpec{Name: "winrm_insecure", Type: cty.Bool, Required: false},
 		"winrm_use_ntlm":               &hcldec.AttrSpec{Name: "winrm_use_ntlm", Type: cty.Bool, Required: false},

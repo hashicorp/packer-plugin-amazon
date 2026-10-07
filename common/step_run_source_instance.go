@@ -56,6 +56,7 @@ type StepRunSourceInstance struct {
 	VolumeTags                        map[string]string
 	NoEphemeral                       bool
 	EnableNitroEnclave                bool
+	EnableNestedVirtualization        bool
 	IsBurstableInstanceType           bool
 
 	instanceId string
@@ -125,6 +126,13 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		Enabled: &s.EnableNitroEnclave,
 	}
 
+	var cpuOptions *ec2types.CpuOptionsRequest
+	if s.EnableNestedVirtualization {
+		cpuOptions = &ec2types.CpuOptionsRequest{
+			NestedVirtualization: ec2types.NestedVirtualizationSpecificationEnabled,
+		}
+	}
+
 	az := state.Get("availability_zone").(string)
 	runOpts := &ec2.RunInstancesInput{
 		ImageId:             &s.SourceAMI,
@@ -137,6 +145,7 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 		Placement:           &ec2types.Placement{AvailabilityZone: &az},
 		EbsOptimized:        &s.EbsOptimized,
 		EnclaveOptions:      &enclaveOptions,
+		CpuOptions:          cpuOptions,
 	}
 
 	if s.NoEphemeral {

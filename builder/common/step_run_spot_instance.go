@@ -60,6 +60,7 @@ type StepRunSpotInstance struct {
 	NoEphemeral                       bool
 	IsBurstableInstanceType           bool
 	EnableUnlimitedCredits            bool
+	EnableNestedVirtualization        bool
 
 	instanceId string
 }
@@ -166,6 +167,11 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 
 	if s.EnableUnlimitedCredits {
 		templateData.CreditSpecification = &ec2.CreditSpecificationRequest{CpuCredits: aws.String(CPUCreditsUnlimited)}
+	}
+
+	if s.EnableNestedVirtualization {
+		log.Println("Warning: EnableNestedVirtualization is not supported with the legacy AWS SDK v1. " +
+			"Use the ebs, ebssurrogate, or ebs-volume builders which use the AWS SDK v2.")
 	}
 
 	if s.HttpEndpoint == "enabled" {

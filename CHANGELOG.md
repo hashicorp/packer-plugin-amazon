@@ -2,6 +2,37 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 ---
+## 1.8.3 (OCT 7, 2026)
+
+## ✨ Features
+- **Nested virtualization** – Add `enable_nested_virtualization` support for the EBS builder, with validation for supported instance families. ([#679](https://github.com/hashicorp/packer-plugin-amazon/pull/679))
+
+## 🐛 Bug Fixes
+- **Fix IAM instance profile propagation checks** – Use the configured instance type and resolved subnet during the propagation dry-run, avoiding unrelated failures for ARM64 AMIs and accounts without a default VPC. Ensure the temporary role is detached during cleanup even if the check fails. ([#700](https://github.com/hashicorp/packer-plugin-amazon/pull/700))
+- **Honor dedicated host placement** – Pass the configured `host_id` to instance launches in the EBS surrogate, EBS volume, and instance builders. ([#559](https://github.com/hashicorp/packer-plugin-amazon/pull/559))
+
+## 📦 Dependencies
+- Bump `github.com/hashicorp/packer-plugin-sdk` from **0.6.10 → 0.6.11**. ([#705](https://github.com/hashicorp/packer-plugin-amazon/pull/705))
+- Bump `github.com/aws/aws-sdk-go-v2/service/ec2` from **v1.218.0 → v1.307.0** for nested virtualization support. ([#679](https://github.com/hashicorp/packer-plugin-amazon/pull/679))
+- Update OpenTelemetry and gRPC dependencies, including OpenTelemetry to **v1.45.0**, gRPC to **v1.83.2**, and `github.com/go-logr/logr` to **v1.4.4**. ([#698](https://github.com/hashicorp/packer-plugin-amazon/pull/698), [#705](https://github.com/hashicorp/packer-plugin-amazon/pull/705), [#710](https://github.com/hashicorp/packer-plugin-amazon/pull/710))
+- Update the Go requirement to **1.26.8** and refresh transitive dependencies, including `golang.org/x/crypto` to **v0.57.0** and `golang.org/x/net` to **v0.58.0**. ([#705](https://github.com/hashicorp/packer-plugin-amazon/pull/705))
+
+## 🧹 Maintenance
+- Pin GitHub Actions to commit references. ([#697](https://github.com/hashicorp/packer-plugin-amazon/pull/697))
+- Suppress the false positive for **GO-2026-5932** in release security scans. ([#693](https://github.com/hashicorp/packer-plugin-amazon/pull/693))
+- Add/update copyright headers. ([#706](https://github.com/hashicorp/packer-plugin-amazon/pull/706))
+
+---
+## 1.8.2 (July 14, 2026)
+
+## 📦 Dependencies
+- Bump `github.com/hashicorp/packer-plugin-sdk` from **0.6.9 → 0.6.10** – by @dependabot ([#689](https://github.com/hashicorp/packer-plugin-amazon/pull/689))
+- Bump `golang.org/x/crypto` to **v0.54.0** – security and performance improvements ([#692](https://github.com/hashicorp/packer-plugin-amazon/pull/692))
+
+## 🧹 Maintenance
+- **Add/Update Copyright Headers** – by @hashicorp-copywrite ([#677](https://github.com/hashicorp/packer-plugin-amazon/pull/677))
+
+---
 ## 1.8.1 (May 25, 2026)
 
 ## 🐛 Bug Fixes

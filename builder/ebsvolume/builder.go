@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 //go:generate packer-sdc struct-markdown
@@ -215,6 +215,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                               b.config.ctx,
 			Debug:                             b.config.PackerDebug,
 			EbsOptimized:                      b.config.EbsOptimized,
+			EnableNestedVirtualization:        b.config.EnableNestedVirtualization,
 			ExpectedRootDevice:                "ebs",
 			IsBurstableInstanceType:           b.config.RunConfig.IsBurstableInstanceType(),
 			EnableUnlimitedCredits:            b.config.EnableUnlimitedCredits,
@@ -258,6 +259,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                               b.config.ctx,
 			Debug:                             b.config.PackerDebug,
 			EbsOptimized:                      b.config.EbsOptimized,
+			EnableNestedVirtualization:        b.config.EnableNestedVirtualization,
 			EnableNitroEnclave:                b.config.EnableNitroEnclave,
 			IsBurstableInstanceType:           b.config.RunConfig.IsBurstableInstanceType(),
 			EnableUnlimitedCredits:            b.config.EnableUnlimitedCredits,
@@ -273,6 +275,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Tags:                              b.config.RunTags,
 			LicenseSpecifications:             b.config.LicenseSpecifications,
 			HostResourceGroupArn:              b.config.Placement.HostResourceGroupArn,
+			HostId:                            b.config.Placement.HostId,
 			Tenancy:                           tenancy,
 			UserData:                          b.config.UserData,
 			UserDataFile:                      b.config.UserDataFile,
@@ -320,9 +323,10 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Ctx:                       b.config.ctx,
 		},
 		&awscommon.StepIamInstanceProfile{
-			PollingConfig:                             b.config.PollingConfig,
-			IamInstanceProfile:                        b.config.IamInstanceProfile,
-			SkipProfileValidation:                     b.config.SkipProfileValidation,
+			PollingConfig:         b.config.PollingConfig,
+			IamInstanceProfile:    b.config.IamInstanceProfile,
+			InstanceType:          b.config.EffectiveInstanceType(),
+			SkipProfileValidation: b.config.SkipProfileValidation,
 			TemporaryIamInstanceProfilePolicyDocument: b.config.TemporaryIamInstanceProfilePolicyDocument,
 			Tags: b.config.RunTags,
 			Ctx:  b.config.ctx,
