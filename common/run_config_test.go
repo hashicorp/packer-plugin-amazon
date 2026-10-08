@@ -712,4 +712,30 @@ func TestRunConfigPrepare_MetadataOptions_HttpProtocolIpv6(t *testing.T) {
 	if errs[0].Error() != expected {
 		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
 	}
+
+	// Test disabled http_endpoint with enabled http_protocol_ipv6
+	c = testConfig()
+	c.Metadata.HttpEndpoint = "disabled"
+	c.Metadata.HttpProtocolIpv6 = "enabled"
+	errs = c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for disabled http_endpoint with enabled http_protocol_ipv6, got: %d", len(errs))
+	}
+	expected = "http_protocol_ipv6 can only be enabled when http_endpoint is enabled"
+	if errs[0].Error() != expected {
+		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
+	}
+
+	// Test disabled http_endpoint with enabled instance_metadata_tags
+	c = testConfig()
+	c.Metadata.HttpEndpoint = "disabled"
+	c.Metadata.InstanceMetadataTags = "enabled"
+	errs = c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for disabled http_endpoint with enabled instance_metadata_tags, got: %d", len(errs))
+	}
+	expected = "instance_metadata_tags can only be enabled when http_endpoint is enabled"
+	if errs[0].Error() != expected {
+		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
+	}
 }

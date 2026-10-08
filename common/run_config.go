@@ -779,6 +779,18 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		errs = append(errs, msg)
 	}
 
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.HttpProtocolIpv6 == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"http_protocol_ipv6 can only be enabled when http_endpoint is enabled",
+		))
+	}
+
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.InstanceMetadataTags == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"instance_metadata_tags can only be enabled when http_endpoint is enabled",
+		))
+	}
+
 	// Copy singular tag maps
 	errs = append(errs, c.RunTag.CopyOn(&c.RunTags)...)
 	errs = append(errs, c.SpotTag.CopyOn(&c.SpotTags)...)
