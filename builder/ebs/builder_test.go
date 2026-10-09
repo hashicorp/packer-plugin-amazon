@@ -452,3 +452,30 @@ func TestBuilderPrepare_DeregistrationProtection(t *testing.T) {
 		})
 	}
 }
+
+func TestBuilderPrepare_CreateDuringShutdown(t *testing.T) {
+	for _, tc := range []struct {
+		name, key string
+		value     interface{}
+		wantError bool
+	}{
+		{name: "enabled"},
+		{name: "disabled stop", key: "disable_stop_instance", value: true, wantError: true},
+		{name: "skip AMI", key: "skip_create_ami", value: true, wantError: true},
+		{name: "Spot", key: "spot_price", value: "auto", wantError: true},
+		{name: "no communicator", key: "communicator", value: "none", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := testConfig()
+			c["ami_create_during_shutdown"] = true
+			if tc.key != "" {
+				c[tc.key] = tc.value
+			}
+			var b Builder
+			_, _, err := b.Prepare(c)
+			if (err != nil) != tc.wantError {
+				t.Fatalf("error=%v, wantError=%t", err, tc.wantError)
+			}
+		})
+	}
+}

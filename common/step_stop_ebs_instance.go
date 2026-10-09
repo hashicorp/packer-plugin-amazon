@@ -16,12 +16,16 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	"github.com/hashicorp/packer-plugin-sdk/retry"
+	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
 type StepStopEBSBackedInstance struct {
-	PollingConfig       *AWSPollingConfig
-	Skip                bool
-	DisableStopInstance bool
+	PollingConfig            *AWSPollingConfig
+	Skip                     bool
+	DisableStopInstance      bool
+	WaitForGuestShutdown     bool
+	EnableAMIENASupport      config.Trilean
+	EnableAMISriovNetSupport bool
 }
 
 func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
@@ -35,6 +39,10 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 	}
 
 	var err error
+	token := ""
+	if s.WaitForGuestShutdown && !s.DisableStopInstance {
+		token = prepareGuestShutdownProbe(ctx, state)
+	}
 
 	if !s.DisableStopInstance {
 		// Stop the instance so we can create an AMI from it
@@ -74,6 +82,22 @@ func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.Sta
 
 	} else {
 		ui.Say("Automatic instance stop disabled. Please stop instance manually.")
+	}
+
+	if token != "" {
+		ui.Say("Waiting for guest power-off or EC2 stopped state...")
+		confirmed, err := s.waitForGuestShutdown(ctx, ec2Client, *instance.InstanceId, token)
+		if err != nil {
+			err = fmt.Errorf("Error waiting for instance shutdown: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		if confirmed {
+			state.Put(GuestShutdownConfirmedKey, true)
+			ui.Say("Guest powered off; AMI creation can overlap EC2 resource cleanup.")
+		}
+		return multistep.ActionContinue
 	}
 
 	// Wait for the instance to actually stop
