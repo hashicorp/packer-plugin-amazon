@@ -8,12 +8,12 @@ variables {
 
 variable "region" {
  type    = string
- default = "us-west-2"
+ default = "us-east-1"
 }
 
 source "amazon-ebs" "standard" {
   region                  = var.region
-  source_ami              = "ami-044065b5480679567"
+  source_ami              = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
   instance_type           = "t3.small"
   ssh_username            = "ec2-user"
   ssh_agent_auth          = false
@@ -37,7 +37,7 @@ source "amazon-ebs" "standard" {
 
 source "amazon-ebs" "unlimited" {
   region                   = var.region
-  source_ami               = "ami-044065b5480679567"
+  source_ami               = "ami-06e46074ae430fba6" # Amazon Linux 2023 x86-64
   instance_type            = "t2.small"
   ssh_username             = "ec2-user"
   ssh_agent_auth           = false
@@ -81,7 +81,7 @@ build {
     only = ["amazon-ebs.unlimited"]
     inline = [
       "aws configure set region ${var.region} --profile default",
-      "CREDITTYPE=$(AWS_DEFAULT_REGION=us-west-2 aws ec2 describe-instance-credit-specifications --instance-ids ${build.ID} | jq --raw-output \".InstanceCreditSpecifications|.[]|.CpuCredits\")",
+      "CREDITTYPE=$(AWS_DEFAULT_REGION=${var.region} aws ec2 describe-instance-credit-specifications --instance-ids ${build.ID} | jq --raw-output \".InstanceCreditSpecifications|.[]|.CpuCredits\")",
       "echo CPU Credit Specification is $CREDITTYPE",
       "[[ $CREDITTYPE == ${var.unlimitedCPUCredit} ]]"
     ]
