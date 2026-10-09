@@ -274,7 +274,7 @@ func (s *StepIamInstanceProfile) Cleanup(state multistep.StateBag) {
 	ui := state.Get("ui").(packersdk.Ui)
 	var err error
 
-	if s.roleIsAttached == true {
+	if s.createdRoleName != "" {
 		ui.Say("Detaching temporary role from instance profile...")
 
 		_, err := iamsvc.RemoveRoleFromInstanceProfile(ctx, &iam.RemoveRoleFromInstanceProfileInput{
