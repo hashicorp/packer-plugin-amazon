@@ -13,13 +13,20 @@ variable "region" {
 
 source "amazon-ebs" "standard" {
   region                  = var.region
-  source_ami              = "ami-044065b5480679567"
   instance_type           = "t3.small"
-  ssh_username            = "ec2-user"
+  ssh_username            = "ubuntu"
   ssh_agent_auth          = false
   temporary_key_pair_type = "ed25519"
   ami_name                = "packer_AWS_{{timestamp}}"
   skip_create_ami         = true
+  source_ami_filter {
+    filters = {
+      name         = "hc-security-base-ubuntu-2204-*"
+      architecture = "x86_64"
+    }
+    owners      = ["888995627335"] # hc-ami_prod
+    most_recent = true
+  }
   temporary_iam_instance_profile_policy_document {
     Version = "2012-10-17"
     Statement {
@@ -37,14 +44,21 @@ source "amazon-ebs" "standard" {
 
 source "amazon-ebs" "unlimited" {
   region                   = var.region
-  source_ami               = "ami-044065b5480679567"
   instance_type            = "t2.small"
-  ssh_username             = "ec2-user"
+  ssh_username             = "ubuntu"
   ssh_agent_auth           = false
   enable_unlimited_credits = true
   temporary_key_pair_type  = "ed25519"
   ami_name                 = "packer_AWS_{{timestamp}}"
   skip_create_ami          = true
+  source_ami_filter {
+    filters = {
+      name         = "hc-security-base-ubuntu-2204-*"
+      architecture = "x86_64"
+    }
+    owners      = ["888995627335"] # hc-ami_prod
+    most_recent = true
+  }
   temporary_iam_instance_profile_policy_document {
     Version = "2012-10-17"
     Statement {
@@ -65,7 +79,11 @@ build {
     "source.amazon-ebs.unlimited"
   ]
   provisioner "shell" {
-    inline = ["sudo dnf install -q -y jq"]
+    inline = [
+      "sudo cloud-init status --wait || true",
+      "sudo apt-get -o DPkg::Lock::Timeout=300 update -q",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=300 install -q -y jq awscli"
+    ]
   }
 
   provisioner "shell" {
@@ -74,7 +92,7 @@ build {
       "aws configure set region ${var.region} --profile default",
       "CREDITTYPE=$(aws ec2 describe-instance-credit-specifications --instance-ids ${build.ID}| jq --raw-output \".InstanceCreditSpecifications|.[]|.CpuCredits\")",
       "echo CPU Credit Specification is $CREDITTYPE",
-      "[[ $CREDITTYPE == ${var.standardCPUCredit} ]]"
+      "[ \"$CREDITTYPE\" = \"${var.standardCPUCredit}\" ]"
     ]
   }
   provisioner "shell" {
@@ -83,7 +101,7 @@ build {
       "aws configure set region ${var.region} --profile default",
       "CREDITTYPE=$(AWS_DEFAULT_REGION=us-west-2 aws ec2 describe-instance-credit-specifications --instance-ids ${build.ID} | jq --raw-output \".InstanceCreditSpecifications|.[]|.CpuCredits\")",
       "echo CPU Credit Specification is $CREDITTYPE",
-      "[[ $CREDITTYPE == ${var.unlimitedCPUCredit} ]]"
+      "[ \"$CREDITTYPE\" = \"${var.unlimitedCPUCredit}\" ]"
     ]
   }
 }
