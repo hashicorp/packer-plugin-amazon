@@ -19,17 +19,23 @@ type StepModifyEBSBackedInstance struct {
 	Skip                     bool
 	EnableAMIENASupport      config.Trilean
 	EnableAMISriovNetSupport bool
+	AMISkipCreateImage       bool
 }
 
 func (s *StepModifyEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(ec2iface.EC2API)
-	instance := state.Get("instance").(*ec2.Instance)
-	ui := state.Get("ui").(packersdk.Ui)
-
 	// Skip when it is a spot instance
 	if s.Skip {
 		return multistep.ActionContinue
 	}
+
+	ui := state.Get("ui").(packersdk.Ui)
+	if s.AMISkipCreateImage {
+		ui.Say("skip_create_ami was set; skipping source instance attribute modification")
+		return multistep.ActionContinue
+	}
+
+	ec2conn := state.Get("ec2").(ec2iface.EC2API)
+	instance := state.Get("instance").(*ec2.Instance)
 
 	// Set SriovNetSupport to "simple". See http://goo.gl/icuXh5
 	// As of February 2017, this applies to C3, C4, D2, I2, R3, and M4 (excluding m4.16xlarge)

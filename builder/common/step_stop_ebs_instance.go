@@ -19,17 +19,24 @@ type StepStopEBSBackedInstance struct {
 	PollingConfig       *AWSPollingConfig
 	Skip                bool
 	DisableStopInstance bool
+	AMISkipCreateImage  bool
 }
 
 func (s *StepStopEBSBackedInstance) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
-	ec2conn := state.Get("ec2").(*ec2.EC2)
-	instance := state.Get("instance").(*ec2.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
 	// Skip when it is a spot instance
 	if s.Skip {
 		return multistep.ActionContinue
 	}
+
+	if s.AMISkipCreateImage {
+		ui.Say("skip_create_ami was set; skipping source instance stop")
+		return multistep.ActionContinue
+	}
+
+	ec2conn := state.Get("ec2").(*ec2.EC2)
+	instance := state.Get("instance").(*ec2.Instance)
 
 	var err error
 
