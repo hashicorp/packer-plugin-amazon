@@ -40,6 +40,15 @@ type Config struct {
 	// during a build test stage. Default `false`.
 	AMISkipCreateImage bool `mapstructure:"skip_create_ami" required:"false"`
 
+	// Start AMI creation after confirmed Linux guest power-off, while EC2 may
+	// still be cleaning up GPU or other resources. Defaults to false. Requires
+	// SSH, root or passwordless sudo access to /dev/kmsg, kernel shutdown output
+	// on the EC2 console, and ec2:GetConsoleOutput permission. If confirmation
+	// is unavailable or ENA/SR-IOV attributes need changing, Packer waits for
+	// EC2's stopped state as usual. Cannot be combined with Spot instances,
+	// disable_stop_instance, or skip_create_ami.
+	AMICreateDuringShutdown bool `mapstructure:"ami_create_during_shutdown" required:"false"`
+
 	// If true will not propagate the run tags set on Packer created instance to the AMI created.
 	AMISkipRunTags bool `mapstructure:"skip_ami_run_tags" required:"false"`
 
@@ -142,6 +151,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
 	errs = packersdk.MultiErrorAppend(errs, b.config.AMIMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.LaunchMappings.Prepare(&b.config.ctx)...)
 	errs = packersdk.MultiErrorAppend(errs, b.config.RunConfig.Prepare(&b.config.ctx)...)
+
+	if b.config.AMICreateDuringShutdown && (b.config.IsSpotInstance() || b.config.DisableStopInstance || b.config.AMISkipCreateImage || b.config.RunConfig.Comm.Type != "ssh") {
+		errs = packersdk.MultiErrorAppend(errs, fmt.Errorf("ami_create_during_shutdown requires SSH and cannot be combined with Spot instances, disable_stop_instance, or skip_create_ami"))
+	}
 
 	b.config.FastLaunch.defaultRegion = b.config.RawRegion
 	errs = packersdk.MultiErrorAppend(errs, b.config.FastLaunch.Prepare()...)
@@ -400,9 +413,12 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			Comm: &b.config.RunConfig.Comm,
 		},
 		&awscommon.StepStopEBSBackedInstance{
-			PollingConfig:       b.config.PollingConfig,
-			Skip:                b.config.IsSpotInstance(),
-			DisableStopInstance: b.config.DisableStopInstance,
+			PollingConfig:            b.config.PollingConfig,
+			Skip:                     b.config.IsSpotInstance(),
+			DisableStopInstance:      b.config.DisableStopInstance,
+			WaitForGuestShutdown:     b.config.AMICreateDuringShutdown,
+			EnableAMIENASupport:      b.config.AMIENASupport,
+			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,
 		},
 		&awscommon.StepModifyEBSBackedInstance{
 			EnableAMISriovNetSupport: b.config.AMISriovNetSupport,

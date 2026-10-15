@@ -502,7 +502,8 @@ func (s *StepRunSourceInstance) Cleanup(state multistep.StateBag) {
 			return
 		}
 
-		if err := s.PollingConfig.WaitUntilInstanceTerminated(ctx, ec2Client, s.instanceId); err != nil {
+		confirmed, _ := state.Get(GuestShutdownConfirmedKey).(bool)
+		if err := s.PollingConfig.waitUntilInstanceTerminated(ctx, ec2Client, s.instanceId, confirmed); err != nil {
 			ui.Error(err.Error())
 		}
 	}
