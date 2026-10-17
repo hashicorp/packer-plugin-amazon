@@ -691,6 +691,15 @@ type RunConfig struct {
 	// left blank, Packer will choose a port for you from available ports.
 	// This option is only used when `ssh_interface` is set `session_manager`.
 	SessionManagerPort int `mapstructure:"session_manager_port"`
+
+	// The name of the Systems Manager document used to start the Session
+	// Manager port forwarding tunnel. Defaults to the AWS managed
+	// `AWS-StartPortForwardingSession` document. A custom document must
+	// accept the same `portNumber` and `localPortNumber` parameters as the
+	// AWS managed document. This is useful when your organization restricts
+	// which documents can be used.
+	// This option is only used when `ssh_interface` is set `session_manager`.
+	SSMDocument string `mapstructure:"ssm_document"`
 }
 
 func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
@@ -802,6 +811,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 			msg := fmt.Errorf(`no iam_instance_profile defined; session_manager connectivity requires a valid instance profile with AmazonSSMManagedInstanceCore permissions. Alternatively a temporary_iam_instance_profile_policy_document can be used.`)
 			errs = append(errs, msg)
 		}
+	} else if c.SSMDocument != "" {
+		errs = append(errs, fmt.Errorf(`ssm_document can only be used when ssh_interface is set to "session_manager"`))
 	}
 
 	if c.Comm.SSHKeyPairName != "" {

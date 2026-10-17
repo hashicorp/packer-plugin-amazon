@@ -463,6 +463,7 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			RemotePortNumber: b.config.Comm.Port(),
 			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
 			SSHConfig:        &b.config.Comm.SSH,
+			DocumentName:     b.config.SSMDocument,
 		},
 		&communicator.StepConnect{
 			Config: &b.config.RunConfig.Comm,
