@@ -656,3 +656,34 @@ func TestRunConfigPrepare_SSHInterfaceIPv6_DefaultCIDR(t *testing.T) {
 		t.Errorf("expected default CIDR to be '::/0', got: %s", c.TemporarySGSourceCidrs[0])
 	}
 }
+
+func TestRunConfigPrepare_SSMDocument(t *testing.T) {
+	tc := []struct {
+		name         string
+		sshInterface string
+		ssmDocument  string
+		expectErr    bool
+	}{
+		{name: "session manager without document", sshInterface: "session_manager", ssmDocument: "", expectErr: false},
+		{name: "session manager with document", sshInterface: "session_manager", ssmDocument: "MyPortForwardingDocument", expectErr: false},
+		{name: "document without session manager", sshInterface: "", ssmDocument: "MyPortForwardingDocument", expectErr: true},
+		{name: "document with public_ip", sshInterface: "public_ip", ssmDocument: "MyPortForwardingDocument", expectErr: true},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testConfig()
+			c.IamInstanceProfile = "SomeInstanceProfileName"
+			c.SSHInterface = tt.sshInterface
+			c.SSMDocument = tt.ssmDocument
+
+			errs := c.Prepare(nil)
+			if tt.expectErr && len(errs) != 1 {
+				t.Fatalf("expected 1 error, got: %v", errs)
+			}
+			if !tt.expectErr && len(errs) != 0 {
+				t.Fatalf("expected no errors, got: %v", errs)
+			}
+		})
+	}
+}
