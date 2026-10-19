@@ -656,3 +656,66 @@ func TestRunConfigPrepare_SSHInterfaceIPv6_DefaultCIDR(t *testing.T) {
 		t.Errorf("expected default CIDR to be '::/0', got: %s", c.TemporarySGSourceCidrs[0])
 	}
 }
+
+func TestRunConfigPrepare_MetadataOptions_HttpProtocolIpv6(t *testing.T) {
+	// Test default value
+	c := testConfig()
+	if errs := c.Prepare(nil); len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+	if c.Metadata.HttpProtocolIpv6 != "disabled" {
+		t.Errorf("expected default HttpProtocolIpv6 to be 'disabled', got: %s", c.Metadata.HttpProtocolIpv6)
+	}
+
+	// Test enabled
+	c = testConfig()
+	c.Metadata.HttpProtocolIpv6 = "enabled"
+	if errs := c.Prepare(nil); len(errs) != 0 {
+		t.Fatalf("expected no errors for enabled, got: %v", errs)
+	}
+
+	// Test disabled explicitly
+	c = testConfig()
+	c.Metadata.HttpProtocolIpv6 = "disabled"
+	if errs := c.Prepare(nil); len(errs) != 0 {
+		t.Fatalf("expected no errors for disabled, got: %v", errs)
+	}
+
+	// Test invalid value
+	c = testConfig()
+	c.Metadata.HttpProtocolIpv6 = "invalid"
+	errs := c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for invalid value, got: %d", len(errs))
+	}
+	expected := "http_protocol_ipv6 requires either disabled or enabled as its value"
+	if errs[0].Error() != expected {
+		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
+	}
+
+	// Test disabled http_endpoint with enabled http_protocol_ipv6
+	c = testConfig()
+	c.Metadata.HttpEndpoint = "disabled"
+	c.Metadata.HttpProtocolIpv6 = "enabled"
+	errs = c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for disabled http_endpoint with enabled http_protocol_ipv6, got: %d", len(errs))
+	}
+	expected = "http_protocol_ipv6 can only be enabled when http_endpoint is enabled"
+	if errs[0].Error() != expected {
+		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
+	}
+
+	// Test disabled http_endpoint with enabled instance_metadata_tags
+	c = testConfig()
+	c.Metadata.HttpEndpoint = "disabled"
+	c.Metadata.InstanceMetadataTags = "enabled"
+	errs = c.Prepare(nil)
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error for disabled http_endpoint with enabled instance_metadata_tags, got: %d", len(errs))
+	}
+	expected = "instance_metadata_tags can only be enabled when http_endpoint is enabled"
+	if errs[0].Error() != expected {
+		t.Errorf("expected error %q, got: %q", expected, errs[0].Error())
+	}
+}

@@ -1149,6 +1149,9 @@ See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configu
   Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
   Accepts either "enabled" or "disabled"
 
+- `http_protocol_ipv6` (string) - A string to enable or disable the IPv6 IMDS endpoint for an instance. Defaults to "disabled".
+  Accepts either "enabled" or "disabled"
+
 <!-- End of code generated from the comments of the MetadataOptions struct in builder/common/run_config.go; -->
 
 
