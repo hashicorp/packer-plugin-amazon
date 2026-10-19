@@ -1095,6 +1095,15 @@ JSON example:
   which documents can be used.
   This option is only used when `ssh_interface` is set `session_manager`.
 
+- `session_manager_reconnect_on_reboot` (bool) - Start a new Session Manager session when the SSM agent on the instance
+  disconnects, for example when a provisioner reboots the instance. AWS
+  does not resume a port forwarding session after a reboot, and the
+  session-manager-plugin process does not always exit, so without this
+  option the build can wait on a dead tunnel until the provisioner times out.
+  Packer checks the agent every 5 seconds with `ssm:GetConnectionStatus`;
+  without that permission the session is not restarted. Defaults to `false`.
+  This option is only used when `ssh_interface` is set `session_manager`.
+
 <!-- End of code generated from the comments of the RunConfig struct in builder/common/run_config.go; -->
 
 
@@ -1114,6 +1123,7 @@ To use the session manager as the connection interface for the SSH communicator 
 
 - `session_manager_port`: A local port on the host machine that should be used as the local end of the session tunnel to the remote host. If not specified Packer will find an available port to use.
 - `ssm_document`: The name of a custom Systems Manager document to use for the port forwarding session, instead of the AWS managed `AWS-StartPortForwardingSession` document. The custom document must accept the same `portNumber` and `localPortNumber` parameters as the AWS managed document. Make sure the credentials used by Packer are allowed to call `ssm:StartSession` with this document.
+- `session_manager_reconnect_on_reboot`: Start a new session when the SSM agent on the instance disconnects, for example when a provisioner reboots the instance. See [Rebooting the instance](#rebooting-the-instance). Defaults to `false`.
 - `temporary_iam_instance_profile_policy_document`: Creates a temporary instance profile policy document to grant Systems Manager permissions to the Ec2 instance. This is an alternative to using an existing `iam_instance_profile`.
 
 HCL2 example:
@@ -1210,6 +1220,34 @@ To close the SSM tunnels created, this plugin relies on being able to call
 In case this is not possible you might see a `Bad exit status` message in the logs.
 
 The absence of this permission won't prevent you from building the AMI, and the error only means that packer is not able to close the tunnel gracefully.
+
+#### Rebooting the instance
+
+AWS does not resume a Session Manager port forwarding session after the instance reboots, and the session-manager-plugin process does not always exit when its tunnel stops working. A build that reboots the instance, for example with a `shell` provisioner using `expect_disconnect = true`, can then wait on the dead tunnel until the next provisioner times out.
+
+Set `session_manager_reconnect_on_reboot = true` to have Packer check the instance's SSM agent every 5 seconds with [GetConnectionStatus](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetConnectionStatus.html). After two consecutive `notconnected` results, Packer stops the current session-manager-plugin process and starts a new session on the same local port once the agent is back. The credentials Packer runs with need the `ssm:GetConnectionStatus` permission. Without it, Packer logs the denied call and keeps the current session, as when the option is not set.
+
+```hcl
+source "amazon-ebs" "ssm-reboot" {
+  # ...
+  ssh_interface                       = "session_manager"
+  iam_instance_profile                = "myinstanceprofile"
+  session_manager_reconnect_on_reboot = true
+}
+
+build {
+  sources = ["source.amazon-ebs.ssm-reboot"]
+
+  provisioner "shell" {
+    expect_disconnect = true
+    inline            = ["sudo reboot"]
+  }
+
+  provisioner "shell" {
+    inline = ["echo reconnected after reboot"]
+  }
+}
+```
 
 
 #### Placement Configuration
