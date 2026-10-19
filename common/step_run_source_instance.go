@@ -42,6 +42,7 @@ type StepRunSourceInstance struct {
 	HttpTokens                        string
 	HttpPutResponseHopLimit           int32
 	InstanceMetadataTags              string
+	HttpProtocolIpv6                  string
 	InstanceInitiatedShutdownBehavior string
 	InstanceType                      string
 	IsRestricted                      bool
@@ -185,6 +186,10 @@ func (s *StepRunSourceInstance) Run(ctx context.Context, state multistep.StateBa
 
 	if s.InstanceMetadataTags == "enabled" {
 		runOpts.MetadataOptions.InstanceMetadataTags = ec2types.InstanceMetadataTagsState(s.InstanceMetadataTags)
+	}
+
+	if s.HttpProtocolIpv6 == "enabled" {
+		runOpts.MetadataOptions.HttpProtocolIpv6 = ec2types.InstanceMetadataProtocolState(s.HttpProtocolIpv6)
 	}
 
 	// Collect tags for tagging on resource creation

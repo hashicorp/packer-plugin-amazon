@@ -44,6 +44,7 @@ type StepRunSpotInstance struct {
 	HttpTokens                        string
 	HttpPutResponseHopLimit           int64
 	InstanceMetadataTags              string
+	HttpProtocolIpv6                  string
 	InstanceInitiatedShutdownBehavior string
 	InstanceType                      string
 	Region                            string
@@ -184,6 +185,10 @@ func (s *StepRunSpotInstance) CreateTemplateData(userData *string, az string,
 
 	if s.InstanceMetadataTags == "enabled" {
 		templateData.MetadataOptions.InstanceMetadataTags = aws.String(s.InstanceMetadataTags)
+	}
+
+	if s.HttpProtocolIpv6 == "enabled" {
+		templateData.MetadataOptions.HttpProtocolIpv6 = aws.String(s.HttpProtocolIpv6)
 	}
 
 	// If instance type is not set, we'll just pick the lowest priced instance

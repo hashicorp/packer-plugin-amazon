@@ -108,6 +108,9 @@ type MetadataOptions struct {
 	// Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
 	// Accepts either "enabled" or "disabled"
 	InstanceMetadataTags string `mapstructure:"instance_metadata_tags" required:"false"`
+	// A string to enable or disable the IPv6 IMDS endpoint for an instance. Defaults to "disabled".
+	// Accepts either "enabled" or "disabled"
+	HttpProtocolIpv6 string `mapstructure:"http_protocol_ipv6" required:"false"`
 }
 
 // RunConfig contains configuration for running an instance from a source
@@ -742,6 +745,10 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.Metadata.InstanceMetadataTags = "disabled"
 	}
 
+	if c.Metadata.HttpProtocolIpv6 == "" {
+		c.Metadata.HttpProtocolIpv6 = "disabled"
+	}
+
 	if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
 		msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
 		errs = append(errs, msg)
@@ -765,6 +772,23 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	if c.Metadata.InstanceMetadataTags != "enabled" && c.Metadata.InstanceMetadataTags != "disabled" {
 		msg := fmt.Errorf("instance_metadata_tags requires either disabled or enabled as its value")
 		errs = append(errs, msg)
+	}
+
+	if c.Metadata.HttpProtocolIpv6 != "enabled" && c.Metadata.HttpProtocolIpv6 != "disabled" {
+		msg := fmt.Errorf("http_protocol_ipv6 requires either disabled or enabled as its value")
+		errs = append(errs, msg)
+	}
+
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.HttpProtocolIpv6 == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"http_protocol_ipv6 can only be enabled when http_endpoint is enabled",
+		))
+	}
+
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.InstanceMetadataTags == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"instance_metadata_tags can only be enabled when http_endpoint is enabled",
+		))
 	}
 
 	// Copy singular tag maps
