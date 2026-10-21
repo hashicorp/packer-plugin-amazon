@@ -163,6 +163,7 @@ type FlatConfig struct {
 	SSHInterface                              *string                                     `mapstructure:"ssh_interface" cty:"ssh_interface" hcl:"ssh_interface"`
 	PauseBeforeSSM                            *string                                     `mapstructure:"pause_before_ssm" cty:"pause_before_ssm" hcl:"pause_before_ssm"`
 	SessionManagerPort                        *int                                        `mapstructure:"session_manager_port" cty:"session_manager_port" hcl:"session_manager_port"`
+	SSMDocument                               *string                                     `mapstructure:"ssm_document" cty:"ssm_document" hcl:"ssm_document"`
 	AMIMappings                               []common.FlatBlockDevice                    `mapstructure:"ami_block_device_mappings" required:"false" cty:"ami_block_device_mappings" hcl:"ami_block_device_mappings"`
 	LaunchMappings                            []common.FlatBlockDevice                    `mapstructure:"launch_block_device_mappings" required:"false" cty:"launch_block_device_mappings" hcl:"launch_block_device_mappings"`
 	AccountId                                 *string                                     `mapstructure:"account_id" required:"true" cty:"account_id" hcl:"account_id"`
@@ -340,6 +341,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ssh_interface":                &hcldec.AttrSpec{Name: "ssh_interface", Type: cty.String, Required: false},
 		"pause_before_ssm":             &hcldec.AttrSpec{Name: "pause_before_ssm", Type: cty.String, Required: false},
 		"session_manager_port":         &hcldec.AttrSpec{Name: "session_manager_port", Type: cty.Number, Required: false},
+		"ssm_document":                 &hcldec.AttrSpec{Name: "ssm_document", Type: cty.String, Required: false},
 		"ami_block_device_mappings":    &hcldec.BlockListSpec{TypeName: "ami_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
 		"launch_block_device_mappings": &hcldec.BlockListSpec{TypeName: "launch_block_device_mappings", Nested: hcldec.ObjectSpec((*common.FlatBlockDevice)(nil).HCL2Spec())},
 		"account_id":                   &hcldec.AttrSpec{Name: "account_id", Type: cty.String, Required: false},

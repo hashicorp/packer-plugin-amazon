@@ -13,6 +13,7 @@ To use the session manager as the connection interface for the SSH communicator 
 #### Optional
 
 - `session_manager_port`: A local port on the host machine that should be used as the local end of the session tunnel to the remote host. If not specified Packer will find an available port to use.
+- `ssm_document`: The name of a custom Systems Manager document to use for the port forwarding session, instead of the AWS managed `AWS-StartPortForwardingSession` document. The custom document must accept the same `portNumber` and `localPortNumber` parameters as the AWS managed document. Make sure the credentials used by Packer are allowed to call `ssm:StartSession` with this document.
 - `temporary_iam_instance_profile_policy_document`: Creates a temporary instance profile policy document to grant Systems Manager permissions to the Ec2 instance. This is an alternative to using an existing `iam_instance_profile`.
 
 HCL2 example:

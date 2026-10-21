@@ -22,12 +22,17 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/shell-local/localexec"
 )
 
+// DefaultDocumentName is the AWS managed document used to start a port
+// forwarding session when no custom document is specified.
+const DefaultDocumentName = "AWS-StartPortForwardingSession"
+
 type Session struct {
 	SvcClient             ssmiface.SSMAPI
 	Region                string
 	InstanceID            string
 	LocalPort, RemotePort int
 	Ec2Conn               *ec2.EC2
+	DocumentName          string
 }
 
 func (s Session) buildTunnelInput() *ssm.StartSessionInput {
@@ -37,8 +42,13 @@ func (s Session) buildTunnelInput() *ssm.StartSessionInput {
 		"localPortNumber": []*string{aws.String(localPortNumber)},
 	}
 
+	documentName := s.DocumentName
+	if documentName == "" {
+		documentName = DefaultDocumentName
+	}
+
 	return &ssm.StartSessionInput{
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		DocumentName: aws.String(documentName),
 		Parameters:   params,
 		Target:       aws.String(s.InstanceID),
 	}

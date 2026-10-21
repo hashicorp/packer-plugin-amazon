@@ -194,6 +194,7 @@ type FlatConfig struct {
 	SSHInterface                              *string                                `mapstructure:"ssh_interface" cty:"ssh_interface" hcl:"ssh_interface"`
 	PauseBeforeSSM                            *string                                `mapstructure:"pause_before_ssm" cty:"pause_before_ssm" hcl:"pause_before_ssm"`
 	SessionManagerPort                        *int                                   `mapstructure:"session_manager_port" cty:"session_manager_port" hcl:"session_manager_port"`
+	SSMDocument                               *string                                `mapstructure:"ssm_document" cty:"ssm_document" hcl:"ssm_document"`
 	AMIENASupport                             *bool                                  `mapstructure:"ena_support" required:"false" cty:"ena_support" hcl:"ena_support"`
 	AMISriovNetSupport                        *bool                                  `mapstructure:"sriov_support" required:"false" cty:"sriov_support" hcl:"sriov_support"`
 	VolumeMappings                            []FlatBlockDevice                      `mapstructure:"ebs_volumes" required:"false" cty:"ebs_volumes" hcl:"ebs_volumes"`
@@ -336,6 +337,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ssh_interface":                &hcldec.AttrSpec{Name: "ssh_interface", Type: cty.String, Required: false},
 		"pause_before_ssm":             &hcldec.AttrSpec{Name: "pause_before_ssm", Type: cty.String, Required: false},
 		"session_manager_port":         &hcldec.AttrSpec{Name: "session_manager_port", Type: cty.Number, Required: false},
+		"ssm_document":                 &hcldec.AttrSpec{Name: "ssm_document", Type: cty.String, Required: false},
 		"ena_support":                  &hcldec.AttrSpec{Name: "ena_support", Type: cty.Bool, Required: false},
 		"sriov_support":                &hcldec.AttrSpec{Name: "sriov_support", Type: cty.Bool, Required: false},
 		"ebs_volumes":                  &hcldec.BlockListSpec{TypeName: "ebs_volumes", Nested: hcldec.ObjectSpec((*FlatBlockDevice)(nil).HCL2Spec())},

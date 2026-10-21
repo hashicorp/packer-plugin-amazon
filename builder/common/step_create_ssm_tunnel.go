@@ -31,6 +31,7 @@ type StepCreateSSMTunnel struct {
 	SSMAgentEnabled  bool
 	SSHConfig        *communicator.SSH
 	PauseBeforeSSM   time.Duration
+	DocumentName     string
 	stopSSMCommand   func()
 }
 
@@ -78,12 +79,13 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 
 	ssmconn := ssm.New(s.AWSSession)
 	session := pssm.Session{
-		SvcClient:  ssmconn,
-		InstanceID: aws.StringValue(instance.InstanceId),
-		RemotePort: s.RemotePortNumber,
-		LocalPort:  s.LocalPortNumber,
-		Region:     s.Region,
-		Ec2Conn:    ec2Conn,
+		SvcClient:    ssmconn,
+		InstanceID:   aws.StringValue(instance.InstanceId),
+		RemotePort:   s.RemotePortNumber,
+		LocalPort:    s.LocalPortNumber,
+		Region:       s.Region,
+		Ec2Conn:      ec2Conn,
+		DocumentName: s.DocumentName,
 	}
 	go s.CreatePersistentSSMSession(ssmCtx, ui, &session, instance)
 
