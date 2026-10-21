@@ -180,6 +180,7 @@ type FlatConfig struct {
 	SSHInterface                              *string                                     `mapstructure:"ssh_interface" cty:"ssh_interface" hcl:"ssh_interface"`
 	PauseBeforeSSM                            *string                                     `mapstructure:"pause_before_ssm" cty:"pause_before_ssm" hcl:"pause_before_ssm"`
 	SessionManagerPort                        *int                                        `mapstructure:"session_manager_port" cty:"session_manager_port" hcl:"session_manager_port"`
+	SSMDocument                               *string                                     `mapstructure:"ssm_document" cty:"ssm_document" hcl:"ssm_document"`
 	AMIName                                   *string                                     `mapstructure:"ami_name" required:"true" cty:"ami_name" hcl:"ami_name"`
 	AMIDescription                            *string                                     `mapstructure:"ami_description" required:"false" cty:"ami_description" hcl:"ami_description"`
 	AMIVirtType                               *string                                     `mapstructure:"ami_virtualization_type" required:"false" cty:"ami_virtualization_type" hcl:"ami_virtualization_type"`
@@ -357,6 +358,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"ssh_interface":                  &hcldec.AttrSpec{Name: "ssh_interface", Type: cty.String, Required: false},
 		"pause_before_ssm":               &hcldec.AttrSpec{Name: "pause_before_ssm", Type: cty.String, Required: false},
 		"session_manager_port":           &hcldec.AttrSpec{Name: "session_manager_port", Type: cty.Number, Required: false},
+		"ssm_document":                   &hcldec.AttrSpec{Name: "ssm_document", Type: cty.String, Required: false},
 		"ami_name":                       &hcldec.AttrSpec{Name: "ami_name", Type: cty.String, Required: false},
 		"ami_description":                &hcldec.AttrSpec{Name: "ami_description", Type: cty.String, Required: false},
 		"ami_virtualization_type":        &hcldec.AttrSpec{Name: "ami_virtualization_type", Type: cty.String, Required: false},
