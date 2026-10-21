@@ -69,6 +69,10 @@ func (s *stepCreateAMI) Run(ctx context.Context, state multistep.StateBag) multi
 		BlockDeviceMappings: config.AMIMappings.BuildEC2BlockDeviceMappings(),
 	}
 
+	if confirmed, _ := state.Get(awscommon.GuestShutdownConfirmedKey).(bool); confirmed {
+		createOpts.NoReboot = aws.Bool(true)
+	}
+
 	if !s.IsRestricted {
 		ec2Tags, err := awscommon.TagMap(s.Tags).EC2Tags(s.Ctx, awsConfig.Region, state)
 		if err != nil {
