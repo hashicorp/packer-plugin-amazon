@@ -1048,8 +1048,7 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `session_manager_reconnect_on_reboot` (bool) - Start a new Session Manager session when the SSM agent on the instance
   disconnects, for example when a provisioner reboots the instance. AWS
-  does not resume a port forwarding session after a reboot, and the
-  session-manager-plugin process does not always exit, so without this
+  does not resume a port forwarding session after a reboot, so without this
   option the build can wait on a dead tunnel until the provisioner times out.
   Packer checks the agent every 5 seconds with `ssm:GetConnectionStatus`;
   without that permission the session is not restarted. Defaults to `false`.
@@ -1270,9 +1269,9 @@ The absence of this permission won't prevent you from building the AMI, and the 
 
 #### Rebooting the instance
 
-AWS does not resume a Session Manager port forwarding session after the instance reboots, and the session-manager-plugin process does not always exit when its tunnel stops working. A build that reboots the instance, for example with a `shell` provisioner using `expect_disconnect = true`, can then wait on the dead tunnel until the next provisioner times out.
+AWS does not resume a Session Manager port forwarding session after the instance reboots. A build that reboots the instance, for example with a `shell` provisioner using `expect_disconnect = true`, can then wait on the dead tunnel until the next provisioner times out.
 
-Set `session_manager_reconnect_on_reboot = true` to have Packer check the instance's SSM agent every 5 seconds with [GetConnectionStatus](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetConnectionStatus.html). After two consecutive `notconnected` results, Packer stops the current session-manager-plugin process and starts a new session on the same local port once the agent is back. The credentials Packer runs with need the `ssm:GetConnectionStatus` permission. Without it, Packer logs the denied call and keeps the current session, as when the option is not set.
+Set `session_manager_reconnect_on_reboot = true` to have Packer check the instance's SSM agent every 5 seconds with [GetConnectionStatus](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetConnectionStatus.html). After two consecutive `notconnected` results, Packer stops the current tunnel process and starts a new session on the same local port once the agent is back. The credentials Packer runs with need the `ssm:GetConnectionStatus` permission. Without it, Packer logs the denied call and keeps the current session, as when the option is not set.
 
 ```hcl
 source "amazon-ebs" "ssm-reboot" {
