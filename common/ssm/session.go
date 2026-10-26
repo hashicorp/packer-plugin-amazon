@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	ssmtypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/hashicorp/packer-plugin-amazon/common/clients"
 
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
@@ -27,13 +28,84 @@ import (
 // forwarding session when no custom document is specified.
 const DefaultDocumentName = "AWS-StartPortForwardingSession"
 
+// SSMAPI is the subset of the SSM client used to manage port forwarding sessions.
+type SSMAPI interface {
+	StartSession(ctx context.Context, params *ssm.StartSessionInput, optFns ...func(*ssm.Options)) (*ssm.StartSessionOutput, error)
+	TerminateSession(ctx context.Context, params *ssm.TerminateSessionInput, optFns ...func(*ssm.Options)) (*ssm.TerminateSessionOutput, error)
+	GetConnectionStatus(ctx context.Context, params *ssm.GetConnectionStatusInput, optFns ...func(*ssm.Options)) (*ssm.GetConnectionStatusOutput, error)
+}
+
 type Session struct {
-	SvcClient             *ssm.Client
+	SvcClient             SSMAPI
 	Region                string
 	InstanceID            string
 	LocalPort, RemotePort int
 	Ec2Client             clients.Ec2Client
 	DocumentName          string
+	// RestartOnAgentDisconnect restarts the port forwarding session when the SSM agent on
+	// the instance disconnects from Session Manager, e.g. during a reboot.
+	RestartOnAgentDisconnect bool
+
+	// Overridable in tests; zero values use the defaults.
+	agentCheckInterval time.Duration
+	pluginCommand      func(ctx context.Context, args ...string) *exec.Cmd
+}
+
+const (
+	// How often the SSM agent connection is checked while a session is open.
+	defaultAgentCheckInterval = 5 * time.Second
+	// Consecutive "notconnected" reports required before a session is considered dead,
+	// so a single stale status does not restart a healthy session.
+	agentDisconnectThreshold = 2
+)
+
+func (s Session) agentConnectionCheckInterval() time.Duration {
+	if s.agentCheckInterval > 0 {
+		return s.agentCheckInterval
+	}
+	return defaultAgentCheckInterval
+}
+
+func (s Session) newPluginCommand(ctx context.Context, args ...string) *exec.Cmd {
+	if s.pluginCommand != nil {
+		return s.pluginCommand(ctx, args...)
+	}
+	return exec.CommandContext(ctx, "session-manager-plugin", args...)
+}
+
+// agentConnectionMonitor detects when the SSM agent on the instance disconnects from
+// Session Manager, e.g. while the instance reboots. AWS does not support resuming a port
+// forwarding session after a reboot, and session-manager-plugin does not reliably exit in
+// that case, which leaves a local tunnel that accepts connections but forwards nothing.
+type agentConnectionMonitor struct {
+	client     SSMAPI
+	instanceID string
+	misses     int
+	disabled   bool
+}
+
+// agentLost reports whether the agent has been seen disconnected enough times in a row
+// to consider the current session dead.
+func (m *agentConnectionMonitor) agentLost(ctx context.Context) bool {
+	if m.disabled {
+		return false
+	}
+	out, err := m.client.GetConnectionStatus(ctx, &ssm.GetConnectionStatusInput{Target: aws.String(m.instanceID)})
+	if err != nil {
+		if awserrors.Matches(err, "AccessDeniedException", "") {
+			log.Printf("ssm: not allowed to call GetConnectionStatus, the session will not be restarted when the SSM agent disconnects: %s", err)
+			m.disabled = true
+		} else if ctx.Err() == nil {
+			log.Printf("ssm: error getting connection status for instance %s: %s", m.instanceID, err)
+		}
+		return false
+	}
+	if out.Status != ssmtypes.ConnectionStatusNotConnected {
+		m.misses = 0
+		return false
+	}
+	m.misses++
+	return m.misses >= agentDisconnectThreshold
 }
 
 func (s Session) buildTunnelInput() *ssm.StartSessionInput {
@@ -118,9 +190,16 @@ func (s Session) terminateSession(ctx context.Context, sessionID string, ui pack
 // To stop the session you must cancel the context.
 func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan struct{}) error {
 	exitSession := false
+	var monitor *agentConnectionMonitor
+	if s.RestartOnAgentDisconnect {
+		monitor = &agentConnectionMonitor{client: s.SvcClient, instanceID: s.InstanceID}
+	}
 	for ctx.Err() == nil && !exitSession {
 		log.Printf("ssm: Starting PortForwarding session to instance %s", s.InstanceID)
 		args, sessionID, err := s.getCommand(ctx)
+		// Cancelling sessionCtx stops only the current session-manager-plugin process,
+		// which lets the loop start a new session.
+		sessionCtx, cancelSession := context.WithCancel(ctx)
 		sessionFinished := make(chan struct{})
 		defer close(sessionFinished)
 		if sessionID != "" {
@@ -129,6 +208,14 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 			go func() {
 				timer := time.NewTicker(2 * time.Second)
 				defer timer.Stop()
+				// Stays nil, and never fires, unless RestartOnAgentDisconnect is set.
+				var agentCheck <-chan time.Time
+				if monitor != nil {
+					ticker := time.NewTicker(s.agentConnectionCheckInterval())
+					defer ticker.Stop()
+					agentCheck = ticker.C
+					monitor.misses = 0
+				}
 				for {
 					select {
 					// in cases where the session is terminated naturally
@@ -138,6 +225,11 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 					case <-sessionFinished:
 						s.terminateSession(ctx, sessionID, ui)
 						return
+					case <-agentCheck:
+						if sessionCtx.Err() == nil && monitor.agentLost(ctx) {
+							ui.Say(fmt.Sprintf("ssm: SSM agent on instance %s disconnected (e.g. reboot), restarting PortForwarding session", s.InstanceID))
+							cancelSession()
+						}
 					case <-timer.C: // wait for the session to be created
 						instanceState, err := s.Ec2Client.DescribeInstanceStatus(ctx, &ec2.DescribeInstanceStatusInput{
 							InstanceIds: []string{s.InstanceID},
@@ -158,16 +250,19 @@ func (s Session) Start(ctx context.Context, ui packersdk.Ui, sessionChan chan st
 			}()
 		}
 		if err != nil {
+			cancelSession()
 			return err
 		}
 
 		sessionChan <- struct{}{}
-		cmd := exec.CommandContext(ctx, "session-manager-plugin", args...)
+		cmd := s.newPluginCommand(sessionCtx, args...)
 
 		ui.Say(fmt.Sprintf("Starting portForwarding session %q.", sessionID))
 		err = localexec.RunAndStream(cmd, ui, nil)
 		sessionFinished <- struct{}{}
-		if err != nil {
+		restarted := sessionCtx.Err() != nil && ctx.Err() == nil
+		cancelSession()
+		if err != nil && !restarted {
 			ui.Error(err.Error())
 		}
 	}

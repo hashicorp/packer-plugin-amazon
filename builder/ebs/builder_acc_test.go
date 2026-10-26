@@ -646,7 +646,6 @@ func TestAccBuilder_EbsSessionManagerInterface(t *testing.T) {
 }
 
 func TestAccBuilder_EbsSSMRebootProvisioner(t *testing.T) {
-	t.Skip()
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
@@ -1018,7 +1017,6 @@ func TestAccBuilder_PrivateKeyFile(t *testing.T) {
 }
 
 func TestAccBuilder_PrivateKeyFileWithReboot(t *testing.T) {
-	t.Skip()
 	t.Parallel()
 	ami := amazon_acc.AMIHelper{
 		Region: "us-east-1",
@@ -2043,6 +2041,7 @@ source "amazon-ebs" "test" {
 	ssh_interface        = "session_manager"
 	iam_instance_profile = "SSMInstanceProfile"
 	communicator         = "ssh"
+	session_manager_reconnect_on_reboot = true
 }
 
 build {
@@ -2101,6 +2100,7 @@ source "amazon-ebs" "test" {
 	ssh_interface        = "session_manager"
 	iam_instance_profile = "SSMInstanceProfile"
 	communicator         = "ssh"
+	session_manager_reconnect_on_reboot = true
 	ssh_private_key_file = "%s"
 }
 
