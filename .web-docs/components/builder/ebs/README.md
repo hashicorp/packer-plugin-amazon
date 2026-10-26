@@ -40,6 +40,14 @@ necessary for this build to succeed and can be found further down the page.
 - `skip_create_ami` (bool) - If true, Packer will not create the AMI. Useful for setting to `true`
   during a build test stage. Default `false`.
 
+- `ami_create_during_shutdown` (bool) - Start AMI creation after confirmed Linux guest power-off, while EC2 may
+  still be cleaning up GPU or other resources. Defaults to false. Requires
+  SSH, root or passwordless sudo access to /dev/kmsg, kernel shutdown output
+  on the EC2 console, and ec2:GetConsoleOutput permission. If confirmation
+  is unavailable or ENA/SR-IOV attributes need changing, Packer waits for
+  EC2's stopped state as usual. Cannot be combined with Spot instances,
+  disable_stop_instance, or skip_create_ami.
+
 - `skip_ami_run_tags` (bool) - If true will not propagate the run tags set on Packer created instance to the AMI created.
 
 - `ami_block_device_mappings` (awscommon.BlockDevices) - Add one or more block device mappings to the AMI. These will be attached
@@ -88,6 +96,45 @@ necessary for this build to succeed and can be found further down the page.
 
 <!-- End of code generated from the comments of the Config struct in builder/ebs/builder.go; -->
 
+
+### Overlapping AMI creation with instance shutdown
+
+With `ami_create_during_shutdown = true`, Packer can start the snapshot after
+Linux powers off, while EC2 is still cleaning up GPU or other instance resources.
+The default remains to wait for the EC2 `stopped` state.
+
+Packer writes a unique marker to `/dev/kmsg` before requesting shutdown. It then
+checks the latest EC2 console output for that marker followed by the kernel's
+`reboot: Power down` message. It does not treat a lost SSH connection, the EC2
+`stopping` state, or an earlier boot's power-off message as confirmation. After
+confirmation, Packer uses `CreateImage` with `NoReboot` enabled.
+
+This optimization requires a Linux guest with an SSH communicator, root or
+passwordless sudo access to `/dev/kmsg`, serial-console kernel output, and
+`ec2:GetConsoleOutput` permission for the Packer identity. It falls back to the
+normal stop wait when the probe cannot run, console access is unavailable, or no
+fresh power-off evidence arrives. The same polling timeout still applies.
+
+When `sriov_support` is enabled and EC2 omits the value from
+`DescribeInstances`, Packer also uses `ec2:DescribeInstanceAttribute` to verify it.
+If that query is unavailable, Packer waits for `stopped`.
+
+ENA and SR-IOV settings must already match the requested values on the instance
+for overlap to occur. If an attribute needs changing, Packer waits for `stopped`
+and applies it before creating the AMI, as usual. Spot builds,
+`disable_stop_instance`, `skip_create_ami`, and non-SSH communicators cannot be
+combined with this option.
+
+```hcl
+source "amazon-ebs" "example" {
+  # Other required settings omitted.
+  ami_create_during_shutdown = true
+}
+```
+
+Overlap can shorten the combined shutdown and snapshot wait. It does not reduce
+the amount of data the snapshot needs to store or guarantee a fixed time saving.
+See [AWS's GPU shutdown explanation](https://repost.aws/knowledge-center/ec2-gpu-metal-instance-stop-time).
 
 ### AMI Configuration
 
