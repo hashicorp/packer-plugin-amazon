@@ -32,7 +32,9 @@ type StepCreateSSMTunnel struct {
 	SSHConfig        *communicator.SSH
 	PauseBeforeSSM   time.Duration
 	DocumentName     string
-	stopSSMCommand   func()
+	// ReconnectOnReboot restarts the session when the instance's SSM agent disconnects.
+	ReconnectOnReboot bool
+	stopSSMCommand    func()
 }
 
 // Run executes the Packer build step that creates a session tunnel.
@@ -86,6 +88,8 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 		Region:       s.Region,
 		Ec2Conn:      ec2Conn,
 		DocumentName: s.DocumentName,
+
+		RestartOnAgentDisconnect: s.ReconnectOnReboot,
 	}
 	go s.CreatePersistentSSMSession(ssmCtx, ui, &session, instance)
 

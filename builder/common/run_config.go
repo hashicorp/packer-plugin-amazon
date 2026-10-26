@@ -706,6 +706,15 @@ type RunConfig struct {
 	// which documents can be used.
 	// This option is only used when `ssh_interface` is set `session_manager`.
 	SSMDocument string `mapstructure:"ssm_document"`
+
+	// Start a new Session Manager session when the SSM agent on the instance
+	// disconnects, for example when a provisioner reboots the instance. AWS
+	// does not resume a port forwarding session after a reboot, so without this
+	// option the build can wait on a dead tunnel until the provisioner times out.
+	// Packer checks the agent every 5 seconds with `ssm:GetConnectionStatus`;
+	// without that permission the session is not restarted. Defaults to `false`.
+	// This option is only used when `ssh_interface` is set `session_manager`.
+	SessionManagerReconnectOnReboot bool `mapstructure:"session_manager_reconnect_on_reboot"`
 }
 
 func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {

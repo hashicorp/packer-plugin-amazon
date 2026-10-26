@@ -402,14 +402,15 @@ func (b *Builder) Run(ctx context.Context, ui packersdk.Ui, hook packersdk.Hook)
 			BuildName: b.config.PackerBuildName,
 		},
 		&awscommon.StepCreateSSMTunnel{
-			AWSSession:       session,
-			Region:           *ec2conn.Config.Region,
-			PauseBeforeSSM:   b.config.PauseBeforeSSM,
-			LocalPortNumber:  b.config.SessionManagerPort,
-			RemotePortNumber: b.config.Comm.Port(),
-			SSMAgentEnabled:  b.config.SSMAgentEnabled(),
-			SSHConfig:        &b.config.Comm.SSH,
-			DocumentName:     b.config.SSMDocument,
+			AWSSession:        session,
+			Region:            *ec2conn.Config.Region,
+			PauseBeforeSSM:    b.config.PauseBeforeSSM,
+			LocalPortNumber:   b.config.SessionManagerPort,
+			RemotePortNumber:  b.config.Comm.Port(),
+			SSMAgentEnabled:   b.config.SSMAgentEnabled(),
+			SSHConfig:         &b.config.Comm.SSH,
+			DocumentName:      b.config.SSMDocument,
+			ReconnectOnReboot: b.config.SessionManagerReconnectOnReboot,
 		},
 		&communicator.StepConnect{
 			// StepConnect is provided settings for WinRM and SSH, but
