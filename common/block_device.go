@@ -18,11 +18,12 @@ import (
 
 const (
 	minIops       = 100
-	maxIops       = 64000
+	maxIopsIo1    = 64000
+	maxIopsIo2    = 256000
 	minIopsGp3    = 3000
-	maxIopsGp3    = 16000
+	maxIopsGp3    = 80000
 	minThroughput = 125
-	maxThroughput = 1000
+	maxThroughput = 2000
 )
 
 // These will be attached when launching your instance. Your
@@ -78,6 +79,10 @@ type BlockDevice struct {
 	// encrypted one.
 	Encrypted config.Trilean `mapstructure:"encrypted" required:"false"`
 	// The number of I/O operations per second (IOPS) that the volume supports.
+	// For gp3 volumes, valid values are 3,000 to 80,000.
+	// For io1 volumes, valid values are 100 to 64,000. For io2 volumes,
+	// valid values are 100 to 256,000, with an IOPS-to-GiB ratio up to 1,000:1.
+	// Achieving 256,000 IOPS requires a Nitro-based instance.
 	// See the documentation on
 	// [IOPs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
 	// for more information
@@ -87,7 +92,8 @@ type BlockDevice struct {
 	NoDevice bool `mapstructure:"no_device" required:"false"`
 	// The ID of the snapshot.
 	SnapshotId string `mapstructure:"snapshot_id" required:"false"`
-	// The throughput for gp3 volumes, only valid for gp3 types
+	// The throughput for gp3 volumes, only valid for gp3 types.
+	// Valid values are 125 to 2,000 MiB/s.
 	// See the documentation on
 	// [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
 	// for more information
@@ -186,7 +192,7 @@ func (blockDevice BlockDevice) BuildEC2BlockDeviceMapping() ec2types.BlockDevice
 
 var iopsRatios = map[string]int32{
 	"io1": 50,
-	"io2": 500,
+	"io2": 1000,
 }
 
 func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
@@ -207,6 +213,10 @@ func (b *BlockDevice) Prepare(ctx *interpolate.Context) error {
 				"(in GiB) is %v:1 for %s volumes", b.DeviceName, ratio, b.VolumeType)
 		}
 
+		var maxIops int32 = maxIopsIo1
+		if b.VolumeType == "io2" {
+			maxIops = maxIopsIo2
+		}
 		if b.IOPS != nil && (*b.IOPS < minIops || *b.IOPS > maxIops) {
 			return fmt.Errorf("IOPS must be between %d and %d for device %s",
 				minIops, maxIops, b.DeviceName)

@@ -269,10 +269,38 @@ func TestIOPSValidation(t *testing.T) {
 				DeviceName: "/dev/sdb",
 				VolumeType: "io2",
 				VolumeSize: 50,
-				IOPS:       aws.Int64(30000),
+				IOPS:       aws.Int64(51000),
 			},
 			ok:  false,
-			msg: "/dev/sdb: the maximum ratio of provisioned IOPS to requested volume size (in GiB) is 500:1 for io2 volumes",
+			msg: "/dev/sdb: the maximum ratio of provisioned IOPS to requested volume size (in GiB) is 1000:1 for io2 volumes",
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "io1",
+				VolumeSize: 1280,
+				IOPS:       aws.Int64(64000),
+			},
+			ok: true,
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "io1",
+				VolumeSize: 2000,
+				IOPS:       aws.Int64(64001),
+			},
+			ok:  false,
+			msg: "IOPS must be between 100 and 64000 for device /dev/sdb",
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "io2",
+				VolumeSize: 256,
+				IOPS:       aws.Int64(256000),
+			},
+			ok: true,
 		},
 		// exceed max iops
 		{
@@ -280,10 +308,10 @@ func TestIOPSValidation(t *testing.T) {
 				DeviceName: "/dev/sdb",
 				VolumeType: "io2",
 				VolumeSize: 500,
-				IOPS:       aws.Int64(99999),
+				IOPS:       aws.Int64(256001),
 			},
 			ok:  false,
-			msg: "IOPS must be between 100 and 64000 for device /dev/sdb",
+			msg: "IOPS must be between 100 and 256000 for device /dev/sdb",
 		},
 		// lower than min iops
 		{
@@ -294,19 +322,47 @@ func TestIOPSValidation(t *testing.T) {
 				IOPS:       aws.Int64(10),
 			},
 			ok:  false,
-			msg: "IOPS must be between 100 and 64000 for device /dev/sdb",
+			msg: "IOPS must be between 100 and 256000 for device /dev/sdb",
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "gp3",
+				VolumeSize: 160,
+				IOPS:       aws.Int64(3000),
+			},
+			ok: true,
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "gp3",
+				VolumeSize: 160,
+				IOPS:       aws.Int64(16001),
+			},
+			ok: true,
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "gp3",
+				VolumeSize: 160,
+				Throughput: aws.Int64(2000),
+				IOPS:       aws.Int64(80000),
+			},
+			ok: true,
 		},
 		// exceed max iops
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
 				VolumeType: "gp3",
-				VolumeSize: 50,
+				VolumeSize: 160,
 				Throughput: aws.Int64(125),
-				IOPS:       aws.Int64(99999),
+				IOPS:       aws.Int64(80001),
 			},
 			ok:  false,
-			msg: "IOPS must be between 3000 and 16000 for device /dev/sdb",
+			msg: "IOPS must be between 3000 and 80000 for device /dev/sdb",
 		},
 		// lower than min iops
 		{
@@ -315,10 +371,10 @@ func TestIOPSValidation(t *testing.T) {
 				VolumeType: "gp3",
 				VolumeSize: 50,
 				Throughput: aws.Int64(125),
-				IOPS:       aws.Int64(10),
+				IOPS:       aws.Int64(2999),
 			},
 			ok:  false,
-			msg: "IOPS must be between 3000 and 16000 for device /dev/sdb",
+			msg: "IOPS must be between 3000 and 80000 for device /dev/sdb",
 		},
 	}
 
@@ -363,16 +419,34 @@ func TestThroughputValidation(t *testing.T) {
 			},
 			ok: true,
 		},
-		// exceed max Throughput
 		{
 			device: BlockDevice{
 				DeviceName: "/dev/sdb",
 				VolumeType: "gp3",
 				Throughput: aws.Int64(1001),
-				IOPS:       aws.Int64(3000),
+				IOPS:       aws.Int64(8000),
+			},
+			ok: true,
+		},
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "gp3",
+				Throughput: aws.Int64(2000),
+				IOPS:       aws.Int64(8000),
+			},
+			ok: true,
+		},
+		// exceed max Throughput
+		{
+			device: BlockDevice{
+				DeviceName: "/dev/sdb",
+				VolumeType: "gp3",
+				Throughput: aws.Int64(2001),
+				IOPS:       aws.Int64(8000),
 			},
 			ok:  false,
-			msg: "Throughput must be between 125 and 1000 for device /dev/sdb",
+			msg: "Throughput must be between 125 and 2000 for device /dev/sdb",
 		},
 		// lower than min Throughput
 		{
@@ -383,7 +457,7 @@ func TestThroughputValidation(t *testing.T) {
 				IOPS:       aws.Int64(3000),
 			},
 			ok:  false,
-			msg: "Throughput must be between 125 and 1000 for device /dev/sdb",
+			msg: "Throughput must be between 125 and 2000 for device /dev/sdb",
 		},
 	}
 
