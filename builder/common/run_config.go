@@ -112,6 +112,9 @@ type MetadataOptions struct {
 	// Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
 	// Accepts either "enabled" or "disabled"
 	InstanceMetadataTags string `mapstructure:"instance_metadata_tags" required:"false"`
+	// A string to enable or disable the IPv6 IMDS endpoint for an instance. Defaults to "disabled".
+	// Accepts either "enabled" or "disabled"
+	HttpProtocolIpv6 string `mapstructure:"http_protocol_ipv6" required:"false"`
 }
 
 // RunConfig contains configuration for running an instance from a source
@@ -694,6 +697,24 @@ type RunConfig struct {
 	// left blank, Packer will choose a port for you from available ports.
 	// This option is only used when `ssh_interface` is set `session_manager`.
 	SessionManagerPort int `mapstructure:"session_manager_port"`
+
+	// The name of the Systems Manager document used to start the Session
+	// Manager port forwarding tunnel. Defaults to the AWS managed
+	// `AWS-StartPortForwardingSession` document. A custom document must
+	// accept the same `portNumber` and `localPortNumber` parameters as the
+	// AWS managed document. This is useful when your organization restricts
+	// which documents can be used.
+	// This option is only used when `ssh_interface` is set `session_manager`.
+	SSMDocument string `mapstructure:"ssm_document"`
+
+	// Start a new Session Manager session when the SSM agent on the instance
+	// disconnects, for example when a provisioner reboots the instance. AWS
+	// does not resume a port forwarding session after a reboot, so without this
+	// option the build can wait on a dead tunnel until the provisioner times out.
+	// Packer checks the agent every 5 seconds with `ssm:GetConnectionStatus`;
+	// without that permission the session is not restarted. Defaults to `false`.
+	// This option is only used when `ssh_interface` is set `session_manager`.
+	SessionManagerReconnectOnReboot bool `mapstructure:"session_manager_reconnect_on_reboot"`
 }
 
 func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
@@ -745,6 +766,10 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 		c.Metadata.InstanceMetadataTags = "disabled"
 	}
 
+	if c.Metadata.HttpProtocolIpv6 == "" {
+		c.Metadata.HttpProtocolIpv6 = "disabled"
+	}
+
 	if c.Comm.SSHTemporaryKeyPairType != "rsa" && c.Comm.SSHTemporaryKeyPairType != "ed25519" {
 		msg := fmt.Errorf("temporary_key_pair_type requires either rsa or ed25519 as its value")
 		errs = append(errs, msg)
@@ -768,6 +793,23 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 	if c.Metadata.InstanceMetadataTags != "enabled" && c.Metadata.InstanceMetadataTags != "disabled" {
 		msg := fmt.Errorf("instance_metadata_tags requires either disabled or enabled as its value")
 		errs = append(errs, msg)
+	}
+
+	if c.Metadata.HttpProtocolIpv6 != "enabled" && c.Metadata.HttpProtocolIpv6 != "disabled" {
+		msg := fmt.Errorf("http_protocol_ipv6 requires either disabled or enabled as its value")
+		errs = append(errs, msg)
+	}
+
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.HttpProtocolIpv6 == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"http_protocol_ipv6 can only be enabled when http_endpoint is enabled",
+		))
+	}
+
+	if c.Metadata.HttpEndpoint == "disabled" && c.Metadata.InstanceMetadataTags == "enabled" {
+		errs = append(errs, fmt.Errorf(
+			"instance_metadata_tags can only be enabled when http_endpoint is enabled",
+		))
 	}
 
 	// Copy singular tag maps
@@ -805,6 +847,8 @@ func (c *RunConfig) Prepare(ctx *interpolate.Context) []error {
 			msg := fmt.Errorf(`no iam_instance_profile defined; session_manager connectivity requires a valid instance profile with AmazonSSMManagedInstanceCore permissions. Alternatively a temporary_iam_instance_profile_policy_document can be used.`)
 			errs = append(errs, msg)
 		}
+	} else if c.SSMDocument != "" {
+		errs = append(errs, fmt.Errorf(`ssm_document can only be used when ssh_interface is set to "session_manager"`))
 	}
 
 	if c.Comm.SSHKeyPairName != "" {

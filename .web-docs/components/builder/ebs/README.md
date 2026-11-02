@@ -1091,6 +1091,22 @@ JSON example:
   left blank, Packer will choose a port for you from available ports.
   This option is only used when `ssh_interface` is set `session_manager`.
 
+- `ssm_document` (string) - The name of the Systems Manager document used to start the Session
+  Manager port forwarding tunnel. Defaults to the AWS managed
+  `AWS-StartPortForwardingSession` document. A custom document must
+  accept the same `portNumber` and `localPortNumber` parameters as the
+  AWS managed document. This is useful when your organization restricts
+  which documents can be used.
+  This option is only used when `ssh_interface` is set `session_manager`.
+
+- `session_manager_reconnect_on_reboot` (bool) - Start a new Session Manager session when the SSM agent on the instance
+  disconnects, for example when a provisioner reboots the instance. AWS
+  does not resume a port forwarding session after a reboot, so without this
+  option the build can wait on a dead tunnel until the provisioner times out.
+  Packer checks the agent every 5 seconds with `ssm:GetConnectionStatus`;
+  without that permission the session is not restarted. Defaults to `false`.
+  This option is only used when `ssh_interface` is set `session_manager`.
+
 <!-- End of code generated from the comments of the RunConfig struct in builder/common/run_config.go; -->
 
 
@@ -1134,6 +1150,9 @@ See [Configure IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configu
 
 - `instance_metadata_tags` (string) - A string to enable or disable access to instance tags from the instance metadata. Defaults to disabled.
   Access to instance metadata tags is available for commercial regions. For non-commercial regions please check availability before enabling.
+  Accepts either "enabled" or "disabled"
+
+- `http_protocol_ipv6` (string) - A string to enable or disable the IPv6 IMDS endpoint for an instance. Defaults to "disabled".
   Accepts either "enabled" or "disabled"
 
 <!-- End of code generated from the comments of the MetadataOptions struct in builder/common/run_config.go; -->
@@ -1225,6 +1244,8 @@ To use the session manager as the connection interface for the SSH communicator 
 #### Optional
 
 - `session_manager_port`: A local port on the host machine that should be used as the local end of the session tunnel to the remote host. If not specified Packer will find an available port to use.
+- `ssm_document`: The name of a custom Systems Manager document to use for the port forwarding session, instead of the AWS managed `AWS-StartPortForwardingSession` document. The custom document must accept the same `portNumber` and `localPortNumber` parameters as the AWS managed document. Make sure the credentials used by Packer are allowed to call `ssm:StartSession` with this document.
+- `session_manager_reconnect_on_reboot`: Start a new session when the SSM agent on the instance disconnects, for example when a provisioner reboots the instance. See [Rebooting the instance](#rebooting-the-instance). Defaults to `false`.
 - `temporary_iam_instance_profile_policy_document`: Creates a temporary instance profile policy document to grant Systems Manager permissions to the Ec2 instance. This is an alternative to using an existing `iam_instance_profile`.
 
 HCL2 example:
@@ -1322,6 +1343,34 @@ In case this is not possible you might see a `Bad exit status` message in the lo
 
 The absence of this permission won't prevent you from building the AMI, and the error only means that packer is not able to close the tunnel gracefully.
 
+#### Rebooting the instance
+
+AWS does not resume a Session Manager port forwarding session after the instance reboots. A build that reboots the instance, for example with a `shell` provisioner using `expect_disconnect = true`, can then wait on the dead tunnel until the next provisioner times out.
+
+Set `session_manager_reconnect_on_reboot = true` to have Packer check the instance's SSM agent every 5 seconds with [GetConnectionStatus](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_GetConnectionStatus.html). After two consecutive `notconnected` results, Packer stops the current tunnel process and starts a new session on the same local port once the agent is back. The credentials Packer runs with need the `ssm:GetConnectionStatus` permission. Without it, Packer logs the denied call and keeps the current session, as when the option is not set.
+
+```hcl
+source "amazon-ebs" "ssm-reboot" {
+  # ...
+  ssh_interface                       = "session_manager"
+  iam_instance_profile                = "myinstanceprofile"
+  session_manager_reconnect_on_reboot = true
+}
+
+build {
+  sources = ["source.amazon-ebs.ssm-reboot"]
+
+  provisioner "shell" {
+    expect_disconnect = true
+    inline            = ["sudo reboot"]
+  }
+
+  provisioner "shell" {
+    inline = ["echo reconnected after reboot"]
+  }
+}
+```
+
 
 ### Block Devices Configuration
 
@@ -1391,6 +1440,10 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
   encrypted one.
 
 - `iops` (\*int64) - The number of I/O operations per second (IOPS) that the volume supports.
+  For gp3 volumes, valid values are 3,000 to 80,000.
+  For io1 volumes, valid values are 100 to 64,000. For io2 volumes,
+  valid values are 100 to 256,000, with an IOPS-to-GiB ratio up to 1,000:1.
+  Achieving 256,000 IOPS requires a Nitro-based instance.
   See the documentation on
   [IOPs](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information
@@ -1400,7 +1453,8 @@ https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concept
 
 - `snapshot_id` (string) - The ID of the snapshot.
 
-- `throughput` (\*int64) - The throughput for gp3 volumes, only valid for gp3 types
+- `throughput` (\*int64) - The throughput for gp3 volumes, only valid for gp3 types.
+  Valid values are 125 to 2,000 MiB/s.
   See the documentation on
   [Throughput](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_EbsBlockDevice.html)
   for more information

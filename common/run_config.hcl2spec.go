@@ -90,6 +90,7 @@ type FlatMetadataOptions struct {
 	HttpTokens              *string `mapstructure:"http_tokens" required:"false" cty:"http_tokens" hcl:"http_tokens"`
 	HttpPutResponseHopLimit *int32  `mapstructure:"http_put_response_hop_limit" required:"false" cty:"http_put_response_hop_limit" hcl:"http_put_response_hop_limit"`
 	InstanceMetadataTags    *string `mapstructure:"instance_metadata_tags" required:"false" cty:"instance_metadata_tags" hcl:"instance_metadata_tags"`
+	HttpProtocolIpv6        *string `mapstructure:"http_protocol_ipv6" required:"false" cty:"http_protocol_ipv6" hcl:"http_protocol_ipv6"`
 }
 
 // FlatMapstructure returns a new FlatMetadataOptions.
@@ -108,6 +109,7 @@ func (*FlatMetadataOptions) HCL2Spec() map[string]hcldec.Spec {
 		"http_tokens":                 &hcldec.AttrSpec{Name: "http_tokens", Type: cty.String, Required: false},
 		"http_put_response_hop_limit": &hcldec.AttrSpec{Name: "http_put_response_hop_limit", Type: cty.Number, Required: false},
 		"instance_metadata_tags":      &hcldec.AttrSpec{Name: "instance_metadata_tags", Type: cty.String, Required: false},
+		"http_protocol_ipv6":          &hcldec.AttrSpec{Name: "http_protocol_ipv6", Type: cty.String, Required: false},
 	}
 	return s
 }

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
@@ -31,7 +31,10 @@ type StepCreateSSMTunnel struct {
 	SSMAgentEnabled  bool
 	SSHConfig        *communicator.SSH
 	PauseBeforeSSM   time.Duration
-	stopSSMCommand   func()
+	DocumentName     string
+	// ReconnectOnReboot restarts the session when the instance's SSM agent disconnects.
+	ReconnectOnReboot bool
+	stopSSMCommand    func()
 }
 
 // Run executes the Packer build step that creates a session tunnel.
@@ -78,12 +81,15 @@ func (s *StepCreateSSMTunnel) Run(ctx context.Context, state multistep.StateBag)
 
 	ssmconn := ssm.New(s.AWSSession)
 	session := pssm.Session{
-		SvcClient:  ssmconn,
-		InstanceID: aws.StringValue(instance.InstanceId),
-		RemotePort: s.RemotePortNumber,
-		LocalPort:  s.LocalPortNumber,
-		Region:     s.Region,
-		Ec2Conn:    ec2Conn,
+		SvcClient:    ssmconn,
+		InstanceID:   aws.StringValue(instance.InstanceId),
+		RemotePort:   s.RemotePortNumber,
+		LocalPort:    s.LocalPortNumber,
+		Region:       s.Region,
+		Ec2Conn:      ec2Conn,
+		DocumentName: s.DocumentName,
+
+		RestartOnAgentDisconnect: s.ReconnectOnReboot,
 	}
 	go s.CreatePersistentSSMSession(ssmCtx, ui, &session, instance)
 

@@ -151,3 +151,36 @@ func TestStepRunSourceInstance_HostResourceGroupArn(t *testing.T) {
 		t.Fatalf("expected Placement.HostResourceGroupArn to be %q, got %q", step.HostResourceGroupArn, got)
 	}
 }
+
+func TestStepRunSourceInstance_HttpProtocolIpv6(t *testing.T) {
+	conn, runInstancesParams := fakeEC2Server(t)
+
+	state := tStateRunSourceInstance(conn)
+	state.Put("ui", packersdk.TestUi(t))
+
+	step := &StepRunSourceInstance{
+		PollingConfig:            &AWSPollingConfig{},
+		AssociatePublicIpAddress: confighelper.TriUnset,
+		LaunchMappings:           BlockDevices{},
+		ExpectedRootDevice:       "ebs",
+		InstanceType:             "t2.micro",
+		Comm:                     &communicator.Config{},
+		HttpEndpoint:             "enabled",
+		HttpTokens:               "required",
+		HttpPutResponseHopLimit:  1,
+		HttpProtocolIpv6:         "enabled",
+	}
+
+	action := step.Run(context.Background(), state)
+	if err := state.Get("error"); err != nil {
+		t.Fatalf("should not have errored, but got: %s", err)
+	}
+	if action != multistep.ActionContinue {
+		t.Fatalf("expected action to continue, got: %v", action)
+	}
+
+	got := runInstancesParams.Get("MetadataOptions.HttpProtocolIpv6")
+	if got != "enabled" {
+		t.Fatalf("expected MetadataOptions.HttpProtocolIpv6 to be %q, got %q", "enabled", got)
+	}
+}
