@@ -2,6 +2,26 @@
 
 Please refer to [releases](https://github.com/hashicorp/packer-plugin-amazon/releases) for the latest CHANGELOG information.
 ---
+## 1.8.4 (November 2, 2026)
+
+## ✨ Features
+- **Custom Session Manager documents** – Add `ssm_document` to use a custom port-forwarding document when `ssh_interface` is `session_manager`. ([#718](https://github.com/hashicorp/packer-plugin-amazon/pull/718))
+- **Session Manager reconnection after reboot** – Add opt-in `session_manager_reconnect_on_reboot` to restart the port-forwarding session when the instance's SSM agent disconnects. Requires `ssm:GetConnectionStatus` permission and defaults to `false`. ([#719](https://github.com/hashicorp/packer-plugin-amazon/pull/719))
+- **IPv6 instance metadata endpoint** – Add `http_protocol_ipv6` support in `metadata_options` for on-demand and Spot instances. ([#709](https://github.com/hashicorp/packer-plugin-amazon/pull/709))
+
+## 🐛 Bug Fixes
+- **Updated EBS performance limits** – Allow gp3 volumes with up to **80,000 IOPS** and **2,000 MiB/s throughput**, and io2 volumes with up to **256,000 IOPS**. Update validation and documentation for the supported limits. ([#723](https://github.com/hashicorp/packer-plugin-amazon/pull/723))
+
+## 📦 Dependencies
+- Bump `github.com/hashicorp/packer-plugin-sdk` from **0.6.11 → 0.6.13** and `github.com/hashicorp/hcl/v2` from **v2.24.0 → v2.25.0**. ([#713](https://github.com/hashicorp/packer-plugin-amazon/pull/713))
+- Update the Go requirement from **1.26.8 → 1.26.10** and refresh dependencies, including `golang.org/x/crypto` to **v0.58.0**. ([#722](https://github.com/hashicorp/packer-plugin-amazon/pull/722))
+- Bump `github.com/go-jose/go-jose/v4` from **v4.1.4 → v4.1.7** and `golang.org/x/net` from **v0.58.0 → v0.62.0**.
+
+## 🧹 Maintenance
+- Refresh acceptance-test base images and test configuration. ([#716](https://github.com/hashicorp/packer-plugin-amazon/pull/716))
+- Add/update copyright headers. ([#721](https://github.com/hashicorp/packer-plugin-amazon/pull/721))
+
+---
 ## 1.8.3 (OCT 7, 2026)
 
 ## ✨ Features
