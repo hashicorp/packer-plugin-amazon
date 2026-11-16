@@ -36,9 +36,8 @@ type StepSnapshotVolumes struct {
 	Ctx                 interpolate.Context
 }
 
-func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName string, state multistep.StateBag) error {
+func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName string, snapshotTags awscommon.EC2Tags, state multistep.StateBag) error {
 	ec2conn := state.Get("ec2v2").(clients.Ec2Client)
-	awsConfig := state.Get("aws_config").(*aws.Config)
 	ui := state.Get("ui").(packersdk.Ui)
 	instance := state.Get("instance").(ec2types.Instance)
 
@@ -51,15 +50,6 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 	if volumeId == "" {
 		return fmt.Errorf("Volume ID for device %s not found", deviceName)
 	}
-
-	ui.Say("Creating snapshot tags")
-	snapshotTags, err := awscommon.TagMap(s.SnapshotTags).EC2Tags(s.Ctx, awsConfig.Region, state)
-	if err != nil {
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return err
-	}
-	snapshotTags.Report(ui)
 
 	ui.Say(fmt.Sprintf("Creating snapshot of EBS Volume %s...", volumeId))
 
@@ -98,8 +88,20 @@ func (s *StepSnapshotVolumes) snapshotVolume(ctx context.Context, deviceName str
 
 func (s *StepSnapshotVolumes) Run(ctx context.Context, state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packersdk.Ui)
+	awsConfig := state.Get("aws_config").(*aws.Config)
 
 	s.snapshotIds = map[string]string{}
+
+	// Rendering the tags writes build info into the shared generated_data map, so it must
+	// happen once here rather than in the per-volume goroutines.
+	ui.Say("Creating snapshot tags")
+	snapshotTags, err := awscommon.TagMap(s.SnapshotTags).EC2Tags(s.Ctx, awsConfig.Region, state)
+	if err != nil {
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	snapshotTags.Report(ui)
 
 	var wg sync.WaitGroup
 	var errs *multierror.Error
@@ -113,7 +115,7 @@ func (s *StepSnapshotVolumes) Run(ctx context.Context, state multistep.StateBag)
 		wg.Add(1)
 		go func(device ec2types.BlockDeviceMapping) {
 			defer wg.Done()
-			if err := s.snapshotVolume(ctx, *device.DeviceName, state); err != nil {
+			if err := s.snapshotVolume(ctx, *device.DeviceName, snapshotTags, state); err != nil {
 				errs = multierror.Append(errs, err)
 			}
 		}(device)
