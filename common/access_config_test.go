@@ -5,11 +5,26 @@ package common
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/smithy-go"
 	"github.com/hashicorp/packer-plugin-sdk/common"
 )
+
+func TestAccessConfigFailedMFACredentials(t *testing.T) {
+	t.Setenv("AWS_ENDPOINT_URL_STS", "http://127.0.0.1:1")
+	c := AccessConfig{
+		RawRegion: "us-east-1", AccessKey: "test", SecretKey: "test",
+		SkipCredsValidation: true, MFACode: "123456", MaxRetries: 1,
+	}
+	_, err := c.Config(context.Background())
+	var operation *smithy.OperationError
+	if !errors.As(err, &operation) || operation.OperationName != "AssumeRole" {
+		t.Fatalf("expected the AssumeRole credential error, got %v", err)
+	}
+}
 
 func TestAccessConfigPrepare_Region(t *testing.T) {
 	c := FakeAccessConfig()

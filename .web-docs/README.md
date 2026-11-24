@@ -1,5 +1,5 @@
 The Amazon plugin can be used with HashiCorp Packer to create custom images on AWS. To achieve this, the plugin comes with
-multiple builders, data sources, and a post-processor to build the AMI depending on the strategy you want to use.
+multiple builders, data sources, and post-processors for building and publishing AMIs.
 
 ### Installation
 
@@ -66,6 +66,7 @@ It is much easier to use and Amazon generally recommends EBS-backed images nowad
 #### Post-Processors
 - [amazon-import](/packer/integrations/hashicorp/amazon/latest/components/post-processor/import) -  The Amazon Import post-processor takes an OVA artifact 
   from various builders and imports it to an AMI available to Amazon Web Services EC2.
+- [amazon-ssm-parameter](/packer/integrations/hashicorp/amazon/latest/components/post-processor/ssm-parameter) - Publish the AMI ID for each build region to AWS Systems Manager Parameter Store.
 
 ### Authentication
 

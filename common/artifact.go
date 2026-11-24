@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2013, 2025
+// Copyright IBM Corp. 2013, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package common
@@ -13,9 +13,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
+	"github.com/hashicorp/packer-plugin-amazon/internal/amiartifact"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
+
+// AMIIDsStateKey identifies the region-to-AMI map exposed to post-processors.
+const AMIIDsStateKey = amiartifact.AMIIDsStateKey
+
+// RetainAMIsStateKey is an Amazon plugin RPC request, not a read-only state key.
+// It acknowledges that the AMIs won't be deregistered by Packer artifact cleanup.
+// The SSM publisher uses it before creating aliases because Packer ignores its
+// keep flags on errors, and a regional write can succeed before another fails.
+const RetainAMIsStateKey = amiartifact.RetainAMIsStateKey
 
 // Artifact is an artifact implementation that contains built AMIs.
 type Artifact struct {
@@ -31,6 +41,8 @@ type Artifact struct {
 
 	// EC2 config for performing API stuff.
 	Config *aws.Config
+
+	amiState amiartifact.State
 }
 
 func (a *Artifact) BuilderId() string {
@@ -64,8 +76,11 @@ func (a *Artifact) String() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
-	if _, ok := a.StateData[name]; ok {
-		return a.StateData[name]
+	if value, ok := a.amiState.Lookup(name, a.Amis); ok {
+		return value
+	}
+	if value, ok := a.StateData[name]; ok {
+		return value
 	}
 
 	switch name {
@@ -81,6 +96,10 @@ func (a *Artifact) State(name string) interface{} {
 }
 
 func (a *Artifact) Destroy() error {
+	if a.amiState.SkipDestroy() {
+		return nil
+	}
+
 	errors := make([]error, 0)
 	ctx := context.TODO()
 	for region, imageId := range a.Amis {
