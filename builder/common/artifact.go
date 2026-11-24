@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/hashicorp/packer-plugin-amazon/internal/amiartifact"
 	packersdk "github.com/hashicorp/packer-plugin-sdk/packer"
 	registryimage "github.com/hashicorp/packer-plugin-sdk/packer/registry/image"
 )
@@ -30,6 +31,8 @@ type Artifact struct {
 
 	// EC2 connection for performing API stuff.
 	Session *session.Session
+
+	amiState amiartifact.State
 }
 
 func (a *Artifact) BuilderId() string {
@@ -63,8 +66,11 @@ func (a *Artifact) String() string {
 }
 
 func (a *Artifact) State(name string) interface{} {
-	if _, ok := a.StateData[name]; ok {
-		return a.StateData[name]
+	if value, ok := a.amiState.Lookup(name, a.Amis); ok {
+		return value
+	}
+	if value, ok := a.StateData[name]; ok {
+		return value
 	}
 
 	switch name {
@@ -80,6 +86,10 @@ func (a *Artifact) State(name string) interface{} {
 }
 
 func (a *Artifact) Destroy() error {
+	if a.amiState.SkipDestroy() {
+		return nil
+	}
+
 	errors := make([]error, 0)
 
 	for region, imageId := range a.Amis {
