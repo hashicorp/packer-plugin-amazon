@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/smithy-go"
 	awsbase "github.com/hashicorp/aws-sdk-go-base/v2"
 	"github.com/hashicorp/aws-sdk-go-base/v2/diag"
 	"github.com/hashicorp/packer-plugin-amazon/common/awserrors"
@@ -257,15 +256,11 @@ func (c *AccessConfig) Config(ctx context.Context) (*aws.Config, error) {
 	log.Printf("Found region %s", cfg.Region)
 
 	creds, err := cfg.Credentials.Retrieve(ctx)
-
-	var apierr *smithy.APIError
-	if errors.As(err, apierr) {
-		awserrors.Matches(err, "NoCredentialProviders", "")
-		return nil, c.NewNoValidCredentialSourcesError(err)
-	}
-
 	if err != nil {
-		return nil, fmt.Errorf("Error loading credentials for AWS Provider: %s", err)
+		if awserrors.Matches(err, "NoCredentialProviders", "") {
+			return nil, c.NewNoValidCredentialSourcesError(err)
+		}
+		return nil, fmt.Errorf("Error loading credentials for AWS Provider: %w", err)
 	}
 	c.config = &cfg
 	log.Printf("[INFO] AWS Auth provider used: %q", creds.Source)
