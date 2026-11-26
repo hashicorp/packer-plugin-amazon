@@ -2034,7 +2034,14 @@ const testBuilderAccSessionManagerInterface = `
 const testBuilderAccSSMWithReboot = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami_filter {
+		filters = {
+			name                = "hc-base-ubuntu-2204-*"
+			architecture        = "x86_64"
+		}
+		owners      = ["888995627335"] # hc-ami_prod
+		most_recent = true
+	}
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	ssh_username         = "ubuntu"
@@ -2121,7 +2128,14 @@ build {
 const testIMDSv2Support = `
 source "amazon-ebs" "test" {
 	ami_name             = "%s"
-	source_ami           = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami_filter {
+		filters = {
+			name                = "hc-base-ubuntu-2204-*"
+			architecture        = "x86_64"
+		}
+		owners      = ["888995627335"] # hc-ami_prod
+		most_recent = true
+	}
 	instance_type        = "m3.medium"
 	region               = "us-east-1"
 	ssh_username         = "ubuntu"
@@ -2139,7 +2153,14 @@ build {
 const testAMIRunTagsCopyKeepRunTags = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami_filter {
+		filters = {
+			name                = "hc-base-ubuntu-2204-*"
+			architecture        = "x86_64"
+		}
+		owners      = ["888995627335"] # hc-ami_prod
+		most_recent = true
+	}
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
@@ -2164,7 +2185,14 @@ build {
 const testAMIRunTagsCopyKeepTags = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami_filter {
+		filters = {
+			name                = "hc-base-ubuntu-2204-*"
+			architecture        = "x86_64"
+		}
+		owners      = ["888995627335"] # hc-ami_prod
+		most_recent = true
+	}
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
@@ -2206,7 +2234,14 @@ build {
 const sshPasswordEnabledAMI = `
 source "amazon-ebs" "test" {
 	region        = "us-east-1"
-	source_ami    = "ami-0b4a8cd67f04e48b7" #  hc-base-ubuntu-2204-20260330144317
+	source_ami_filter {
+		filters = {
+			name                = "hc-base-ubuntu-2204-*"
+			architecture        = "x86_64"
+		}
+		owners      = ["888995627335"] # hc-ami_prod
+		most_recent = true
+	}
 	instance_type = "m3.medium"
 	ami_name      = "%s"
 	communicator  = "ssh"
